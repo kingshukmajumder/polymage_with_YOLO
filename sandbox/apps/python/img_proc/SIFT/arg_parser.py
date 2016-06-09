@@ -1,3 +1,5 @@
+#This is the arg_parser for sift.py
+
 from __init__ import *
 
 import optparse
@@ -24,29 +26,6 @@ def parse_args():
                       action='store',
                       dest='img_file1',
                       help='input image file path for image1')
-
-    parser.add_option('--img2',
-                      action='store',
-                      dest='img_file2',
-                      help='input image file path for image2')
-
-    parser.add_option('-x', '--rows',
-                      action='store',
-                      dest='rows',
-                      default=0,
-                      help='number of rows of image ROI')
-
-    parser.add_option('-y', '--cols',
-                      action='store',
-                      dest='cols',
-                      default=0,
-                      help='number of cols of image ROI')
-
-    parser.add_option('-n', '--runs',
-                      action='store',
-                      dest='runs',
-                      default=1,
-                      help='number of runs')
 
     parser.add_option('-t', '--timer',
                       action='store_true',

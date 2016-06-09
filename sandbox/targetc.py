@@ -113,6 +113,14 @@ class CLog(Log):
     def __init__(self, _expr):
         Log.__init__(self, _expr)
 
+class CTan(Tan):
+    def __init__(self, _expr):
+        Tan.__init__(self, _expr)
+
+class CArcTan(ArcTan):
+    def __init__(self, _expr):
+        ArcTan.__init__(self, _expr)
+
 class CExp(Exp):
     def __init__(self, _expr):
         Exp.__init__(self, _expr)

@@ -1,3 +1,5 @@
+#this is exec_pipe for sift
+
 import sys
 import os
 import ctypes
@@ -17,9 +19,7 @@ def call_pipe(app_data):
 
     img_data = app_data['img_data']
     IN1 = img_data['IN1']
-    IN2 = img_data['IN2']
     OUT = img_data['OUT']
-    mask_ghost = img_data['mask_ghost']
 
     # lib function name
     func_name = 'pipeline_'+app_data['app']
@@ -30,8 +30,6 @@ def call_pipe(app_data):
     pipe_args += [ctypes.c_int(cols+total_pad)]
     pipe_args += [ctypes.c_int(rows+total_pad)]
     pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
-    pipe_args += [ctypes.c_void_p(IN2.ctypes.data)]
-    pipe_args += [ctypes.c_void_p(mask_ghost.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
 
     # call lib function
@@ -39,26 +37,22 @@ def call_pipe(app_data):
     
     return
 
-def pyramid_blending(app_data):
+def sift(app_data):
 
-    it  = 0
     app_args = app_data['app_args']
-   
-    runs = int(app_args.runs)
     timer = app_args.timer
 
     app = app_data['app']
     lib = app_data[app+'.so']
     pool_alloc = app_data['pool_alloc']
+
     if pool_alloc:
         lib.pool_init()
 
     if timer == True:
         t1 = time.time()
 
-    while it < runs :
-        call_pipe(app_data)
-        it += 1
+    call_pipe(app_data)
 
     if timer == True:
         t2 = time.time()

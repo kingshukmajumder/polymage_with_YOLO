@@ -1,3 +1,5 @@
+#this is the printer.py for sift
+
 import sys
 
 def print_line(to_file=None):
@@ -7,7 +9,7 @@ def print_line(to_file=None):
         print("--------------------------------------------------")
 
 def print_header():
-    print("Pyramid Blending")
+    print("SIFT")
 
 def print_usage():
     print("[main]: Usage: ")
@@ -24,7 +26,5 @@ def print_config(app_data):
     print("")
     print("[main]: mode        =", app_args.mode)
     print("[main]: image1       =", app_args.img_file1)
-    print("[main]: image2       =", app_args.img_file2)
     print("[main]: image size  =", rows, "x", cols)
-    print("[main]: nruns       =", app_args.runs)
     print_line()

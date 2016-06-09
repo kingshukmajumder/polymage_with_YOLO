@@ -1,3 +1,5 @@
+#This is the main.py for SIFT
+
 import numpy as np
 import time
 import sys
@@ -7,10 +9,10 @@ from __init__ import *
 from init import init_all
 from printer import print_header, print_config, print_line
 from builder import create_lib,build_pyramid
-from exec_pipe import pyramid_blending
+from exec_pipe import sift
 from app_tuner import auto_tune
 
-app = "pyramid_blend"
+app = "sift"
 
 def main():
     print_header()
@@ -26,8 +28,7 @@ def main():
         pass
     else:
         create_lib(build_pyramid, app, app_data)
-        pyramid_blending(app_data)
-
+        sift(app_data)
     return
 
 main()

@@ -702,6 +702,16 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
                                 cparam_map, cvar_map,
                                 scratch_map, prologue_stmts)
         return genc.CCos(cexpr)
+    if isinstance(exp, Tan):
+        cexpr = generate_c_expr(pipe, exp.arguments[0],
+                                cparam_map, cvar_map,
+                                scratch_map, prologue_stmts)
+        return genc.CTan(cexpr)
+    if isinstance(exp, ArcTan):
+        cexpr = generate_c_expr(pipe, exp.arguments[0],
+                                cparam_map, cvar_map,
+                                scratch_map, prologue_stmts)
+        return genc.CArcTan(cexpr)
     if isinstance(exp, Abs):
         cexpr = generate_c_expr(pipe, exp.arguments[0],
                                 cparam_map, cvar_map,

@@ -84,6 +84,13 @@ class cCos(Cos):
     def __init__(self, _expr):
         Cos.__init__(self, _expr)
 
+class cTan(Cos):
+    def __init__(self, _expr):
+        Tan.__init__(self, _expr)
+
+class cArcTan(Cos):
+    def __init__(self, _expr):
+        ArcTan.__init__(self, _expr)
 
 class cSqrt(Sqrt):
     def __init__(self, _expr):

@@ -1,3 +1,5 @@
+#this is the builder.py for sift
+
 from __init__ import *
 
 import sys
@@ -7,7 +9,7 @@ sys.path.insert(0, ROOT+'/apps/python/')
 
 from cpp_compiler import c_compile
 from loader import load_lib
-from polymage_blending import pyramid_blending
+from polymage_sift import sift
 
 from compiler import *
 from constructs import *
@@ -64,7 +66,7 @@ def build_pyramid(app_data):
     p_constraints = [ Condition(R, "==", rows), \
                       Condition(C, "==", cols) ]
     t_size = [16, 256]
-    g_size = 10
+    g_size = 1
     opts = []
     if app_data['early_free']:
         opts += ['early_free']
