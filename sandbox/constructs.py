@@ -1212,3 +1212,70 @@ class Reduction(Function):
         else:
             return self._name
 
+
+class Matrix(Image):
+    def __init__(self, _typ, _name, _dims):
+        _dims = [ Value.numericToValue(dim) for dim in _dims ]
+        # Have to evaluate if a  stronger constraint 
+        # can be imposed. Only AbstractExpression in parameters?
+        for dim in _dims:
+            assert(isinstance(dim, AbstractExpression))
+        self._dims = _dims
+        self._type = _typ
+        self._name = _name
+        intervals = []
+        variables = []
+        i = 0
+        for dim in self._dims:
+            # Just assuming it will not be more that UInt
+            intervals.append(Interval(UInt, 0, dim-1))
+            print("_" + _name + str(i))
+            variables.append(Variable(UInt, "_" + _name + str(i)))
+            i = i + 1
+        self._variables = variables
+        self._intervals = intervals
+        Function.__init__(self,(variables, intervals),_typ,_name)
+
+    @property
+    def dimensions(self):
+        return tuple(self._dims)
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def variables(self):
+        return self._variables
+
+    @property
+    def intervals(self):
+        return self._intervals
+
+    def __str__(self):
+        dim_str = ", ".join([dim.__str__() for dim in self._dims])
+        return self._name.__str__() + "(" + dim_str + ")"
+
+    @staticmethod
+    def multiply(mat1, mat2):
+        assert (isinstance(mat2, Matrix))
+
+        assert (mat1.type == mat2.type)
+
+        z = Variable(UInt,'p_1_1')
+        x = mat1.variables[0]
+        y = mat1.variables[1]
+        var_dom = ([x, y], mat1.intervals)
+
+        reduction_variables = mat1.variables.copy()
+        reduction_variables.append(z)
+
+        reduction_interval = mat1.intervals.copy()
+        reduction_interval.append(Interval(UInt,0,mat2._dims[0]-1))
+
+        red_dom = ([x,y,z],reduction_interval)
+        name = 'prod_' + mat1.name + '_' + mat2.name
+
+        prod_matrix = Reduction(var_dom, red_dom, mat1.type, name)
+        prod_matrix.defn = [Reduce(prod_matrix(x, y), mat1(x, z) * mat2(z, y), Op.Sum)]
+        return prod_matrix

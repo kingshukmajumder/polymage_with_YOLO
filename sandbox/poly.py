@@ -539,7 +539,7 @@ class PolyRep(object):
                          [ self.getVarName()  for i in range(0, dim) ]
 
         for comp in comp_map:
-            if (type(comp.func) == Function or type(comp.func) == Image):
+            if (type(comp.func) == Function or type(comp.func) == Image or type(comp.func) == Matrix):
                 self.extract_polyrep_from_function(comp, dim, schedule_names,
                                                    param_names, context_conds,
                                                    comp_map[comp]+1,
