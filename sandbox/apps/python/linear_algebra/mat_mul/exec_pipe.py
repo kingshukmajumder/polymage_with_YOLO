@@ -49,6 +49,9 @@ def matmul(app_data):
         call_pipe(app_data)
         it += 1
 
+    print('OUTPUT')
+    print(app_data['img_data']['OUT'])
+
     if timer == True:
         t2 = time.time()
 

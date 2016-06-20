@@ -515,7 +515,7 @@ class PolyRep(object):
                 if type(comp.func) == Reduction:
                     dim = max(dim, len(comp.func.reductionVariables))
                     dim = max(dim, len(comp.func.variables))
-                elif type(comp.func) == Function or type(comp.func) == Image:
+                elif type(comp.func) == Function or type(comp.func) == Image or type(comp.func) == Matrix:
                     dim = max(dim, len(comp.func.variables))
             return dim
 
