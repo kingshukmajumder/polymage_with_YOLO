@@ -1270,28 +1270,31 @@ class Matrix(Function):
 
 
     def __mul__(self, other):
-        # (mat1, mat2, dimension_to_contract=None):
         mat1 = self
         mat2 = other
         assert (isinstance(mat2, Matrix))
         assert (mat1.type == mat2.type)
-        mat1_dim = mat1.dimensions.__len__()
-        mat2_dim = mat2.dimensions.__len__()
+        assert (len(mat1.dimensions) == len(mat2.dimensions))
 
-        #assume the last dimension in the first dimension is the one to contract by default
-        # if(dimension_to_contract == None):
-        #     assert (mat1.dimensions[mat1_dim-1] == mat2.dimensions[0])
+        variables = []
+        intervals = []
 
-        z = Variable(UInt,'prod_var_' + mat1.name + '_' + mat2.name)
-        x = mat1.variables[0]
-        y = mat1.variables[1]
-        var_dom = ([x, y], mat1.intervals)
+        total_dimension_mat1 = mat1.dimensions.__len__()
+        variables = variables.__add__(mat1.variables[0:total_dimension_mat1 - 1])
+        intervals = intervals.__add__(mat1.intervals[0:total_dimension_mat1 - 1])
 
-        reduction_variables = mat1.variables.copy()
-        reduction_variables.append(z)
+        total_dimension_mat2 = mat2.dimensions.__len__()
+        variables = variables.__add__(mat2.variables[1:total_dimension_mat2])
+        intervals = intervals.__add__(mat2.intervals[1:total_dimension_mat2])
 
-        reduction_interval = mat1.intervals.copy()
-        reduction_interval.append(Interval(UInt,0,mat2._dims[0]-1))
+        var_dom = (variables, intervals)
+
+        z = Variable(UInt, 'prod_var_' + mat1.name + '_' + mat2.name)
+        x = variables[0]
+        y = variables[1]
+
+        reduction_interval = intervals.copy()
+        reduction_interval.append(mat2.intervals[0])
 
         red_dom = ([x,y,z],reduction_interval)
         name = 'redn_prod_' + mat1.name + '_' + mat2.name
@@ -1300,6 +1303,6 @@ class Matrix(Function):
         matmul_as_reduction.defn = [Reduce(matmul_as_reduction(x, y), mat1(x, z) * mat2(z, y), Op.Sum)]
 
         name = 'prod_' + mat1.name + '_' + mat2.name
-        prod_matrix = Matrix(mat1.type, name, mat1._dims, [x,y])
+        prod_matrix = Matrix(mat1.type, name, [mat1.dimensions[0],mat2.dimensions[total_dimension_mat2-1]], [x,y])
         prod_matrix.defn = [matmul_as_reduction(x,y)]
         return prod_matrix
