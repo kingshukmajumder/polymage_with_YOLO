@@ -613,7 +613,7 @@ def align_and_scale(pipeline, group):
         for p in comp_parts:
             # collect the references to solved parents
             refs = [ref for ref in p.refs \
-                          if not isinstance(ref.objectRef, Image) and \
+                          if not (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput)) and \
                              func_map[ref.objectRef] in solved_pars]
 
             # if the poly part makes no reference to any other compute object

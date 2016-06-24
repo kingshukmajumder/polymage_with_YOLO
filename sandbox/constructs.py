@@ -1066,7 +1066,7 @@ class Function(object):
 
     def clone(self):
         newBody = [ c.clone() for c in self._body ]
-        varDom = ( [ v.clone() for v in self._variables], 
+        varDom = ( [ v.clone() for v in self._variables],
                    [ d.clone() for d in self._varDomain] )
         _const = ""
         if self.is_const_func:
@@ -1074,7 +1074,7 @@ class Function(object):
         newFunc = Function(varDom, self._typ, self._name, _const)
         newFunc.defn = newBody
         return newFunc
-    
+
     def __str__(self):
         if (self._body):
             var_str = ", ".join([var.__str__() for var in self._variables])
@@ -1091,7 +1091,7 @@ class Function(object):
 class Image(Function):
     def __init__(self, _typ, _name, _dims):
         _dims = [ Value.numericToValue(dim) for dim in _dims ]
-        # Have to evaluate if a  stronger constraint 
+        # Have to evaluate if a  stronger constraint
         # can be imposed. Only AbstractExpression in parameters?
         for dim in _dims:
             assert(isinstance(dim, AbstractExpression))
@@ -1157,7 +1157,7 @@ class Reduction(Function):
     @property
     def reductionVariables(self):
         return self._redVariables
-        
+
     @property
     def defn(self):
         return self._body
@@ -1208,17 +1208,17 @@ class Reduction(Function):
             objs += interval.collect(objType)
         objs += self._default.collect(objType)
         return list(set(objs))
-   
+
     def clone(self):
         newBody = [ r.clone() for r in self._body ]
-        varDom = ( [ v.clone() for v in self._variables], 
+        varDom = ( [ v.clone() for v in self._variables],
                    [ d.clone() for d in self._varDomain] )
         redDom = ( [ r.clone() for r in self._redVariables],
                    [ d.clone() for d in self._redDomain] )
         newRed = Reduction(varDom, redDom, self._typ, self._name)
         newRed.defn = newBody
         newRed.default = self._default.clone()
-        return newRed    
+        return newRed
 
     def __str__(self):
         if (self._body):
@@ -1238,3 +1238,107 @@ class Reduction(Function):
         else:
             return self._name
 
+
+class Matrix(Function):
+    def __init__(self, _typ, _name, _dims, _var=None):
+        _dims = [ Value.numericToValue(dim) for dim in _dims ]
+        # Have to evaluate if a  stronger constraint
+        # can be imposed. Only AbstractExpression in parameters?
+        for dim in _dims:
+            assert(isinstance(dim, AbstractExpression))
+        self._dims = _dims
+        self._type = _typ
+        self._name = _name
+        intervals = []
+        variables = []
+        i = 0
+        if(_var == None):
+            for dim in self._dims:
+                # Just assuming it will not be more that UInt
+                intervals.append(Interval(UInt, 0, dim-1))
+                variables.append(Variable(UInt, "_" + _name + str(i)))
+                i = i + 1
+            self._variables = variables
+        else:
+            for dim in self._dims:
+                # Just assuming it will not be more that UInt
+                intervals.append(Interval(UInt, 0, dim - 1))
+            self._variables = _var
+            variables = _var
+        self._intervals = intervals
+        Function.__init__(self,(variables, intervals),_typ,_name)
+
+    @property
+    def dimensions(self):
+        return self._dims
+
+    @property
+    def isInput(self):
+        if self.defn == []:
+            return True
+        return False
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def variables(self):
+        return self._variables
+
+    @property
+    def intervals(self):
+        return self._intervals
+
+    def __str__(self):
+        dim_str = ", ".join([dim.__str__() for dim in self._dims])
+        return self._name.__str__() + "(" + dim_str + ")"
+
+
+    def __mul__(self, other):
+        mat1 = self
+        mat2 = other
+        assert (isinstance(mat2, Matrix))
+        assert (mat1.type == mat2.type)
+        assert (len(mat1.dimensions) == len(mat2.dimensions))
+
+        variables = []
+        intervals = []
+
+        total_dimension_mat1 = mat1.dimensions.__len__()
+        variables = variables.__add__(mat1.variables[0:total_dimension_mat1 - 1])
+        intervals = intervals.__add__(mat1.intervals[0:total_dimension_mat1 - 1])
+
+        total_dimension_mat2 = mat2.dimensions.__len__()
+        variables = variables.__add__(mat2.variables[1:total_dimension_mat2])
+        intervals = intervals.__add__(mat2.intervals[1:total_dimension_mat2])
+
+        var_dom = (variables, intervals)
+
+        z = Variable(UInt, 'prod_var_' + mat1.name + '_' + mat2.name)
+        x = variables[0]
+        y = variables[1]
+
+        reduction_interval = intervals.copy()
+        reduction_interval.append(mat2.intervals[0])
+
+        red_dom = ([x,y,z],reduction_interval)
+        name = 'redn_prod_' + mat1.name + '_' + mat2.name
+
+        matmul_as_reduction = Reduction(var_dom, red_dom, mat1.type, name)
+        matmul_as_reduction.defn = [Reduce(matmul_as_reduction(x, y), mat1(x, z) * mat2(z, y), Op.Sum)]
+
+        name = 'prod_' + mat1.name + '_' + mat2.name
+        prod_matrix = Matrix(mat1.type, name, [mat1.dimensions[0],mat2.dimensions[total_dimension_mat2-1]], [x,y])
+        prod_matrix.defn = [matmul_as_reduction(x,y)]
+        return prod_matrix
+
+    @staticmethod
+    def det(mat):
+        # TODO: Add implementation
+        return mat.dimensions[0]
+
+    @staticmethod
+    def inverse(mat):
+        # TODO: Add implementation, mostly GEMM call
+        return mat
