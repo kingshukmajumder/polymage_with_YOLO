@@ -1306,3 +1306,13 @@ class Matrix(Function):
         prod_matrix = Matrix(mat1.type, name, [mat1.dimensions[0],mat2.dimensions[total_dimension_mat2-1]], [x,y])
         prod_matrix.defn = [matmul_as_reduction(x,y)]
         return prod_matrix
+
+    @staticmethod
+    def det(mat):
+        # TODO: Add implementation
+        return mat.dimensions[0]
+
+    @staticmethod
+    def inverse(mat):
+        # TODO: Add implementation, mostly GEMM call
+        return mat

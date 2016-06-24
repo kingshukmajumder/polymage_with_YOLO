@@ -52,6 +52,15 @@ def mat_ops(pipe_data):
     # Element-wise division
     div = Matrix(Float, "div", [R, C], [x, y])
     div.defn = [transpose(x,y) / mat2(x,y)]
-    return div
+    #return div
 
+    # Determinant of a matrix
+    det = Matrix.det(div)
+    # return det
 
+    # Inverse of a matrix
+    inv = Matrix.inverse(div)
+    # return inv
+
+    new = div * mat1
+    return new
