@@ -2,9 +2,6 @@ import sys
 from common import clock, draw_str
 from structs import *
 from key_bindings import *
-import os
-
-os.system("python unsharp_mask/unsharp_numba_version.py")
 
 sys.path.insert(0, "harris_corner")
 sys.path.insert(0, "unsharp_mask")
