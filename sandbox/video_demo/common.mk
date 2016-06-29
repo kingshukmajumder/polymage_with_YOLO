@@ -13,10 +13,10 @@ LIB_SRC=../simple_pool_allocator.cpp
 
 all: $(APP)
 
-polymage: $(APP).so
+polymage: $(APP)_opt.so
 naive: $(APP)_naive.so
 
-$(APP).so: $(APP)_polymage.cpp
+$(APP)_opt.so: $(APP)_polymage.cpp
 	$(CXX) $(CXX_FLAGS) $(LIB_SRC) $< -o $@
 
 $(APP)_naive.so: $(APP)_naive.cpp
