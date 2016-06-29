@@ -51,21 +51,28 @@ def build_matmul(app_data):
 
     out_matmul = matmul(pipe_data)
     
-    R = pipe_data['R']
-    C = pipe_data['C']
+    R1 = pipe_data['R1']
+    C1 = pipe_data['C1']
+    R2 = pipe_data['R2']
+    C2 = pipe_data['C2']
 
     live_outs = [out_matmul]
     pipe_name = app_data['app']
 
-    rows = app_data['rows']
-    cols = app_data['cols']
+    rows1 = app_data['rows1']
+    cols1 = app_data['cols1']
+    rows2 = app_data['rows2']
+    cols2 = app_data['cols2']
 
     #rows = 256
     #cols = 256
 
-    p_estimates = [(R, rows), (C, cols)]
-    p_constraints = [ Condition(R, "==", rows), \
-                      Condition(C, "==", cols) ]
+    p_estimates = [(R1, rows1), (C1, cols1), (R2, rows2), (C2, cols2)]
+    p_constraints = [ Condition(R1, "==", rows1), \
+                      Condition(C1, "==", cols1), \
+                      Condition(R2, "==", rows2), \
+                      Condition(C2, "==", cols2), \
+                      Condition(C1, "==", R2)]
     t_size = [16, 16]
     g_size = 11
     opts = []
@@ -79,8 +86,8 @@ def build_matmul(app_data):
     pipe = buildPipeline(live_outs,
                          param_estimates=p_estimates,
                          param_constraints=p_constraints,
-                         tile_sizes = t_size,
-                         group_size = g_size,
+                         #tile_sizes = t_size,
+                         #group_size = g_size,
                          options = opts,
                          pipe_name = pipe_name)
 

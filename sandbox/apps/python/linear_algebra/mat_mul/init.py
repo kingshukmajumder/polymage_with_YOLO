@@ -12,9 +12,10 @@ def init_images(app_data):
     app_args = app_data['app_args']
 
     # input matrix: 
-    rows, cols = 256,256
-    mat1 = np.full((rows,cols),7)
-    mat2 = np.full((rows,cols),7)
+    rows1, cols1 = 1,256
+    rows2, cols2 = 256,128
+    mat1 = np.full((rows1,cols1),7)
+    mat2 = np.full((rows2,cols2),7)
 
     # convert to float image
     IN = np.array(mat1)
@@ -23,7 +24,7 @@ def init_images(app_data):
     IN1 = IN.astype(np.float32).ravel()
 
     # final output image
-    OUT = np.zeros((rows, cols), np.float32).ravel()
+    OUT = np.zeros((rows1, cols2), np.float32).ravel()
 
     img_data = {}
     img_data['IN'] = IN
@@ -31,8 +32,10 @@ def init_images(app_data):
     img_data['OUT'] = OUT
 
     app_data['img_data'] = img_data
-    app_data['rows'] = rows
-    app_data['cols'] = cols
+    app_data['rows1'] = rows1
+    app_data['cols1'] = cols1
+    app_data['rows2'] = rows2
+    app_data['cols2'] = cols2
 
     return
 
