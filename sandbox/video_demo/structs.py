@@ -72,7 +72,7 @@ class ModeType():
         if mode_id == ModeType.P_NAIVE:
             return '_naive'
         elif mode_id == ModeType.P_OPT:
-            return ''
+            return '_opt'
         else:
             return '_not_this_app_'
 
