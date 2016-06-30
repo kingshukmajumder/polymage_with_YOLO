@@ -1,13 +1,12 @@
-# 
-# To use GNU compilers instead of Intel's C++ compiler, comment the two lines 
-# below and uncomment the subsequent ones
-#
+ifdef $(shell which icpc)
+	CXX= g++
+	CXX_FLAGS= -fopenmp -march=native
+else
+	CXX= icpc
+	CXX_FLAGS= -qopenmp -xhost
+endif
 
-#CXX=icpc
-#CXX_FLAGS=-openmp -O3 -xhost -fPIC -shared
-
-CXX=g++
-CXX_FLAGS=-fopenmp -O3 -march=native -fPIC -shared
+CXX_FLAGS+= -O3 -fPIC -shared
 
 LIB_SRC=../simple_pool_allocator.cpp
 
