@@ -1,10 +1,11 @@
-ifdef $(shell which icpc)
-	CXX= g++
-	CXX_FLAGS= -fopenmp -march=native
-else
+ifneq (,$(shell which icpc))
 	CXX= icpc
 	CXX_FLAGS= -qopenmp -xhost
+else
+	CXX= g++
+	CXX_FLAGS= -fopenmp -march=native
 endif
+
 
 CXX_FLAGS+= -O3 -fPIC -shared
 
