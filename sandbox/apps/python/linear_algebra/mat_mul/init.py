@@ -12,7 +12,7 @@ def init_images(app_data):
     app_args = app_data['app_args']
 
     # input matrix: 
-    rows1, cols1 = 1,256
+    rows1, cols1 = 32,256
     rows2, cols2 = 256,128
     mat1 = np.full((rows1,cols1),7)
     mat2 = np.full((rows2,cols2),7)

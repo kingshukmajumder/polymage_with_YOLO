@@ -64,17 +64,14 @@ def build_matmul(app_data):
     rows2 = app_data['rows2']
     cols2 = app_data['cols2']
 
-    #rows = 256
-    #cols = 256
-
     p_estimates = [(R1, rows1), (C1, cols1), (R2, rows2), (C2, cols2)]
     p_constraints = [ Condition(R1, "==", rows1), \
                       Condition(C1, "==", cols1), \
                       Condition(R2, "==", rows2), \
                       Condition(C2, "==", cols2), \
-                      Condition(C1, "==", R2)]
+                    ]
     t_size = [16, 16]
-    g_size = 11
+    g_size = 1
     opts = []
     if app_data['early_free']:
         opts += ['early_free']
