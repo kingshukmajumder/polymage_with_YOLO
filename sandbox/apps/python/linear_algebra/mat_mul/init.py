@@ -21,7 +21,7 @@ def init_images(app_data):
     IN = np.array(mat1)
     IN1 = np.array(mat2)
     IN = IN.astype(np.float32).ravel()
-    IN1 = IN.astype(np.float32).ravel()
+    IN1 = IN1.astype(np.float32).ravel()
 
     # final output image
     OUT = np.zeros((rows1, cols2), np.float32).ravel()
