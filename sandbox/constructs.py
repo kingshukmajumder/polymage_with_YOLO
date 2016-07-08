@@ -1299,8 +1299,14 @@ class Matrix(Function):
         red_dom = ([x,y,z],reduction_interval)
         name = 'redn_prod_' + mat1.name + '_' + mat2.name
 
+        # NOTE: This is the constraint given to isl, as a promise, that
+        # the parameters of the dimension in which matrices are reduced
+        # are equal. The bounds check pass will fail if we don't supply
+        # this information.
+        cond = Condition(mat1.dimensions[1], "==", mat2.dimensions[0])
+
         matmul_as_reduction = Reduction(var_dom, red_dom, mat1.type, name)
-        matmul_as_reduction.defn = [Reduce(matmul_as_reduction(x, y), mat1(x, z) * mat2(z, y), Op.Sum)]
+        matmul_as_reduction.defn = [Case(cond, Reduce(matmul_as_reduction(x, y), mat1(x, z) * mat2(z, y), Op.Sum))]
 
         name = 'prod_' + mat1.name + '_' + mat2.name
         prod_matrix = Matrix(mat1.type, name, [mat1.dimensions[0],mat2.dimensions[total_dimension_mat2-1]], [x,y])
