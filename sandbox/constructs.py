@@ -210,6 +210,27 @@ class Abs(InbuiltFunction):
     def __str__(self):
         return "std::abs(" +  self._args[0].__str__() +  ")"
 
+class Mat_Inverse(InbuiltFunction):
+    def __init__(self, *_args):
+        InbuiltFunction.__init__(self, *_args)
+
+    def getType(self):
+        return getType(self._args[0])
+
+    def clone(self):
+        return Abs(self._args[0].clone())
+
+    def __str__(self):
+        function_call = "int *IPIV = new int["+self._args[0].__str__()+"+1];" + \
+            "int LWORK = "+self._args[0].__str__()+"*"+self._args[0].__str__()+";" + \
+            "double *WORK = new double[LWORK];" + \
+            "int INFO;" + \
+            "dgetrf_(&"+self._args[0].__str__()+",&"+self._args[0].__str__()+",A,&"+self._args[0].__str__()+",IPIV,&INFO);" + \
+            "dgetri_(&"+self._args[0].__str__()+",A,&"+self._args[0].__str__()+",IPIV,WORK,&LWORK,&INFO);" + \
+            "delete IPIV;" + \
+            "delete WORK"
+        return function_call
+
 class Cast(AbstractExpression):
     def __init__(self, _typ, _expr):
         _expr = Value.numericToValue(_expr)
@@ -1320,5 +1341,11 @@ class Matrix(Function):
 
     @staticmethod
     def inverse(mat):
-        # TODO: Add implementation, mostly GEMM call
-        return mat
+        assert(len(mat.dimensions) == 2)
+        cond = Condition(mat.dimensions[0], "==", mat.dimensions[1])
+        x = mat.variables[0]
+        y = mat.variables[1]
+        rows = mat.intervals[0]
+        inv = Function(([x,y],[rows,rows]),mat.type,"_inv")
+        inv.defn = [Case(cond, Mat_Inverse('Matrix', mat, mat.dimensions[0]))]
+        return inv

@@ -23,7 +23,7 @@ def mat_ops(pipe_data):
 
     mat1 = Matrix(Float, "mat1", [R, C], [x, y])
     mat2 = Matrix(Float, "mat3", [R, C], [x, y])
-
+    '''
     # Scalar multiplication
     scalar_mul = Matrix(Float, "scalar_mul", [R, C], [x, y])
     scalar_mul.defn = [mat1(x,y) * 10]
@@ -57,10 +57,10 @@ def mat_ops(pipe_data):
     # Determinant of a matrix
     det = Matrix.det(div)
     # return det
-
+    '''
     # Inverse of a matrix
-    inv = Matrix.inverse(div)
-    # return inv
+    inv = Matrix.inverse(mat1)
+    return inv
 
-    new = div * mat1
-    return new
+    #new = div * mat1
+    #return new

@@ -27,6 +27,7 @@ from fractions import gcd
 
 # TODO remove this at some point
 from expr_types import *
+from constructs import *
 
 class AbstractExpression(object):
     """ AbstractExpression class is a tree representation for expressions
@@ -305,9 +306,12 @@ class Xor(AbstractBinaryOpNode):
 class InbuiltFunction(AbstractExpression):
     def __init__(self, *_args):
         _args = [ Value.numericToValue(arg) for arg in _args] 
+        print('Arguments')
         for arg in _args:
+            if arg == 'Matrix':
+                break
             assert(isinstance(arg, AbstractExpression))
-        self._args = _args    
+        self._args = _args[1:]
 
     @property
     def arguments(self):
