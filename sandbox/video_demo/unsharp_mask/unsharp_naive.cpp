@@ -1,3 +1,11 @@
+/*
+ *
+ * ACACES 2016 Homework
+ *
+ * Modify pipeline_naive to make it run faster
+ *
+ *
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
