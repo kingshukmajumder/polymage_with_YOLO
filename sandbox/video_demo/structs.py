@@ -63,7 +63,7 @@ class ModeType():
     name[NONE] = ''
     name[CV2] = 'OpenCV'
     name[P_NAIVE] = 'ACACES Naive'
-    name[P_OPT] = 'PolyMage Opt'
+    name[P_OPT] = 'PolyOpt'
     name[NUMBA] = 'Numpy + Numba'
     name[PIL] = 'Pillow (PIL)'
 

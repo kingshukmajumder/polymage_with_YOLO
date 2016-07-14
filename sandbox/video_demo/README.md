@@ -53,8 +53,8 @@ or
 #### Toggle between app modes:
 * **' '** : OpenCV [1]
     * (_space_)
-* **'n'** : PolyMage **N**aive
-* **'o'** : PolyMage **O**pt
+* **'n'** : ACACES **N**aive
+* **'o'** : PolyOpt **O**pt
 * **'p'** : **P**IL [2]
 * **'j'** : Numba [2]
     *  Numpy **J**it
