@@ -43,6 +43,7 @@ class ModeType():
     P_OPT = 3
     NUMBA = 4
     PIL = 5
+    THEANO = 6
 
     modes_list = set([])
     modes_list.add(CV2)
@@ -50,6 +51,7 @@ class ModeType():
     modes_list.add(P_OPT)
     modes_list.add(NUMBA)
     modes_list.add(PIL)
+    modes_list.add(THEANO)
 
     all_modes = set([])
     all_modes.add(QUIT)
@@ -66,13 +68,14 @@ class ModeType():
     name[P_OPT] = 'PolyMage Opt'
     name[NUMBA] = 'Numpy + Numba'
     name[PIL] = 'Pillow (PIL)'
+    name[THEANO] = 'Theano'
 
     @staticmethod
     def get_file_suffix(mode_id):
         if mode_id == ModeType.P_NAIVE:
             return '_naive'
         elif mode_id == ModeType.P_OPT:
-            return ''
+            return '_opt'
         else:
             return '_not_this_app_'
 
@@ -442,10 +445,10 @@ class VideoProcessor:
     def _gen_output_frame(self, frame):
         app = self.apps_map[self.current_app]
 
-        label_start = (0, 0)
+        """label_start = (0, 0)
         label_end = (700, 100)
         colour = (255, 255, 255)
-        #rectangle(frame, label_start, label_end, colour, thickness=cv.CV_FILLED)
+        rectangle(frame, label_start, label_end, colour, thickness=cv.CV_FILLED)"""
 
         # frame process time
         text1_start = (40, 40)
