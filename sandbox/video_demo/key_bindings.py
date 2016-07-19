@@ -10,6 +10,7 @@ def generate_key_bindings(def_modes_map):
     P_OPT = ModeType.P_OPT
     NUMBA = ModeType.NUMBA
     PIL = ModeType.PIL
+    THEANO = ModeType.THEANO
 
     NONE_APP = AppType.NONE
     UNSHARP = AppType.UNSHARP
@@ -25,6 +26,7 @@ def generate_key_bindings(def_modes_map):
     c = ord(' ') # CV2
     p = ord('p') # PIL
     j = ord('j') # NUMBA (jit)
+    t = ord('t') # Theano
 
     mode_keys = {}
     mode_keys[QUIT] = q
@@ -34,6 +36,7 @@ def generate_key_bindings(def_modes_map):
     mode_keys[CV2] = c
     mode_keys[PIL] = p
     mode_keys[NUMBA] = j
+    mode_keys[THEANO] = t
 
     # app chars
     esc = ord('\x1b')
@@ -100,4 +103,3 @@ def generate_key_bindings(def_modes_map):
     key_bind[0] = all_keys
 
     return key_bind
-
