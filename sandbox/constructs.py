@@ -30,6 +30,7 @@ import logging
 import targetc as genc
 import math
 import copy
+from debug_log import *
 
 logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s")
 
@@ -1074,6 +1075,29 @@ class TStencil(Function):
         # dimensionality of the Function
         self._ndims = len(self._variables)
 
+    def _create_safe_bounds(self):
+        # fix the bounds by applying bounds check for ghost region
+        safe_domains = []
+        domain = self.domain
+        kernel_sizes = get_valid_kernel_sizes(self.kernel)
+        origins = self.origin
+        for i in range(len(self.domain)):
+            autolog(header("building restriction for domain"))
+            interval = domain[i]
+            size = kernel_sizes[i]
+            origin = origins[i]
+
+            new_lower_bound = interval.lowerBound + origin
+            new_upper_bound = interval.upperBound - (size - origin - 1)
+
+            safe_interval = Interval(interval.typ,
+                                     new_lower_bound,
+                                     new_upper_bound)
+            safe_domains.append(safe_interval)
+
+        self._var_domain = safe_domains
+
+
     @property
     def defn(self):
         return self._body
@@ -1091,6 +1115,8 @@ class TStencil(Function):
         self._body = _def
 
         assert(self._stencil.iter_vars == self._variables)
+
+        self._create_safe_bounds()
 
     def getObjects(self, objType):
         objs = []
