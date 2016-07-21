@@ -256,6 +256,7 @@ _pluto_header_str = \
 
 
     struct remapping {
+        int nstmts;
         PlutoMatrix **stmt_inv_matrices; 
         int **stmt_divs;
     };
@@ -292,13 +293,60 @@ class Remapping(object):
         self._pluto_ffi = pluto_ffi
         self._raw_ptr = raw_ptr
 
+        self._nstmts = self._raw_ptr.nstmts
+        
+        self._stmt_divs = []
+        self._inv_matrices = []
+
+        # import pudb
+        # pudb.set_trace()
+
+        for i in range(self._raw_ptr.nstmts):
+            inv_matrix = self._raw_ptr.stmt_inv_matrices[i]
+            stmt_div = self._raw_ptr.stmt_divs[i]
+
+            nrows = inv_matrix.nrows
+            ncols = inv_matrix.ncols
+
+            inv_matrix = [[inv_matrix.val[r][c] for c in range(ncols)]
+                        for r in range(nrows)]
+            self._inv_matrices.append(inv_matrix)
+
+            self._inv_matrices.append(inv_matrix)
+            stmt_div = [stmt_div[r] for r in range(nrows)] 
+            self._stmt_divs.append(stmt_div)
+
     @property
     def inv_matrices(self):
-        return self._raw_ptr.stmt_inv_matrices
+        """
+        Returns the inverse matrix corresponding to a transformation.
+        The matrix is the affine transform that takes points in the
+        range to the points in the domain
+        """
+        return self._inv_matrices
 
     @property
     def divs(self):
-        return self._raw_ptr.stmt_divs
+        """
+        Returns the common demnomiator of all elements per row.
+        length of divs = #rows of inv_matrix
+        """
+        return self._stmt_divs
+
+    @property
+    def nstmts(self):
+        return self._nstmts
+
+    def __str__(self):
+        import numpy as np
+        str = ""
+        for i in range(self.nstmts):
+            matrix = self._inv_matrices[i]
+            div = self._stmt_divs[i]
+            str +=  "inverse matrix:\n%s \n\n div:\n%s" % (np.array(matrix), 
+                    np.array(div))
+            str += "\n===\n"
+        return str
 
 class PlutoOptions(object):
     """
@@ -309,10 +357,10 @@ class PlutoOptions(object):
     def __init__(self, pluto_ffi, raw_options_ptr):
         self._pluto_ffi = pluto_ffi
         self._raw_ptr = raw_options_ptr
-        self._raw_ptr.parallel = 1
-        self._raw_ptr.partlbtile = 1
-        self._raw_ptr.lbtile = 1
-        self._raw_ptr.tile = 1
+        self._raw_ptr.parallel = 0
+        self._raw_ptr.partlbtile = 0
+        self._raw_ptr.lbtile = 0
+        self._raw_ptr.tile = 0
 
     @property
     def partlbtile(self):
@@ -413,11 +461,11 @@ class LibPluto(object):
         remapping_ptr = self.ffi.new("Remapping **");
 
         self.so.pluto_get_remapping_str(domains_str, dependences_str, 
-                remapping_ptr)
+                remapping_ptr, options._raw_ptr)
 
         remapping = Remapping(self, remapping_ptr[0])
 
-        return schedulem, remapping
+        return schedule, remapping
 
 
 # This is somewhat of a hack, just to run a "test" if this file is
@@ -429,8 +477,20 @@ if __name__ == "__main__":
     ctx = isl.Context.alloc()
     opts = pluto.create_options()
     opts.partlbtile = 1
-    domains = isl.UnionSet.read_from_str(ctx, "[p_0, p_1, p_2, p_3, p_4, p_5, p_7] -> { S_1[i0, i1] : i0 >= 0 and i0 <= p_0 and i1 >= 0 and i1 <= p_3 and p_2 >= 0; S_0[i0] : i0 >= 0 and i0 <= p_0}")
-    deps = isl.UnionMap.read_from_str(ctx, "[p_0, p_1, p_2, p_3, p_4, p_5, p_7] -> { S_0[i0] -> S_1[o0, o1] : (exists (e0 = [(p_7)/8]: 8o1 = -p_5 + p_7 + 8192i0 - 8192o0 and 8e0 = p_7 and i0 >= 0 and o0 <= p_0 and 8192o0 >= -8p_3 - p_5 + p_7 + 8192i0 and 8192o0 <= -p_5 + p_7 + 8192i0 and p_2 >= 0 and o0 >= 1 + i0)); S_1[i0, i1] -> S_0[o0] : (exists (e0 = [(p_1)/8], e1 = [(p_4)/8], e2 = [(-p_1 + p_7)/8184]: 8192o0 = p_5 - p_7 + 8192i0 + 8i1 and 8e0 = p_1 and 8e1 = p_4 and 8184e2 = -p_1 + p_7 and i1 >= 0 and 8i1 <= 8192p_0 - p_5 + p_7 - 8192i0 and 8184i1 >= 1024 + 1024p_1 - 1023p_5 - p_7 - 8380416i0 and p_2 >= 0 and p_7 <= -1 + p_5 and 8i1 >= 1 + 8p_3 + p_4 - p_5 - 8192i0 and i1 <= p_3 and i0 >= 0 and 8i1 >= 8192 - p_5 + p_7))}")
+    
+    domains = isl.UnionSet.read_from_str(ctx, ("[N] -> "
+        "{ S_0[i0, i1, i2] :"
+        "i0 >= 0 and i0 <= N and "
+        "i1 >= 0 and i1 <= N "
+        "and i2 >= 0 and i2 <= N}"))
+
+
+    deps = isl.UnionMap.read_from_str(ctx, 
+        ("[N] -> { S_0[i0, i1, i2] -> S_0[i0, i1, i2+ 1] } : "
+        "0 <= i0 <= N and 0 <= i1 <= N and 0 <= i2 <= N }"))
+
+    # domains = isl.UnionSet.read_from_str(ctx, "[p_0, p_1, p_2, p_3, p_4, p_5, p_7] -> { S_1[i0, i1] : i0 >= 0 and i0 <= p_0 and i1 >= 0 and i1 <= p_3 and p_2 >= 0; S_0[i0] : i0 >= 0 and i0 <= p_0}")
+    # deps = isl.UnionMap.read_from_str(ctx, "[p_0, p_1, p_2, p_3, p_4, p_5, p_7] -> { S_0[i0] -> S_1[o0, o1] : (exists (e0 = [(p_7)/8]: 8o1 = -p_5 + p_7 + 8192i0 - 8192o0 and 8e0 = p_7 and i0 >= 0 and o0 <= p_0 and 8192o0 >= -8p_3 - p_5 + p_7 + 8192i0 and 8192o0 <= -p_5 + p_7 + 8192i0 and p_2 >= 0 and o0 >= 1 + i0)); S_1[i0, i1] -> S_0[o0] : (exists (e0 = [(p_1)/8], e1 = [(p_4)/8], e2 = [(-p_1 + p_7)/8184]: 8192o0 = p_5 - p_7 + 8192i0 + 8i1 and 8e0 = p_1 and 8e1 = p_4 and 8184e2 = -p_1 + p_7 and i1 >= 0 and 8i1 <= 8192p_0 - p_5 + p_7 - 8192i0 and 8184i1 >= 1024 + 1024p_1 - 1023p_5 - p_7 - 8380416i0 and p_2 >= 0 and p_7 <= -1 + p_5 and 8i1 >= 1 + 8p_3 + p_4 - p_5 - 8192i0 and i1 <= p_3 and i0 >= 0 and 8i1 >= 8192 - p_5 + p_7))}")
     sched, remapping = pluto.schedule(ctx, domains, deps, opts)
     print("schedule: %s" % sched)
     print("remapping: %s" % remapping)
