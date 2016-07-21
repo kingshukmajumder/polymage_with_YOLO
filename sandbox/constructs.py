@@ -572,20 +572,25 @@ class Stencil(AbstractExpression):
         return objs
 
     def clone(self):
-        iter_vars = [ i.clone() for i in self._iteration_vars]
+        iter_vars = [i.clone() for i in self._iteration_vars]
         return Stencil(self._input_fn, iter_vars, self._kernel, self._origin)
+
     @property
     def input_func(self):
         return self._input_fn
+
     @property
     def iter_vars(self):
         return self._iteration_vars
+
     @property
     def kernel(self):
         return self._kernel
+
     @property
     def sizes(self):
         return self._sizes
+
     @property
     def origin(self):
         return self._origin
@@ -1087,9 +1092,6 @@ class TStencil(Function):
 
         assert(self._stencil.iter_vars == self._variables)
 
-
-
-
     def getObjects(self, objType):
         objs = []
         for interval in self._var_domain:
@@ -1134,18 +1136,13 @@ class TStencil(Function):
     def timesteps(self):
         return self._timesteps
 
-    # @property
-    # def name(self):
-    #     return self._name
-    #
-    # @property
-    # def domain(self):
-    #     return self._var_domain
-    #
-    # @property
-    # def variables(self):
-    #     return self._variables
+    @property
+    def kernel(self):
+        return self._stencil.kernel
 
+    @property
+    def origin(self):
+        return self._stencil.origin
     @property
     def ndims(self):
         return self._ndims
