@@ -22,8 +22,8 @@ def test_t_stencil_1d():
     img = Image(Float, "input", [R+1])
 
     stencil = Stencil(img, [x], [-1, 3, 1])
-    tstencil = TStencil(([x], [xrow]), Int, "S_1", T)
-    tstencil.defn = (stencil + 3)
+    tstencil = TStencil(([x], [xrow]), Float, "out", T)
+    tstencil.defn = (stencil + 10*img(x))
 
 
     groups = [tstencil]
@@ -61,8 +61,8 @@ def test_t_stencil_2d():
     xrow = Interval(Int, 1, R)
     xcol = Interval(Int, 1, C)
 
-    yrow = Interval(Int, 2, R-1)
-    ycol = Interval(Int, 2, C-1)
+    yrow = Interval(Int, 2, R-2)
+    ycol = Interval(Int, 2, C-2)
 
     bounds = Condition(x, '>=', 1) & Condition(x, '<=', R) & \
             Condition(y, '>=', 1) & Condition(y, '<=', C)
@@ -70,17 +70,18 @@ def test_t_stencil_2d():
     img = Image(Float, "input", [R+1, C+1])
 
     kernel = [[1, 1, 1], [1, 0, 1], [1, 1, 1]]
-    stencil = TStencil(img, ([x, y], [xrow, xcol]), kernel, "S_1", None, T)
+    #stencil = TStencil(img, ([x, y], [xrow, xcol]), kernel, "S_1", None, T)
 
-    print(stencil)
-
+    stencil = Stencil(img, [x, y], kernel)
+    tstencil = TStencil(([x, y], [yrow, ycol]), Float, "out", T)
+    tstencil.defn = (stencil + 10*img(x, y))
 
     groups = [stencil]
 
     p_est = [ (R, 1024), (C, 1024) ]
 
     # build the pipeline
-    pipeline = buildPipeline([stencil],
+    pipeline = buildPipeline([tstencil],
                              grouping = groups,
                              param_estimates = p_est,
                              pipe_name = "blur")

@@ -430,9 +430,6 @@ def remap_storage_for_comps(comps, storage_class_map, schedule,
             allocated_arrays += [array_count + 1 + i for i in range(deficit)]
             array_count += deficit
 
-        print("-"*10)
-        print(allocated_arrays)
-
         # Values of the storage_map dictionary are used as keys somewhere else
         # (in array_writers dictionary). This forces us to have tuples that
         # are of hashable type, and not lists.
@@ -636,9 +633,15 @@ def create_physical_arrays(pipeline):
     # collect users for each array created
     array_writers = {}
     for comp in pipeline.comps:
-        if comp.array not in array_writers:
-            array_writers[comp.array] = []
-        array_writers[comp.array].append(comp)
+        arrays = [comp.array]
+        if comp.is_tstencil_type:
+            # map for tuple as well tuple elements
+            arrays.append(comp.array[0])
+            arrays.append(comp.array[1])
+        for array in arrays:
+            if array not in array_writers:
+                array_writers[array] = []
+            array_writers[array].append(comp)
 
     return array_writers
 

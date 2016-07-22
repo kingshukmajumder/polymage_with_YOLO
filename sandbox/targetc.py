@@ -173,7 +173,7 @@ class AbstractCgenObject(object):
 
 class TypeNameMap(object):
     _type_name_map = { "void": "void",
-                       "uint64":"unsigned long", "int32": "long",
+                       "uint64":"unsigned long", "int64": "long",
                        "uint32":"unsigned int", "int32":"int",
                        "uint16":"unsigned short", "int16":"short",
                        "uint8":"unsigned char", "int8":"char",

@@ -317,6 +317,7 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
     arglist = []
     scratch_map = {}
     for i in range(0, dom_len):
+        # TODO: *** remap variables here ***
         acc_expr = variables[i] - \
                   poly_part.comp.func.domain[i].lowerBound
         if acc_scratch[i]:
@@ -871,28 +872,57 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
         if comp.is_image_typ:
             continue
 
-        # full array
+        def allocate_c_array(array):
+            if not array in alloc_arrays and not array in out_arrays:
+                # add a comment line with a list of comps using this
+                # array.
+                comment = add_users_as_comment(pipeline, array)
+                body.add(comment)
+                # add a line print comment
+                # printf = genc.c_printf("\"%d\\n\", __LINE__")
+                # body.add(genc.CStatement(printf))
+
+                array_ptr = genc.CPointer(array.typ, 1)
+                array_decl = genc.CDeclaration(array_ptr, array)
+                body.add(array_decl)
+                array.allocate_contiguous(body, pooled)
+                alloc_arrays.append(array)
+
+                # add another line print comment
+                # body.add(genc.CStatement(printf))
+
+            return
+
+        arrays = []
+        # full arrays
         if comp.is_liveout:
             array = comp.array
-            # do not allocate output arrays
+            # alloc intermediate liveouts
             if not comp.is_output:
-                if not array in alloc_arrays and not array in out_arrays:
-                    # add a comment line with a list of comps using this
-                    # array.
-                    comment = add_users_as_comment(pipeline, array)
-                    body.add(comment)
-                    # add a line print comment
-                    # printf = genc.c_printf("\"%d\\n\", __LINE__")
-                    # body.add(genc.CStatement(printf))
+                if comp.is_tstencil_type:
+                    arrays = array
+                else:
+                    arrays = [array]
+            # do not allocate output arrays
+            else:
+                # allocate tstencil temporary buffer anyway
+                if comp.is_tstencil_type:
+                    arrays = [array[0]]
+        for array in arrays:
+            allocate_c_array(array)
 
-                    array_ptr = genc.CPointer(array.typ, 1)
-                    array_decl = genc.CDeclaration(array_ptr, array)
-                    body.add(array_decl)
-                    array.allocate_contiguous(body, pooled)
-                    alloc_arrays.append(array)
-
-                    # add another line print comment
-                    # body.add(genc.CStatement(printf))
+        if comp.is_tstencil_type:
+            # create a modulo-2 ping-pong buffer for TStencil, using a CPointer
+            # that can hold two pointers to arrays
+            unique_name = "_tbuf_"+str(id(comp.func.name))
+            array_typ = genc.TypeMap.convert(comp.func.typ)
+            type_name = str(array_typ)
+            buf_decl = type_name + " *" + unique_name + "[2]"
+            body.add(genc.CStatement(buf_decl))
+            buf0_assign = unique_name+"[0] = "+comp.array[0].name
+            buf1_assign = unique_name+"[1] = "+comp.array[1].name
+            body.add(genc.CStatement(buf0_assign))
+            body.add(genc.CStatement(buf1_assign))
 
         if comp in g.polyRep.poly_parts:
             continue
