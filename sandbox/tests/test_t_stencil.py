@@ -15,23 +15,18 @@ def test_t_stencil_1d():
     T = Parameter(Int, "T")
     x = Variable(Int, "x")
 
-    xrow = Interval(Int, 0, R)
+    xrow = Interval(Int, 0, R-1)
 
-    bounds = Condition(x, '>=', 1) & Condition(x, '<=', R)
-
-    img = Image(Float, "input", [R+1])
+    img = Image(Float, "input", [R])
 
     stencil = Stencil(img, [x], [1, 1, -1, 3, 1])
     tstencil = TStencil(([x], [xrow]), Int, "out", T)
     tstencil.defn = (stencil + 10*img(x))
 
-    groups = [tstencil]
-
     p_est = [ (R, 1024)]
 
     # build the pipeline
     pipeline = buildPipeline([tstencil],
-                             grouping = groups,
                              param_estimates = p_est,
                              pipe_name = "tstencil_1d")
 
@@ -49,7 +44,7 @@ def test_t_stencil_1d():
     c_file.close()
 
 
-def __test_t_stencil_2d():
+def test_t_stencil_2d():
 
     R = Parameter(Int, "R")
     C = Parameter(Int, "C")
@@ -57,33 +52,22 @@ def __test_t_stencil_2d():
     x = Variable(Int, "x")
     y = Variable(Int, "y")
 
-    xrow = Interval(Int, 1, R)
-    xcol = Interval(Int, 1, C)
+    row = Interval(Int, 0, R-1)
+    col = Interval(Int, 0, C-1)
 
-    yrow = Interval(Int, 2, R-2)
-    ycol = Interval(Int, 2, C-2)
-
-    bounds = Condition(x, '>=', 1) & Condition(x, '<=', R) & \
-            Condition(y, '>=', 1) & Condition(y, '<=', C)
-
-    img = Image(Float, "input", [R+1, C+1])
+    img = Image(Float, "input", [R, C])
 
     kernel = [[1, 1, 1], [1, 0, 1], [1, 1, 1]]
-    #stencil = TStencil(img, ([x, y], [xrow, xcol]), kernel, "S_1", None, T)
-
     stencil = Stencil(img, [x, y], kernel)
-    tstencil = TStencil(([x, y], [yrow, ycol]), Float, "out", T)
+    tstencil = TStencil(([x, y], [row, col]), Float, "out", T)
     tstencil.defn = (stencil + 10*img(x, y))
-
-    groups = [stencil]
 
     p_est = [ (R, 1024), (C, 1024) ]
 
     # build the pipeline
     pipeline = buildPipeline([tstencil],
-                             grouping = groups,
                              param_estimates = p_est,
-                             pipe_name = "blur")
+                             pipe_name = "tstencil_2d")
 
     filename = "test_t_stencil_2d_graph"
     dot_file = filename+".dot"
