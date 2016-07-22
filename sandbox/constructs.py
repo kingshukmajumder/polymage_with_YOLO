@@ -1062,6 +1062,9 @@ class TStencil(Function):
 
         self.time_var = Variable(Int, "time")
         self._body = None
+        # hold on to the original definition, because it is lost
+        # during macro expansion
+        self._original_def = None
 
         assert(len(_var_domain[0]) == len(_var_domain[1]))
         for i in range(0, len(_var_domain[0])):
@@ -1074,29 +1077,35 @@ class TStencil(Function):
 
         # dimensionality of the Function
         self._ndims = len(self._variables)
-
-    def _create_safe_bounds(self):
-        # fix the bounds by applying bounds check for ghost region
-        safe_domains = []
+    
+    def create_ghost_zone_condition(self):
         domain = self.domain
         kernel_sizes = get_valid_kernel_sizes(self.kernel)
         origins = self.origin
+        variables = self.variables
+
+        conditions = []
         for i in range(len(self.domain)):
             autolog(header("building restriction for domain"))
             interval = domain[i]
             size = kernel_sizes[i]
             origin = origins[i]
+            variable = self.variables[i]
 
             new_lower_bound = interval.lowerBound + origin
             new_upper_bound = interval.upperBound - (size - origin - 1)
 
-            safe_interval = Interval(interval.typ,
-                                     new_lower_bound,
-                                     new_upper_bound)
-            safe_domains.append(safe_interval)
+            conditions.append(Condition(new_lower_bound, '<=', variable))
+            conditions.append(Condition(variable, '<=', new_upper_bound))
 
-        self._var_domain = safe_domains
+        assert(len(conditions) > 0, "no conditions formed, there are no "
+                                    "variables given for this TStencil")
 
+        collected_cond = conditions[0]
+        for c in conditions[1:]:
+            collected_cond = collected_cond & c
+
+        return collected_cond
 
     @property
     def defn(self):
@@ -1106,26 +1115,31 @@ class TStencil(Function):
     def defn(self, _def):
         assert(self._body == None)
         assert isinstance(_def, AbstractExpression)
+        self._original_def = _def.clone()
 
         stencil_list = _def.collect(Stencil)
         print("stencil_list: %s" % stencil_list)
 
         assert(len(stencil_list) == 1, "Expected exactly 1 stencil in defn.")
         self._stencil = stencil_list[0]
-        self._body = _def
+        
+        ghost_zone_cond = self.create_ghost_zone_condition()
+        self._body = [Case(ghost_zone_cond, _def)]
 
         assert(self._stencil.iter_vars == self._variables)
 
-        self._create_safe_bounds()
 
     def getObjects(self, objType):
         objs = []
         for interval in self._var_domain:
             objs += interval.collect(objType)
 
-        # it is important for us to clone the body before we
-        # macro expand so that we don't lose our original body
-        objs += self._body.clone().macro_expand().collect(objType)
+        assert(len(self._body) == 1, "TStencil must have only one Case "
+                                     "which is auto-generated for ghost "
+                                     "zone padding")
+        for case in self._body:
+            objs += case.collect(objType)
+        
 
         return list(set(objs))
 
@@ -1145,7 +1159,6 @@ class TStencil(Function):
     def clone(self):
         variables = [v.clone() for v in self._variables]
         var_domain = [v.clone() for v in self._var_domain]
-        new_body = self._body.clone()
 
         timesteps = None
         if isinstance(self._timesteps, Variable):
@@ -1155,7 +1168,13 @@ class TStencil(Function):
 
         new_tstencil = TStencil((variables, var_domain), self._typ, self._name,
                                 timesteps)
-        new_tstencil.defn = new_body
+
+        assert(len(self._body) == 1, "Tstencil case only have 1 case "
+                                    "which is auto generated for "
+                                    "ghost zone padding")
+
+        body_case = self._body[0]
+        new_tstencil.defn = self._original_def
 
         return new_tstencil
     @property
@@ -1299,7 +1318,7 @@ class TStencil(Function):
                                                 self._stencil._kernel)
 
     def get_indexing_expr(self):
-        return self._body.macro_expand()
+        return self._body[0]
 
     def __call__(self, *args):
         assert(len(args) == len(self._variables))

@@ -709,8 +709,10 @@ class PolyRep(object):
 
         autolog(header("constraints union on creation") + str(constraints_union), TAG)
 
+
         # --- add constraints from kernel dimensions ---
         # --- these are required to leave space for ghost zones ---
+
 
        #  safe_domains = []
        #  domain = comp.func.domain
@@ -767,20 +769,12 @@ class PolyRep(object):
                                       schedule_names, param_names,
                                       context_conds, level_no,
                                       param_constraints):
-
-
-
-        # add the time dimension to the tstencil
-        # schedule_names.append("time")
-
-        # self.poly_doms[comp] = \
-        #    self.extract_poly_dom_from_comp(comp, param_constraints)
         # ------
         # EXTRACT POLY DOM FROM COMP
 
         tstencil = comp.func
         tstencil_vars = [tstencil.time_var] + tstencil.variables
-        tstencil_domains = [Interval(Int, 0, tstencil.timesteps)]+ tstencil.domain
+        tstencil_domains = [Interval(Int, 0, tstencil.timesteps - 1)] + tstencil.domain
 
         # HACK: we need to forcibly add a variable for our schedule name of "time"
         schedule_names.append(self.getVarName())
@@ -812,6 +806,7 @@ class PolyRep(object):
         param_conds = self.format_param_constraints(param_constraints, params)
         [param_ineqs, param_eqs] = format_conjunct_constraints(param_conds)
         dom_map = add_constraints(dom_map, param_ineqs, param_eqs) 
+
         poly_dom = PolyDomain(dom_map.domain(), comp)
         id_ = isl_alloc_id_for(self.ctx, comp.func.name, poly_dom)
         poly_dom.set_tuple_id(id_)
@@ -827,35 +822,58 @@ class PolyRep(object):
                                             tstencil_domains,
                                             schedule_names, param_names,
                                             context_conds)
-
-
-        # add Tstencil kernel constraints
-        # sched_map = self.add_tstenil_kernel_constraints(sched_map, comp)
-
        # ------
        # CREATE POLY PARTS FOR T STENCIL
         sched_m = sched_map.copy()
         align, scale = \
             aln_scl.default_align_and_scale(sched_m, max_dim, shift=True)
 
-        tstencil_expr = tstencil.get_indexing_expr()
-        assert(isinstance(tstencil_expr, AbstractExpression))
-        poly_part = PolyPart(sched_m, tstencil_expr,
-                             None, comp,
-                             align, scale, level_no-1)
+        #$ tstencil_expr = tstencil.get_indexing_expr()
+        # poly_part = PolyPart(sched_m, tstencil_expr,
+        #                      None, comp,
+        #                      align, scale, level_no-1)
 
         # Add names to domain and range
-        id_domain = isl_alloc_id_for(self.ctx, comp.func.name, poly_part)
-        isl_set_id_user(id_domain, poly_part)
+        # id_domain = isl_alloc_id_for(self.ctx, comp.func.name, poly_part)
+        # isl_set_id_user(id_domain, poly_part)
 
-        poly_part.sched = poly_part.sched.set_tuple_id(isl.dim_type.in_, id_domain)
+        # poly_part.sched = poly_part.sched.set_tuple_id(isl.dim_type.in_, id_domain)
 
-        autolog("sched_map before adding kernel constraints:\n%s" % poly_part.sched, TAG)
+        # self.poly_parts[comp] = []
+        # self.poly_parts[comp].append(poly_part)
+
+
+        # ---------
+        # CREATE POLY PARTS FOR TSTENCIL FROM FN DEFINITION
 
         self.poly_parts[comp] = []
-        self.poly_parts[comp].append(poly_part)
-        print(">>>(TSTENCIL) poly parts: \n%s" % "\n\t".join(map(str, self.poly_parts[comp])))
-
+        case = tstencil.defn[0]
+        split_conjuncts = case.condition.split_to_conjuncts()
+        for conjunct in split_conjuncts:
+            # If the condition is non-affine it is stored as a
+            # predicate for the expression. An affine condition
+            # is added to the domain.
+            affine = True
+            for cond in conjunct:
+                affine = affine and \
+                         isAffine(cond.lhs) and isAffine(cond.rhs)
+            if(affine):
+                [conjunct_ineqs, conjunct_eqs] = \
+                    format_conjunct_constraints(conjunct)
+                sched_m = add_constraints(sched_m,
+                                          conjunct_ineqs,
+                                          conjunct_eqs)
+                parts = self.make_poly_parts(sched_m, case.expression,
+                                             None, comp,
+                                             align, scale, level_no)
+                for part in parts:
+                    self.poly_parts[comp].append(part)
+            else:
+                parts = self.make_poly_parts(sched_m, case.expression,
+                                             case.condition, comp,
+                                             align, scale, level_no)
+                for part in parts:
+                    self.poly_parts[comp].append(part)
 
     def create_sched_space(self, variables, domains,
                            schedule_names, param_names, context_conds):

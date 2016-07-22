@@ -44,7 +44,7 @@ def test_t_stencil_1d():
     c_file.close()
 
 
-def test_t_stencil_2d():
+def __test_t_stencil_2d():
 
     R = Parameter(Int, "R")
     C = Parameter(Int, "C")

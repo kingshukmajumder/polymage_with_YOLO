@@ -90,6 +90,7 @@ def check_refs(child_group, parent_group):
                 deps += extract_value_dependence(child_part, ref, parent_dom)
                 LOG(log_level, "ref : "+str(ref))
             for dep in deps:
+                # import pudb; pudb.set_trace()
                 diff = dep.rel.range().subtract(parent_dom.dom_set)
                 # ***
                 ref_str = "referenced    = "+str(dep.rel.range())
