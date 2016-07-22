@@ -65,7 +65,8 @@ def v_cycle(app_data):
                 else:
                     in_func = smooth_p1[l][t-1]
 
-                smooth_p1[l][t] = w_jacobi(in_func, f, l, fname, app_data)
+                t1 = Parameter(Int, "nuc")
+                smooth_p1[l][t] = w_jacobi(in_func, f, l, fname, app_data, t1)
 
             return smooth_p1[l][nuc-1]
         ###################################################
@@ -80,7 +81,8 @@ def v_cycle(app_data):
                 else:
                     in_func = smooth_p1[l][t-1]
 
-                smooth_p1[l][t] = w_jacobi(in_func, f, l, fname, app_data)
+                t2 = Parameter(Int, "nu1")
+                smooth_p1[l][t] = w_jacobi(in_func, f, l, fname, app_data, t2)
 
             if nu1 <= 0:
                 smooth_out = v
@@ -136,8 +138,8 @@ def v_cycle(app_data):
                     in_func = ec[l]
                 else:
                     in_func = smooth_p2[l][t-1]
-
-                smooth_p2[l][t] = w_jacobi(in_func, f, l, fname, app_data)
+                t3 = Parameter(Int,"nu2")
+                smooth_p2[l][t] = w_jacobi(in_func, f, l, fname, app_data, t3)
  
             return smooth_p2[l][nu2-1]
     #######################################################

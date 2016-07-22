@@ -30,6 +30,7 @@ import logging
 import targetc as genc
 import math
 import copy
+from debug_log import *
 
 logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s")
 
@@ -41,7 +42,7 @@ class Max(InbuiltFunction):
             _rightTyp = getType(_rightExpr)
             assert _leftTyp == _rightTyp
         InbuiltFunction.__init__(self, _leftExpr, _rightExpr)
-   
+
     def getType(self):
         return getType(self._args[0])
 
@@ -52,7 +53,7 @@ class Max(InbuiltFunction):
     def __str__(self):
         leftStr = self._args[0].__str__()
         rightStr = self._args[1].__str__()
-        return "isl_max(" + leftStr + ", " + rightStr + ")"  
+        return "isl_max(" + leftStr + ", " + rightStr + ")"
 
 class Min(InbuiltFunction):
     def __init__(self, _leftExpr, _rightExpr, typeCheck = True):
@@ -61,7 +62,7 @@ class Min(InbuiltFunction):
             _rightTyp = getType(_rightExpr)
             assert _leftTyp == _rightTyp
         InbuiltFunction.__init__(self, _leftExpr, _rightExpr)
-    
+
     def getType(self):
         return getType(self._args[0])
 
@@ -162,7 +163,7 @@ class Sin(InbuiltFunction):
 class Cos(InbuiltFunction):
     def __init__(self, _expr):
         InbuiltFunction.__init__(self, _expr)
-    
+
     def getType(self):
         return Double
 
@@ -175,7 +176,7 @@ class Cos(InbuiltFunction):
 class Sqrt(InbuiltFunction):
     def __init__(self, _expr):
         InbuiltFunction.__init__(self, _expr)
-    
+
     def getType(self):
         return Double
 
@@ -188,7 +189,7 @@ class Sqrt(InbuiltFunction):
 class Sqrtf(InbuiltFunction):
     def __init__(self, _expr):
         InbuiltFunction.__init__(self, _expr)
-    
+
     def getType(self):
         return Float
 
@@ -214,10 +215,10 @@ class Abs(InbuiltFunction):
 class Cast(AbstractExpression):
     def __init__(self, _typ, _expr):
         _expr = Value.numericToValue(_expr)
-        assert _typ in [Float, Double, 
-                        UChar, Char, 
-                        UShort, Short, 
-                        UInt, Int, 
+        assert _typ in [Float, Double,
+                        UChar, Char,
+                        UShort, Short,
+                        UInt, Int,
                         ULong, Long]
         assert(isinstance(_expr, AbstractExpression))
         self._typ  = _typ
@@ -227,7 +228,7 @@ class Cast(AbstractExpression):
     def typ(self):
         return self._typ
 
-    @property 
+    @property
     def expression(self):
         return self._expr
 
@@ -240,7 +241,7 @@ class Cast(AbstractExpression):
 
     def clone(self):
         return Cast(self._typ, self._expr.clone())
-    
+
     def replace_refs(self, ref_to_expr_map):
         self._expr = substitute_refs(self._expr, ref_to_expr_map)
 
@@ -270,12 +271,12 @@ class Select(AbstractExpression):
         self._false_expr = _false_expr
         self._cond = _cond
 
-    @property 
+    @property
     def condition(self):
         return self._cond
     @property
     def true_expression(self):
-        return self._true_expr     
+        return self._true_expr
     @property
     def false_expression(self):
         return self._false_expr
@@ -293,7 +294,7 @@ class Select(AbstractExpression):
         self._cond.replace_refs(ref_to_expr_map)
         self._true_expr = substitute_refs(self._true_expr, ref_to_expr_map)
         self._false_expr = substitute_refs(self._false_expr, ref_to_expr_map)
-    
+
     def clone(self):
         return Select(self._cond.clone(),
                       self._true_expr.clone(),
@@ -316,19 +317,19 @@ class Max(Select):
                                         _leftExpr, _rightExpr, typeCheck)
 class Min(Select):
     def __init__(self, _leftExpr, _rightExpr, typeCheck = True):
-        Select.__init__(self, Condition(_leftExpr, '<', _rightExpr), 
+        Select.__init__(self, Condition(_leftExpr, '<', _rightExpr),
                                         _leftExpr, _rightExpr, typeCheck)
 
 class Variable(AbstractExpression):
     def __init__(self, _typ, _name):
         self._name    = _name
         self._typ     = _typ
-    
-    @property 
+
+    @property
     def name(self):
         return self._name
 
-    @property 
+    @property
     def typ(self):
         return self._typ
 
@@ -346,7 +347,7 @@ class Variable(AbstractExpression):
 class Parameter(Variable):
     def __init__(self, _typ, _name):
         Variable.__init__(self, _typ, _name)
-    
+
 class Interval(object):
     def __init__(self, _typ,  _lb, _ub):
         _lb   = Value.numericToValue(_lb)
@@ -356,14 +357,14 @@ class Interval(object):
         self._lb   = _lb
         self._ub   = _ub
         self._typ  = _typ
- 
-    @property 
+
+    @property
     def lowerBound(self):
         return self._lb
-    @property 
+    @property
     def upperBound(self):
         return self._ub
-    @property 
+    @property
     def typ(self):
         return self._typ
 
@@ -375,8 +376,8 @@ class Interval(object):
         return list(set(objs))
 
     def clone(self):
-        return Interval(self._typ, 
-                        self._lb.clone(), 
+        return Interval(self._typ,
+                        self._lb.clone(),
                         self._ub.clone())
 
     def __str__(self):
@@ -495,8 +496,8 @@ def is_valid_kernel(kernel, num_dimensions):
                                          closure_data["total_dim"],
                                          parent_chain))
         return True
-    
-    
+
+
     # workaround for python scope madness - scopes get absolutely
     # _wrecked_ in a recursive inner function, so just pass around
     # a closure like the C people we are
@@ -515,7 +516,7 @@ def get_valid_kernel_sizes(kernel):
     ----------
     kernel: nested list
     a valid N-dimensional kernel for computation
-    
+
     Returns
     -------
     sizes: list
@@ -572,20 +573,25 @@ class Stencil(AbstractExpression):
         return objs
 
     def clone(self):
-        iter_vars = [ i.clone() for i in self._iteration_vars]
+        iter_vars = [i.clone() for i in self._iteration_vars]
         return Stencil(self._input_fn, iter_vars, self._kernel, self._origin)
+
     @property
     def input_func(self):
         return self._input_fn
+
     @property
     def iter_vars(self):
         return self._iteration_vars
+
     @property
     def kernel(self):
         return self._kernel
+
     @property
     def sizes(self):
         return self._sizes
+
     @property
     def origin(self):
         return self._origin
@@ -701,261 +707,6 @@ class Stencil(AbstractExpression):
 
         return index_expr
 
-
-class TStencil(object):
-    def __init__(self, _var_domain, _typ, _name, _timesteps=1):
-
-        # check_type(_input_fn, Function)
-        # self._input_fn = _input_fn
-        assert(isinstance(_name, str))
-        self._name = _name
-        assert isinstance(_timesteps, (Int, Parameter))
-        self._timesteps = _timesteps
-
-        self._typ = _typ
-        self.time_var = Variable(Int, "time")
-        self._body = None
-
-        print(_var_domain)
-        assert(len(_var_domain[0]) == len(_var_domain[1]))
-        for i in range(0, len(_var_domain[0])):
-            assert(isinstance(_var_domain[0][i], Variable))
-            assert(isinstance(_var_domain[1][i], Interval))
-            assert(_var_domain[0][i].typ == _var_domain[1][i].typ)
-
-        self._variables = _var_domain[0]
-        self._var_domain = _var_domain[1]
-
-        # dimensionality of the Function
-        self._ndims = len(self._variables)
-
-        # assert is_valid_kernel(_kernel, len(self._var_domain))
-        # self._kernel = _kernel
-
-        # size = get_valid_kernel_sizes(self._kernel)
-        # if _origin is None:
-        #     self._origin = list(map(lambda x: math.floor(x / 2), size))
-        # else:
-        #     self._origin = _origin
-
-    @property
-    def defn(self):
-        return self._body
-
-    @defn.setter
-    def defn(self, _def):
-        assert(self._body == None)
-        assert isinstance(_def, AbstractExpression)
-
-        stencil_list = _def.collect(Stencil)
-        print("stencil_list: %s" % stencil_list)
-
-        assert(len(stencil_list) == 1, "Expected exactly 1 stencil in defn.")
-        self._stencil = stencil_list[0]
-        self._body = _def
-
-        # print("stencil: %s\nbody: %s" % (self._stencil, self._body))
-        # make sure that the stencil and the Tstencil have the
-        # same number of Variables
-        assert(self._stencil.iter_vars == self._variables)
-
-
-
-
-    def getObjects(self, objType):
-        objs = []
-        for interval in self._var_domain:
-            objs += interval.collect(objType)
-
-        # it is important for us to clone the body before we 
-        # macro expand so that we don't lose our original body
-        objs += self._body.clone().macro_expand().collect(objType)
-
-        return list(set(objs))
-
-    def __str__(self):
-        size = get_valid_kernel_sizes(self._kernel)
-        return ("Stencil object (%s)"
-                "\n\tdomain: %s"
-                "\n\tdimensions: %s"
-                "\n\ttimesteps: %s"
-                "\n\torigin: %s"
-                "\n\tkernel: %s" % (self._name,
-                                    list(map(str, self._var_domain)),
-                                    size, self._timesteps,
-                                    self._stencil._origin,
-                                    self._stencil._kernel))
-
-    def clone(self):
-        variables = [v.clone() for v in self._variables]
-        var_domain = [v.clone() for v in self._var_domain]
-        new_body = self._body.clone()
-
-        timesteps = None
-        if isinstance(self._timesteps, Variable):
-            timesteps = self._timesteps.clone()
-        else:
-            timesteps = self.timesteps
-
-        new_tstencil = TStencil((variables, var_domain), self._typ, self._name,
-                                timesteps)
-        new_tstencil.defn = new_body
-
-        return new_tstencil
-    @property
-    def timesteps(self):
-        return self._timesteps
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def domain(self):
-        return self._var_domain
-
-    @property
-    def variables(self):
-        return self._variables
-
-    @property
-    def ndims(self):
-        return self._ndims
-
-    @property
-    def typ(self):
-        return self._typ
-
-    def hasBoundedIntegerDomain(self):
-        boundedIntegerDomain = True
-        for var_dom in self._var_domain:
-            if isinstance(var_dom, Interval):
-                if(not isAffine(var_dom.lowerBound) or
-                   not isAffine(var_dom.upperBound)):
-                    boundedIntegerDomain = False
-                    break
-            else:
-                boundedIntegerDomain = False
-                break
-
-        return boundedIntegerDomain
-
-    @staticmethod
-    def _build_indexed_kernel_recur(origin_vector, iter_var_indeces, chosen_indeces,
-                                    to_choose_sizes, subkernel):
-        """
-        Builds a list [([variable index], kernel weight] by taking the kernel,
-        origin offset, and list of variables as parameters
-
-        NOTE:
-        Stencil and Tstencil have different implementations because they
-        need different outputs. Stencil needs indexing *expressions*, while
-        TStencil needs indexing *indeces*.
-
-        Parameters
-        ----------
-        origin_vector: [Int]
-        the relative origin of the kernel with respect to the top left.
-        If origin is (0, 0), then the kernel is built up as
-        (x, y) to (x + w, y + h), since (0, 0) is taken to be the origin of the
-        kernel.
-        Usually, the origin is (w/2, h/2, ...)
-
-        iter_var_indeces: [Int]
-        Integers that index the iteration axes variables
-        Usually x -> 0, y -> 1, z -> 2, ...
-
-        chosen_indeces: [(var: Variable, origin_delta: Int)]
-        pass "frozen" indeces that have already been chosen. The function
-        is now expected to generate all sub-indeces for these chosen
-        indeces. One way to look at this is that chosen_indeces represents the
-        chosen vector components of the final index.
-
-        to_choose_sizes: [Int]
-        Represents the sizes of the indeces that are yet to be chosen. Hence,
-        these need to be looped over to pick _every_ index in these indeces.
-
-        subkernel: [Int]^k (k-nested list)
-        the remaining sub-space of the kernel that is yet to be chosen. Must
-        be indexed from to_choose_sizes.
-
-        Invariants
-        ----------
-        total kernel dimension: K
-        subkernel dimension: K_s
-
-        dim(origin_vector) = K
-        len(iter_vars) = K
-        len(to_choose_sizes) + len(chosen_indeces) = K
-
-        K_s = len(to_choose_sizes)
-
-        Returns
-        -------
-        indexed_kernel: [(Total_Index, kernel_weight: Int)]
-            type Total_Index = [(var_index: Int, origin_delta: Int)]
-
-        indexed_kernel: [
-                (
-                    [(var: Variable, origin_delta: Int)],
-                    kernel_weight : Int
-                )
-            ]
-
-        Returns a list of tuples
-        Each tuple has a list of indexing expressions, used to index the
-        Kernel outermost to innerpost, along with the corresponding kernel
-        weight at that index.
-
-        total index allows us to index the kernel exactly.
-        For example, given total index [(0, 0), (1, -1), (2, 1)]
-        we know that:
-            0th variable is at the local origin
-            1st variable is at (-1) from the origin along its axis
-            2nd variable is at (2) from the origin along its axis.
-        NOTE: we label variables from outside to inside.
-              Outermost: 0
-              Innermost: n - 1
-        """
-        chosen = []
-        for i in range(to_choose_sizes[0]):
-            index_wrt_origin = (iter_var_indeces[0], (i - origin_vector[0]))
-
-            if len(to_choose_sizes) == 1:
-                # TODO: time (or) time - 1?
-                chosen.append((chosen_indeces + [index_wrt_origin],
-                              subkernel[i]))
-            else:
-                indexed = \
-                    TStencil._build_indexed_kernel_recur(origin_vector[1:],
-                                                        iter_var_indeces[1:],
-                                                        chosen_indeces +
-                                                        [index_wrt_origin],
-                                                        to_choose_sizes[1:],
-                                                        subkernel[i])
-                chosen.extend(indexed)
-        return chosen
-
-    def _build_indexed_kernel(self):
-        assert is_valid_kernel(self._stencil._kernel,
-                               num_dimensions=len(self.variables))
-        kernel_sizes = get_valid_kernel_sizes(self._stencil._kernel)
-        iter_var_indeces = range(0, len(self._variables))
-        return self._build_indexed_kernel_recur(self._stencil._origin,
-                                                iter_var_indeces,
-                                                [],
-                                                kernel_sizes,
-                                                self._stencil._kernel)
-
-    def get_indexing_expr(self):
-        return self._body.macro_expand()
-
-    def __call__(self, *args):
-        assert(len(args) == len(self._variables))
-        for arg in args:
-            arg = Value.numericToValue(arg)
-            assert(isinstance(arg, AbstractExpression))
-        return Reference(self, args)
 
 class Condition(object):
     def __init__(self, _left, _cond, _right):
@@ -1300,6 +1051,263 @@ class Function(object):
                    "(" + var_str + ") = " + case_str + '\n'
         else:
             return self._name
+
+
+class TStencil(Function):
+    def __init__(self, _var_domain, _typ, _name, _timesteps=1, _bounds=None):
+        Function.__init__(self, _var_domain, _typ, _name)
+
+        assert isinstance(_timesteps, (Int, Parameter))
+        self._timesteps = _timesteps
+
+        self.time_var = Variable(Int, "time")
+        self._body = None
+
+        assert(len(_var_domain[0]) == len(_var_domain[1]))
+        for i in range(0, len(_var_domain[0])):
+            assert(isinstance(_var_domain[0][i], Variable))
+            assert(isinstance(_var_domain[1][i], Interval))
+            assert(_var_domain[0][i].typ == _var_domain[1][i].typ)
+
+        self._variables = _var_domain[0]
+        self._var_domain = _var_domain[1]
+
+        # dimensionality of the Function
+        self._ndims = len(self._variables)
+
+    def _create_safe_bounds(self):
+        # fix the bounds by applying bounds check for ghost region
+        safe_domains = []
+        domain = self.domain
+        kernel_sizes = get_valid_kernel_sizes(self.kernel)
+        origins = self.origin
+        for i in range(len(self.domain)):
+            autolog(header("building restriction for domain"))
+            interval = domain[i]
+            size = kernel_sizes[i]
+            origin = origins[i]
+
+            new_lower_bound = interval.lowerBound + origin
+            new_upper_bound = interval.upperBound - (size - origin - 1)
+
+            safe_interval = Interval(interval.typ,
+                                     new_lower_bound,
+                                     new_upper_bound)
+            safe_domains.append(safe_interval)
+
+        self._var_domain = safe_domains
+
+
+    @property
+    def defn(self):
+        return self._body
+
+    @defn.setter
+    def defn(self, _def):
+        assert(self._body == None)
+        assert isinstance(_def, AbstractExpression)
+
+        stencil_list = _def.collect(Stencil)
+        print("stencil_list: %s" % stencil_list)
+
+        assert(len(stencil_list) == 1, "Expected exactly 1 stencil in defn.")
+        self._stencil = stencil_list[0]
+        self._body = _def
+
+        assert(self._stencil.iter_vars == self._variables)
+
+        self._create_safe_bounds()
+
+    def getObjects(self, objType):
+        objs = []
+        for interval in self._var_domain:
+            objs += interval.collect(objType)
+
+        # it is important for us to clone the body before we
+        # macro expand so that we don't lose our original body
+        objs += self._body.clone().macro_expand().collect(objType)
+
+        return list(set(objs))
+
+    def __str__(self):
+        size = get_valid_kernel_sizes(self._stencil._kernel)
+        return ("Stencil object (%s)"
+                "\n\tdomain: %s"
+                "\n\tdimensions: %s"
+                "\n\ttimesteps: %s"
+                "\n\torigin: %s"
+                "\n\tkernel: %s" % (self._name,
+                                    list(map(str, self._var_domain)),
+                                    size, self._timesteps,
+                                    self._stencil._origin,
+                                    self._stencil._kernel))
+
+    def clone(self):
+        variables = [v.clone() for v in self._variables]
+        var_domain = [v.clone() for v in self._var_domain]
+        new_body = self._body.clone()
+
+        timesteps = None
+        if isinstance(self._timesteps, Variable):
+            timesteps = self._timesteps.clone()
+        else:
+            timesteps = self.timesteps
+
+        new_tstencil = TStencil((variables, var_domain), self._typ, self._name,
+                                timesteps)
+        new_tstencil.defn = new_body
+
+        return new_tstencil
+    @property
+    def timesteps(self):
+        return self._timesteps
+
+    @property
+    def kernel(self):
+        return self._stencil.kernel
+
+    @property
+    def origin(self):
+        return self._stencil.origin
+    @property
+    def ndims(self):
+        return self._ndims
+
+    @property
+    def typ(self):
+        return self._typ
+
+    def hasBoundedIntegerDomain(self):
+        boundedIntegerDomain = True
+        for var_dom in self._var_domain:
+            if isinstance(var_dom, Interval):
+                if(not isAffine(var_dom.lowerBound) or
+                   not isAffine(var_dom.upperBound)):
+                    boundedIntegerDomain = False
+                    break
+            else:
+                boundedIntegerDomain = False
+                break
+
+        return boundedIntegerDomain
+
+    @staticmethod
+    def _build_indexed_kernel_recur(origin_vector, iter_var_indeces, chosen_indeces,
+                                    to_choose_sizes, subkernel):
+        """
+        Builds a list [([variable index], kernel weight] by taking the kernel,
+        origin offset, and list of variables as parameters
+
+        NOTE:
+        Stencil and Tstencil have different implementations because they
+        need different outputs. Stencil needs indexing *expressions*, while
+        TStencil needs indexing *indeces*.
+
+        Parameters
+        ----------
+        origin_vector: [Int]
+        the relative origin of the kernel with respect to the top left.
+        If origin is (0, 0), then the kernel is built up as
+        (x, y) to (x + w, y + h), since (0, 0) is taken to be the origin of the
+        kernel.
+        Usually, the origin is (w/2, h/2, ...)
+
+        iter_var_indeces: [Int]
+        Integers that index the iteration axes variables
+        Usually x -> 0, y -> 1, z -> 2, ...
+
+        chosen_indeces: [(var: Variable, origin_delta: Int)]
+        pass "frozen" indeces that have already been chosen. The function
+        is now expected to generate all sub-indeces for these chosen
+        indeces. One way to look at this is that chosen_indeces represents the
+        chosen vector components of the final index.
+
+        to_choose_sizes: [Int]
+        Represents the sizes of the indeces that are yet to be chosen. Hence,
+        these need to be looped over to pick _every_ index in these indeces.
+
+        subkernel: [Int]^k (k-nested list)
+        the remaining sub-space of the kernel that is yet to be chosen. Must
+        be indexed from to_choose_sizes.
+
+        Invariants
+        ----------
+        total kernel dimension: K
+        subkernel dimension: K_s
+
+        dim(origin_vector) = K
+        len(iter_vars) = K
+        len(to_choose_sizes) + len(chosen_indeces) = K
+
+        K_s = len(to_choose_sizes)
+
+        Returns
+        -------
+        indexed_kernel: [(Total_Index, kernel_weight: Int)]
+            type Total_Index = [(var_index: Int, origin_delta: Int)]
+
+        indexed_kernel: [
+                (
+                    [(var: Variable, origin_delta: Int)],
+                    kernel_weight : Int
+                )
+            ]
+
+        Returns a list of tuples
+        Each tuple has a list of indexing expressions, used to index the
+        Kernel outermost to innerpost, along with the corresponding kernel
+        weight at that index.
+
+        total index allows us to index the kernel exactly.
+        For example, given total index [(0, 0), (1, -1), (2, 1)]
+        we know that:
+            0th variable is at the local origin
+            1st variable is at (-1) from the origin along its axis
+            2nd variable is at (2) from the origin along its axis.
+        NOTE: we label variables from outside to inside.
+              Outermost: 0
+              Innermost: n - 1
+        """
+        chosen = []
+        for i in range(to_choose_sizes[0]):
+            index_wrt_origin = (iter_var_indeces[0], (i - origin_vector[0]))
+
+            if len(to_choose_sizes) == 1:
+                # TODO: time (or) time - 1?
+                chosen.append((chosen_indeces + [index_wrt_origin],
+                              subkernel[i]))
+            else:
+                indexed = \
+                    TStencil._build_indexed_kernel_recur(origin_vector[1:],
+                                                        iter_var_indeces[1:],
+                                                        chosen_indeces +
+                                                        [index_wrt_origin],
+                                                        to_choose_sizes[1:],
+                                                        subkernel[i])
+                chosen.extend(indexed)
+        return chosen
+
+    def _build_indexed_kernel(self):
+        assert is_valid_kernel(self._stencil._kernel,
+                               num_dimensions=len(self.variables))
+        kernel_sizes = get_valid_kernel_sizes(self._stencil._kernel)
+        iter_var_indeces = range(0, len(self._variables))
+        return self._build_indexed_kernel_recur(self._stencil._origin,
+                                                iter_var_indeces,
+                                                [],
+                                                kernel_sizes,
+                                                self._stencil._kernel)
+
+    def get_indexing_expr(self):
+        return self._body.macro_expand()
+
+    def __call__(self, *args):
+        assert(len(args) == len(self._variables))
+        for arg in args:
+            arg = Value.numericToValue(arg)
+            assert(isinstance(arg, AbstractExpression))
+        return Reference(self, args)
+
 
 class Image(Function):
     def __init__(self, _typ, _name, _dims):

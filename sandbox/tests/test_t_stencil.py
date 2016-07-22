@@ -15,16 +15,15 @@ def test_t_stencil_1d():
     T = Parameter(Int, "T")
     x = Variable(Int, "x")
 
-    xrow = Interval(Int, 2, R - 2)
+    xrow = Interval(Int, 0, R)
 
     bounds = Condition(x, '>=', 1) & Condition(x, '<=', R)
 
     img = Image(Float, "input", [R+1])
 
-    stencil = Stencil(img, [x], [-1, 3, 1])
-    tstencil = TStencil(([x], [xrow]), Float, "out", T)
+    stencil = Stencil(img, [x], [1, 1, -1, 3, 1])
+    tstencil = TStencil(([x], [xrow]), Int, "out", T)
     tstencil.defn = (stencil + 10*img(x))
-
 
     groups = [tstencil]
 
@@ -50,7 +49,7 @@ def test_t_stencil_1d():
     c_file.close()
 
 
-def test_t_stencil_2d():
+def __test_t_stencil_2d():
 
     R = Parameter(Int, "R")
     C = Parameter(Int, "C")

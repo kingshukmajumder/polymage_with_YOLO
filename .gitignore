@@ -97,3 +97,4 @@ sandbox/tests/*.cpp
 sandbox/tests/*.dot
 sandbox/tests/*.png
 
+.idea/*
