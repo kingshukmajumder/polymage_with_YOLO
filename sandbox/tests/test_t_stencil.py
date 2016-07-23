@@ -43,8 +43,9 @@ def test_t_stencil_1d():
     c_file.write(pipeline.generate_code().__str__())
     c_file.close()
 
+    return
 
-def __test_t_stencil_2d():
+def test_t_stencil_2d():
 
     R = Parameter(Int, "R")
     C = Parameter(Int, "C")
@@ -82,3 +83,49 @@ def __test_t_stencil_2d():
     c_file.write(pipeline.generate_code().__str__())
     c_file.close()
 
+    return
+
+def test_t_stencil_3d():
+
+    P = Parameter(Int, "P")
+    R = Parameter(Int, "R")
+    C = Parameter(Int, "C")
+    T = Parameter(Int, "T")
+    x = Variable(Int, "x")
+    y = Variable(Int, "y")
+    z = Variable(Int, "z")
+
+    plane = Interval(Int, 0, P-1)
+    row = Interval(Int, 0, R-1)
+    col = Interval(Int, 0, C-1)
+
+    img = Image(Float, "input", [P, R, C])
+
+    kernel = [[[0, 1, 0], [1, 0, 1], [0, 1, 0]],
+              [[1, 0, 1], [0, 1, 0], [1, 0, 1]],
+              [[0, 1, 0], [1, 0, 1], [0, 1, 0]]]
+    stencil = Stencil(img, [x, y, z], kernel)
+    tstencil = TStencil(([x, y, z], [plane, row, col]), Float, "out", T)
+    tstencil.defn = (stencil + 10*img(x, y, z))
+
+    p_est = [ (P, 1024), (R, 1024), (C, 1024) ]
+
+    # build the pipeline
+    pipeline = buildPipeline([tstencil],
+                             param_estimates = p_est,
+                             pipe_name = "tstencil_3d")
+
+    filename = "test_t_stencil_3d_graph"
+    dot_file = filename+".dot"
+    png_file = filename+".png"
+    g = pipeline.pipeline_graph
+    g.write(filename+".dot")
+    dotty_str = "dot -Tpng "+dot_file+" -o "+png_file
+    subprocess.check_output(dotty_str, shell=True)
+
+    filename = 'test_t_stencil_3d.cpp'
+    c_file = open(filename, 'w')
+    c_file.write(pipeline.generate_code().__str__())
+    c_file.close()
+
+    return
