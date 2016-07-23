@@ -266,6 +266,32 @@ def cvariables_from_variables_and_sched(node, variables, sched):
             isl_expr_to_cgen(node.user_get_expr().get_op_arg(dim+1))
     return cvar_map
 
+def get_time_indexing_expr(tstencil_comp, cvar_map, offset=0):
+    #import pudb; pudb.set_trace();
+    time_coeff, denom = tstencil_comp.func.time_indexing_coeff
+    vars = [tstencil_comp.func.time_var] + tstencil_comp.func.variables
+    cvars = [cvar_map[var] for var in vars]
+
+    assert(len(time_coeff) == len(cvars))
+
+    time_indexing_terms = []
+    for t, coeff in enumerate(time_coeff):
+        if coeff == 0: continue
+        term = cvars[t] * coeff
+        time_indexing_terms.append(term)
+
+    assert len(time_indexing_terms) > 0
+    time_indexing_expr = 0
+    for term in time_indexing_terms:
+        time_indexing_expr = time_indexing_expr + term
+
+    if offset:
+        time_indexing_expr = time_indexing_expr + offset
+    time_indexing_expr = (time_indexing_expr // denom) % 2
+
+    return time_indexing_expr
+
+
 # TESTME
 def generate_c_naive_from_accumlate_node(pipe, polyrep, node, body,
                                          cparam_map):
@@ -301,7 +327,14 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
     part_id = node.user_get_expr().get_op_arg(0).get_id()
     poly_part = isl_get_id_user(part_id)
     variables = poly_part.comp.func.variables
+    domain = poly_part.comp.func.domain
+
     dom_len = len(variables)
+
+    if poly_part.comp.is_tstencil_type:
+        variables = [poly_part.comp.func.time_var] + variables
+        domain = [Interval(Int, 0, poly_part.comp.func._timesteps)] + domain
+        dom_len += 1
 
     # Get the mapping to the array
     array = poly_part.comp.array
@@ -321,7 +354,7 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
     for i in range(0, dom_len):
         # TODO: *** remap variables here ***
         acc_expr = variables[i] - \
-                  poly_part.comp.func.domain[i].lowerBound
+                  domain[i].lowerBound
         if acc_scratch[i]:
             var_name = variables[i].name
             #dim = \
@@ -349,12 +382,31 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
             generate_c_expr(pipe, acc_expr, cparam_map, cvar_map, scratch_map)
         arglist.append(c_expr)
     prologue = []
+    #import pudb; pudb.set_trace();
     expr = generate_c_expr(pipe, poly_part.expr,
                            cparam_map, cvar_map,
                            scratch_map, prologue_stmts = prologue)
     if isinstance(array, tuple):  # TStencil array tuple
         array = array[1]  # Second entry is the output of TStencil
-    assign = genc.CAssign(array(*arglist), expr)
+
+    if poly_part.comp.is_tstencil_type:
+        # assign with time dimension added to both LHS [array(*arglist)] and
+        # RHS [expr]
+        time_indexing_expr = get_time_indexing_expr(poly_part.comp, cvar_map, 1)
+        time_indexing_str = "["+str(time_indexing_expr)+"]"
+        space_indexing_expr = \
+            genc.CArrayAccess.build_contiguous_access_expr(array.dims, arglist)
+        space_indexing_str = "["+str(space_indexing_expr)+"]"
+
+        lhs_access = time_indexing_str + space_indexing_str
+        lhs_array = "_tbuf_"+str(id(poly_part.comp.func.name))
+        lhs = lhs_array + lhs_access
+
+        rhs = expr
+
+        assign = genc.CStatement(str(lhs) + " = " + str(rhs))
+    else:
+        assign = genc.CAssign(array(*arglist), expr)
 
     if prologue is not None:
         for s in prologue:
@@ -618,28 +670,34 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
         if isinstance(array, tuple):  # TStencil array tuple
             array = array[1]  # Second entry is the output of TStencil
 
-        array_access = array(*args)
+        # this Reference is being assigned to a Tstencil,
+        # and it is a self reference of the form
+        # f(t + 1, ...) = f(t)....
+        # we know this because the function
+        # owned by the stencil(owner_comp.func.stencil.input_func)
+        # is the same one being referenced (exp.objectRef)
+        owner_comp = pipe.func_map[exp.owner]
+        #import pudb; pudb.set_trace()
+        if owner_comp.is_tstencil_type and \
+           owner_comp.func._stencil.input_func.name == exp.objectRef.name:
 
-        if ref_comp.is_tstencil_type:
-            import pudb; pudb.set_trace();
+            time_indexing_expr = get_time_indexing_expr(owner_comp, cvar_map)
+            time_indexing_str = str(time_indexing_expr)
 
-            array_access_str = str(array_access)
-            autolog(header("array_access_str") + array_access_str, TAG)
+            space_indexing_expr = \
+                genc.CArrayAccess.build_contiguous_access_expr(array.dims, args)
+            space_indexing_str = str(space_indexing_expr)
 
-            time_coeff, denom = ref_comp.func.time_indexing_coeff
-            time_indexing_terms  = \
-                [exp.arguments[i] * time_coeff[i] \
-                    for i in range(len(time_coeff)) \
-                        if time_coeff[i] != 0]
-            assert len(time_indexing_expr) > 0
+            buffer = "_tbuf_"+str(id(owner_comp.func.name))
 
-            time_indexing_expr = time_indexing_terms[0]
-            for term in time_indexing_terms[1:]:
-                time_indexing_expr = time_indexing_expr + term
-
-            index_str = generate_c_expr(time_indexing_expr)
+            final_index_str = ""
+            final_index_str += buffer
+            final_index_str += "["+time_indexing_str+"]"
+            final_index_str += "["+space_indexing_str+"]"
+            return final_index_str
         else:
             return array(*args)
+
     if isinstance(exp, Select):
         c_cond = generate_c_cond(pipe, exp.condition,
                                  cparam_map, cvar_map,

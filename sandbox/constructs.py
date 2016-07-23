@@ -578,7 +578,6 @@ class Stencil(AbstractExpression):
             self._origin = list(map(lambda x: (x-1) // 2, self._sizes))
 
     def collect(self, objType):
-        # import pudb; pudb.set_trace()
         objs = []
         if (type(self) is objType):
             objs = [self]
@@ -1137,9 +1136,13 @@ class TStencil(Function):
 
         # the T row is the first input dimension, so it will
         # be the outermost dimension after the tiling dimensions
-        time_index = len(self.variables) + 1
+        # import pudb; pudb.set_trace()
+        num_vars = len(self.variables)
+        time_index = num_vars + 1
+        inv_map = inv_map[time_index][time_index:time_index+num_vars+1]
+        divs = divs[time_index]
 
-        self._time_indexing_coeff = (inv_map[time_index], divs[time_index])
+        self._time_indexing_coeff = (inv_map, divs)
 
     @property
     def time_indexing_coeff(self):

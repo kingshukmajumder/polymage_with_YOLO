@@ -26,6 +26,11 @@ from constructs import *
 from poly import *
 import pipe
 
+# TODO: update the inlining pass to update the Reference ownership (refer to
+# class Reference for more details on ref._owner), whenever a function is
+# inlined into another. This is because the owner will be deleted upon zero ref
+# count and we are not creating new references, but reusing them.
+
 def inline_pass(pipeline):
     """
     Inline pass takes all the inlining decisions and inlines functions at

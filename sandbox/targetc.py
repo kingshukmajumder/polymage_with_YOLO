@@ -488,27 +488,34 @@ class CArrayAccess(CExpression):
         assert len(_array.dims) >= len(_dims)
         self.array = _array
         self.dims =  _dims
+
+    @staticmethod
+    def build_contiguous_access_expr(dims, access_exprs):
+        expr = None
+        for i in range(0, len(access_exprs)):
+            multiplier = None
+            for j in range(i+1, len(dims)):
+                if multiplier is None:
+                    multiplier = dims[j]
+                else:
+                    multiplier = multiplier * dims[j]
+            product = access_exprs[i]
+            if multiplier is not None:
+                product = product * multiplier
+            if expr is None:
+                expr = product
+            else:
+                expr = expr + product
+
+        return expr
+
     def __str__(self):
         access_str = ""
         if self.array.layout == 'multidim':
             for dim in self.dims:
                 access_str = access_str + '[' + dim.__str__() + ']'
         elif self.array.layout in ['contiguous', 'contiguous_static']:
-            expr = None
-            for i in range(0, len(self.dims)):
-                multiplier = None
-                for j in range(i+1, len(self.array.dims)):
-                    if multiplier is None:
-                        multiplier = self.array.dims[j]
-                    else:
-                        multiplier = multiplier * self.array.dims[j]
-                product = self.dims[i]        
-                if multiplier is not None:
-                    product = product * multiplier
-                if expr is None:
-                    expr = product
-                else:
-                    expr = expr + product
+            expr = CArrayAccess.build_contiguous_access_expr(self.array.dims, self.dims)
             access_str = '[' + expr.__str__() + ']'
         else:
             print(self.array.layout)
@@ -525,7 +532,7 @@ class CArray(CName):
         self.dims = _dims
         self.layout = _layout
 
-    def __call__(self, *dims):        
+    def __call__(self, *dims):
         return CArrayAccess(self, dims)
 
     # FIXME substitute vars and determine if expr is const

@@ -19,9 +19,12 @@ def test_t_stencil_1d():
 
     img = Image(Float, "input", [R])
 
-    stencil = Stencil(img, [x], [1, 2, 3])
-    tstencil = TStencil(([x], [xrow]), Int, "out", T)
-    tstencil.defn = stencil
+    f = Function(([x], [xrow]), Float, "f")
+    f.defn = [3.1416 * img(x)]
+
+    stencil = Stencil(f, [x], [1, 2, 3])
+    tstencil = TStencil(([x], [xrow]), Float, "out", T)
+    tstencil.defn = stencil + img(x-1)
 
     p_est = [ (R, 1024)]
 

@@ -458,7 +458,7 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
         optimised_sched = pluto.schedule(isl_ctx,
                 isl.UnionSet.from_basic_set(in_domain),
                 in_schedule,
-                 options).copy()
+                options).copy()
 
         autolog("pluto optimised schedule: %s" % optimised_sched, TAG)
 

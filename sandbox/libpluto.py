@@ -361,6 +361,7 @@ class PlutoOptions(object):
         self._raw_ptr.partlbtile = 1
         self._raw_ptr.lbtile = 1
         self._raw_ptr.tile = 1
+        self._raw_ptr.intratileopt = 0
         self._raw_ptr.debug = self._raw_ptr.moredebug = 0
 
     @property
