@@ -1140,6 +1140,8 @@ class TStencil(Function):
         for case in self._body:
             objs += case.collect(objType)
         
+        if isinstance(self._timesteps, objType):
+            objs.append(self._timesteps)
 
         return list(set(objs))
 
