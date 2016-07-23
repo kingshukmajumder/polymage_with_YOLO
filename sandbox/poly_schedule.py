@@ -488,6 +488,11 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
         opt_schedule = opt_schedule.intersect_domain(in_domain)
         opt_schedule = opt_schedule.set_tuple_name(isl.dim_type.in_,
                 original_sched_domain_name)
+
+        for i, var in enumerate([tstencil.time_var] + tstencil.variables):
+            opt_schedule = \
+                opt_schedule.set_dim_name(isl.dim_type.in_, i, var.name)
+
         autolog(header("Final chosen schedule") +  str(opt_schedule), TAG)
         poly_part.sched = opt_schedule
         return
