@@ -391,6 +391,18 @@ class Reference(AbstractExpression):
             assert(isinstance(arg, AbstractExpression))
         self._obj  = _obj
         self._args = _args
+        self._owner = None
+
+
+    @property
+    def owner(self):
+        assert self._owner is not None
+        return self._owner
+
+    @owner.setter
+    def owner(self, owner):
+        assert self._owner is None
+        self._owner = owner
 
     @property
     def objectRef(self):
@@ -732,9 +744,9 @@ class Condition(object):
     @property
     def conditional(self):
         return self._cond
-   
+
     def clone(self):
-        return Condition(self._left.clone(), self._cond, 
+        return Condition(self._left.clone(), self._cond,
                          self._right.clone())
 
     def collect(self, objType):
@@ -782,8 +794,8 @@ class Condition(object):
     def __or__(self, other):
         assert(isinstance(other, Condition))
         return Condition(self, '||', other)
-    
-    def __str__(self):        
+
+    def __str__(self):
         if (self._cond is None):
             assert self._left is None and self._right is None
             return ""
@@ -846,13 +858,13 @@ class Reduce(object):
         self._expr = _expr
         self._op_typ = _op_typ
 
-    @property 
+    @property
     def accumulate_ref(self):
         return self._red_ref
-    @property 
+    @property
     def expression(self):
         return self._expr
-    @property 
+    @property
     def op_type(self):
         return self._expr
 
@@ -863,9 +875,9 @@ class Reduce(object):
     def collect(self, objType):
         if (type(self) is objType):
             return [self]
-        
+
         objs = self._red_ref.collect(objType) + self._expr.collect(objType)
-        return list(set(objs))  
+        return list(set(objs))
 
     def clone(self):
         return Reduce(self._red_ref.clone(), self._expr.clone(), self._op_typ)
@@ -991,6 +1003,11 @@ class Function(object):
             # the first definition?
             self._body.append(case)
 
+        refs = self.getObjects(Reference)
+        for ref in refs:
+            ref.owner = self
+
+
     def __call__(self, *args):
         assert(len(args) == len(self._variables))
         for arg in args:
@@ -1030,7 +1047,7 @@ class Function(object):
 
     def clone(self):
         newBody = [ c.clone() for c in self._body ]
-        varDom = ( [ v.clone() for v in self._variables], 
+        varDom = ( [ v.clone() for v in self._variables],
                    [ d.clone() for d in self._varDomain] )
         _const = ""
         if self.is_const_func:
@@ -1038,7 +1055,7 @@ class Function(object):
         newFunc = Function(varDom, self._typ, self._name, _const)
         newFunc.defn = newBody
         return newFunc
-    
+
     def __str__(self):
         if (self._body):
             var_str = ", ".join([var.__str__() for var in self._variables])
@@ -1077,7 +1094,9 @@ class TStencil(Function):
 
         # dimensionality of the Function
         self._ndims = len(self._variables)
-    
+
+        self._time_indexing_coeff = None
+
     def create_ghost_zone_condition(self):
         domain = self.domain
         kernel_sizes = get_valid_kernel_sizes(self.kernel)
@@ -1111,6 +1130,71 @@ class TStencil(Function):
     def defn(self):
         return self._body
 
+    def take_time_expr_coeff(self, inv_map, divs):
+        # + 1 because time also gets tiled, but time
+        # is not included in self.variables since it is a
+        # pseudo variable.
+
+        # the T row is the first input dimension, so it will
+        # be the outermost dimension after the tiling dimensions
+        time_index = len(self.variables) + 1
+
+        self._time_indexing_coeff = (inv_map[time_index], divs[time_index])
+
+    @property
+    def time_indexing_coeff(self):
+        return self._time_indexing_coeff
+
+    @property
+    def index_map(self):
+        assert self._index_map is not None
+        return self._index_map
+
+    @index_map.setter
+    def index_map(self, _index_map):
+        """
+        Set the mapping from the output variables to
+        input variables. This is required during
+        code generation to generate the correct indexing
+        over the transformed space
+
+        Parameters:
+        -----------
+        _index_map: (inverse_matrix: [[int]], divs: [int])
+
+        The inverse matrix is the matrix that maps the space
+        of output variables to the space of input variables.
+        It must have dimensionality vars * vars where vars is the
+        number of input variables of the TStencil.
+
+        divs are the common denominators for each row of the inverse_matrix.
+        len(divs) == number of rows of inverse_matrix.
+
+        We represent it this way to allow for easy code generation
+
+        Returns:
+        --------
+        None
+        """
+        assert self._index_map == None
+        assert isinstance(_index_map, tuple)
+
+        inv_matrix, divs = _index_map
+        assert isinstance(inv_matrix, list(list(int)))
+        assert isinstance(divs, list(int))
+
+        # the inverse map maps output variables to
+        # input variables, so it must be a square matrix
+        # of dimensions (vars * vars).
+        # divs has a common denominator for each row of the matrix.
+        # So, len(div) == number of rows of inv_matrix
+        assert len(self.variables) == len(inv_matrix)
+        assert len(inv_matrix) > 0 and len(inv_matrix[0]) == len(self.variables)
+        assert len(divs) == len(inv_matrix)
+
+        self._index_map = (inv_matrix, divs)
+        return
+
     @defn.setter
     def defn(self, _def):
         assert(self._body == None)
@@ -1122,12 +1206,16 @@ class TStencil(Function):
 
         assert(len(stencil_list) == 1, "Expected exactly 1 stencil in defn.")
         self._stencil = stencil_list[0]
-        
+
         ghost_zone_cond = self.create_ghost_zone_condition()
         self._body = [Case(ghost_zone_cond, _def)]
 
         assert(self._stencil.iter_vars == self._variables)
 
+        refs = self.getObjects(Reference)
+        for ref in refs:
+            ref.owner = self
+        return
 
     def getObjects(self, objType):
         objs = []
@@ -1139,7 +1227,7 @@ class TStencil(Function):
                                      "zone padding")
         for case in self._body:
             objs += case.collect(objType)
-        
+
         if isinstance(self._timesteps, objType):
             objs.append(self._timesteps)
 
@@ -1333,7 +1421,7 @@ class TStencil(Function):
 class Image(Function):
     def __init__(self, _typ, _name, _dims):
         _dims = [ Value.numericToValue(dim) for dim in _dims ]
-        # Have to evaluate if a  stronger constraint 
+        # Have to evaluate if a  stronger constraint
         # can be imposed. Only AbstractExpression in parameters?
         for dim in _dims:
             assert(isinstance(dim, AbstractExpression))
@@ -1399,7 +1487,7 @@ class Reduction(Function):
     @property
     def reductionVariables(self):
         return self._redVariables
-        
+
     @property
     def defn(self):
         return self._body
@@ -1419,6 +1507,10 @@ class Reduction(Function):
             # MOD -> if _def is not a Case, shouldnt it be disallowed after
             # the first definition?
             self._body.append(case)
+
+        refs = self.getObjects(Reference)
+        for ref in refs:
+            ref.owner = self
 
     def hasBoundedIntegerDomain(self):
         boundedIntegerDomain = True
@@ -1450,17 +1542,17 @@ class Reduction(Function):
             objs += interval.collect(objType)
         objs += self._default.collect(objType)
         return list(set(objs))
-   
+
     def clone(self):
         newBody = [ r.clone() for r in self._body ]
-        varDom = ( [ v.clone() for v in self._variables], 
+        varDom = ( [ v.clone() for v in self._variables],
                    [ d.clone() for d in self._varDomain] )
         redDom = ( [ r.clone() for r in self._redVariables],
                    [ d.clone() for d in self._redDomain] )
         newRed = Reduction(varDom, redDom, self._typ, self._name)
         newRed.defn = newBody
         newRed.default = self._default.clone()
-        return newRed    
+        return newRed
 
     def __str__(self):
         if (self._body):

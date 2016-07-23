@@ -34,6 +34,8 @@ import islpy as isl
 import expr_ast as expr
 import targetc as genc
 import logging
+from debug_log import *
+TAG = "codegen"
 
 # LOG CONFIG #
 codegen_logger = logging.getLogger("codegen.py")
@@ -594,22 +596,50 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
         return cvar_map[exp]
     if isinstance(exp, Reference):
         ref_comp = pipe.func_map[exp.objectRef]
+
         array = ref_comp.array
         scratch = ref_comp.scratch
         num_args = len(exp.objectRef.domain)
         shifted_args = []
+
+        # we have our indexing variables, which need to be re-expressed
+        # in terms of our domain variables.
         for i in range(num_args):
             scratch_arg = (exp.arguments[i] -
                            exp.objectRef.domain[i].lowerBound)
             if scratch and scratch[i]:
                 scratch_arg = substitute_vars(exp.arguments[i], scratch_map)
             shifted_args.append(simplify_expr(scratch_arg))
+
+
         args = [ generate_c_expr(pipe, arg, cparam_map, cvar_map,
                                  scratch_map, prologue_stmts)
                  for arg in shifted_args ]
         if isinstance(array, tuple):  # TStencil array tuple
             array = array[1]  # Second entry is the output of TStencil
-        return array(*args)
+
+        array_access = array(*args)
+
+        if ref_comp.is_tstencil_type:
+            import pudb; pudb.set_trace();
+
+            array_access_str = str(array_access)
+            autolog(header("array_access_str") + array_access_str, TAG)
+
+            time_coeff, denom = ref_comp.func.time_indexing_coeff
+            time_indexing_terms  = \
+                [exp.arguments[i] * time_coeff[i] \
+                    for i in range(len(time_coeff)) \
+                        if time_coeff[i] != 0]
+            assert len(time_indexing_expr) > 0
+
+            time_indexing_expr = time_indexing_terms[0]
+            for term in time_indexing_terms[1:]:
+                time_indexing_expr = time_indexing_expr + term
+
+            index_str = generate_c_expr(time_indexing_expr)
+        else:
+            return array(*args)
     if isinstance(exp, Select):
         c_cond = generate_c_cond(pipe, exp.condition,
                                  cparam_map, cvar_map,

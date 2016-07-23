@@ -92,20 +92,20 @@ def base_schedule(group):
 
 def stripMineSchedule(sched, dim, size):
     sched = sched.insert_dims(isl._isl.dim_type.out, dim, 1)
-    name = sched.get_dim_name(isl._isl.dim_type.out, 1 + dim) 
+    name = sched.get_dim_name(isl._isl.dim_type.out, 1 + dim)
     sched = sched.set_dim_name(isl._isl.dim_type.out, dim, 'S_' + name)
     ineqs = []
     #  size*(Ti) <= i <= size*(Ti) + size - 1
     coeff = {}
-    coeff[('out', dim)] = sizes[dim - startDim] 
+    coeff[('out', dim)] = sizes[dim - startDim]
     coeff[('constant', 0)] = sizes[dim - startDim] - 1
     coeff[('out', numDims + dim)] = -1
     ineqs.append(coeff)
 
     coeff = {}
-    coeff[('out', dim)] = -sizes[dim - startDim] 
+    coeff[('out', dim)] = -sizes[dim - startDim]
     coeff['out', numDims + dim] = 1
-    ineqs.append(coeff) 
+    ineqs.append(coeff)
     sched = addConstriants(sched, ineqs, [])
 
     return sched
@@ -114,21 +114,21 @@ def tileSchedule(sched, dim, size, overlapOffset = 0):
     # Extend space to accomodate the tiling dimensions
     sched = sched.insert_dims(isl._isl.dim_type.out, dim, 1)
     # Create the tile dimensions and their constraints
-    name = sched.get_dim_name(isl._isl.dim_type.out, 1 + dim) 
+    name = sched.get_dim_name(isl._isl.dim_type.out, 1 + dim)
     sched = sched.set_dim_name(isl._isl.dim_type.out, dim, '_T' + name)
 
     ineqs = []
     #  size*(Ti) <= i <= size*(Ti) + size - 1
     coeff = {}
-    coeff[('out', dim)] = size 
+    coeff[('out', dim)] = size
     coeff[('constant', 0)] = size - 1 + overlapOffset
     coeff[('out', 1 + dim)] = -1
     ineqs.append(coeff)
 
     coeff = {}
-    coeff[('out', dim)] = -size 
+    coeff[('out', dim)] = -size
     coeff['out', 1 + dim] = 1
-    ineqs.append(coeff) 
+    ineqs.append(coeff)
     sched = addConstriants(sched, ineqs, [])
     return (sched, ('rect', name, '_T' + name, size))
 
@@ -409,6 +409,7 @@ def add_staging_dimension(schedule, staging_val):
     return schedule
 
 def fused_schedule(pipeline, isl_ctx, group, param_estimates):
+
     """Generate an optimized schedule for the stage."""
 
     g_poly_parts = group.polyRep.poly_parts
@@ -495,6 +496,24 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
 
         autolog(header("Final chosen schedule") +  str(opt_schedule), TAG)
         poly_part.sched = opt_schedule
+
+
+        # ----
+        # Create the remapping matrix and divs - prune extra information from the
+        # PLUTO generated maps
+        remapping = pluto.get_remapping(isl_ctx,
+                isl.UnionSet.from_basic_set(in_domain),
+                in_schedule,
+                options)
+
+
+        # TODO: check if the 0th matrix is the right one. Maybe the 1st matrix is correct?
+        # import pudb; pudb.set_trace()
+
+        divs = remapping.divs
+        tstencil.take_time_expr_coeff(remapping.inv_matrices[0], divs[0])
+
+        # TODO: fill in code that passes remappin
         return
     else:
         g_all_parts = []
@@ -549,7 +568,7 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
 def move_independent_dim(dim, group_parts, stageDim):
     # Move the independent dimensions outward of the stage dimension.
     for part in group_parts:
-        part.sched = part.sched.insert_dims(isl._isl.dim_type.out, 
+        part.sched = part.sched.insert_dims(isl._isl.dim_type.out,
                                             stageDim, 1)
         noDepId = part.sched.get_dim_id(
                         isl._isl.dim_type.out, dim + 1)
@@ -646,7 +665,7 @@ def overlap_tile(pipeline, group_parts, slope_min, slope_max):
                 coeff[('out', tile_dim)] = tile_size
                 coeff[('constant', 0)] = tile_size - 1 + overlap_shift
                 ineqs.append(coeff)
-            
+
                 coeff = {}
                 coeff[('out', time_dim)] = -right
                 coeff[('out', it_dim)] = 1
@@ -691,31 +710,31 @@ def splitTile(self, group, slopeMin, slopeMax):
             for part in group:
                 # Extend space to accomodate the tiling dimensions
                 part.sched = part.sched.insert_dims(
-                                isl._isl.dim_type.out, 
+                                isl._isl.dim_type.out,
                                 stageDim + 2*dtileDims, 2)
-                # Dimension i is for the orientation of the tiles 
+                # Dimension i is for the orientation of the tiles
                 # upward or inverted.
                 name = part.sched.get_dim_name(
-                            isl._isl.dim_type.out, 
+                            isl._isl.dim_type.out,
                             stageDim + 3*dtileDims + 3)
                 part.sched = part.sched.set_dim_name(
-                                isl._isl.dim_type.out, 
-                                stageDim + 2*dtileDims + 1, 
+                                isl._isl.dim_type.out,
+                                stageDim + 2*dtileDims + 1,
                                 '_T' + name)
                 part.sched = part.sched.set_dim_name(
-                                isl._isl.dim_type.out, 
-                                stageDim + 2*dtileDims, 
+                                isl._isl.dim_type.out,
+                                stageDim + 2*dtileDims,
                                 '_Dir' + name)
-                
+
                 L = (slopeMin[i-1][0], slopeMin[i-1][1])
                 R = (slopeMax[i-1][0], slopeMax[i-1][1])
-                # L and R are normals to the left and the right 
+                # L and R are normals to the left and the right
                 # bounding hyperplanes of the uniform dependencies
-                
+
     # Tile size
-    #   -- Pick tile sizes such that there are only two sets of tiles 
-    #      in the time sense .i.e there should be only one fused stage. 
-    #      This has to be revisited when time iterated computations are 
+    #   -- Pick tile sizes such that there are only two sets of tiles
+    #      in the time sense .i.e there should be only one fused stage.
+    #      This has to be revisited when time iterated computations are
     #      incorporated
                 #offset = 3*tileSize/4
                 tileSize = self.tileSizes[numTileDims]
@@ -734,12 +753,12 @@ def splitTile(self, group, slopeMin, slopeMax):
                 coeff[('out', stageDim + 2*dtileDims + 1)] = tileSize
                 coeff[('constant', 0)] = tileSize - 1
                 ineqs.append(coeff)
-                
+
                 coeff = {}
                 coeff[('out', stageDim + 2*dtileDims + 2)] = R[0]
                 coeff[('out', stageDim + 3*dtileDims + 3)] = R[1]
-                coeff[('out', stageDim + 2*dtileDims + 1)] = -tileSize 
-                coeff[('out', stageDim + 2*dtileDims)] = -tileSize 
+                coeff[('out', stageDim + 2*dtileDims + 1)] = -tileSize
+                coeff[('out', stageDim + 2*dtileDims)] = -tileSize
                 coeff[('constant', 0)] = -offset
                 ineqs.append(coeff)
 
@@ -747,7 +766,7 @@ def splitTile(self, group, slopeMin, slopeMax):
                 coeff[('out', stageDim + 2*dtileDims + 2)] = -R[0]
                 coeff[('out', stageDim + 3*dtileDims + 3)] = -R[1]
                 coeff[('out', stageDim + 2*dtileDims + 1)] = tileSize
-                coeff[('out', stageDim + 2*dtileDims)] = tileSize 
+                coeff[('out', stageDim + 2*dtileDims)] = tileSize
                 coeff[('constant', 0)] = tileSize + offset - 1
                 ineqs.append(coeff)
 
@@ -774,7 +793,7 @@ def splitTile(self, group, slopeMin, slopeMax):
                 #eqsDown.append(coeff)
 
                 #schedUp = addConstriants(part.sched, ineqs, eqsUpward)
-                #schedDown = addConstriants(part.sched, ineqs, eqsDown)                                
+                #schedDown = addConstriants(part.sched, ineqs, eqsDown)
                 #part.sched = schedUp.union(schedDown)
                 part.sched = addConstriants(part.sched, ineqs, eqs)
                 assert(part.sched.is_empty() == False)
