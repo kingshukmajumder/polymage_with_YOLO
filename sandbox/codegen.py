@@ -394,6 +394,7 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
         # RHS [expr]
         time_indexing_expr = get_time_indexing_expr(poly_part.comp, cvar_map, 1)
         time_indexing_str = "["+str(time_indexing_expr)+"]"
+        arglist = arglist[1:]
         space_indexing_expr = \
             genc.CArrayAccess.build_contiguous_access_expr(array.dims, arglist)
         space_indexing_str = "["+str(space_indexing_expr)+"]"
