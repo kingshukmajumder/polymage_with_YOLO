@@ -24,6 +24,7 @@
 from __future__ import absolute_import, division, print_function
 
 # More Python 3 vs 2 mojo
+
 try:
     import queue
 except ImportError:
@@ -46,6 +47,7 @@ from inline import *
 from liveness import *
 from storage_mapping import *
 
+
 # LOG CONFIG #
 pipe_logger = logging.getLogger("pipe.py")
 pipe_logger.setLevel(logging.DEBUG)
@@ -59,8 +61,23 @@ def get_parents_from_func(func, non_image=True):
                                      not (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput)) ]
     else:
         refs = [ ref for ref in refs if not ref.objectRef == func ]
+    func_parents = [ref.objectRef for ref in refs]
+    matObjects = getMatInvObjects(func)
+    if matObjects:
+        func_parents.extend(matObjects)
+    return list(set(func_parents))
 
-    return list(set([ref.objectRef for ref in refs]))
+def getMatInvObjects(func):
+    functions = func.getObjects(Matrix)
+    return functions
+
+def getMatInputs(func):
+    mat_inputs = []
+    inputs = getMatInvObjects(func)
+    for inp in inputs:
+        if inp.isInput:
+            mat_inputs.append(inp)
+    return mat_inputs
 
 def get_funcs_and_dep_maps(outputs):
     """
@@ -373,7 +390,6 @@ class Group:
             assert(isinstance(comp, ComputeObject))
             if comp.is_image_typ:
                 self._is_image_typ = True
-
         self._comps  = _comp_objs
         self._parents = []
         self._children = []
@@ -555,7 +571,7 @@ class Group:
         for comp in self.comps:
             refs += comp.func.getObjects(Reference)
         image_refs = [ref.objectRef for ref in refs \
-                                      if (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput))]
+                      if isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput)]
         image_refs = list(set(image_refs))
         return image_refs
 
@@ -720,6 +736,7 @@ class Pipeline:
         # ***
 
         ''' SCHEDULING '''
+
         for g in self.groups:
             # alignment and scaling
             align_and_scale(self, g)
@@ -830,7 +847,6 @@ class Pipeline:
     def create_compute_objects(self):
         funcs, parents, children = \
             get_funcs_and_dep_maps(self.outputs)
-
         comps = []
         func_map = {}
         for func in funcs:
@@ -856,7 +872,6 @@ class Pipeline:
             inp_comp.set_parents([])
             inp_comp.set_children([])
             func_map[inp] = inp_comp
-
         return func_map, comps
 
     def order_compute_objs(self):

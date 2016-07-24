@@ -28,12 +28,11 @@ def call_pipe(app_data):
     pipe_args += [ctypes.c_int(cols)]
     pipe_args += [ctypes.c_int(rows)]
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
-    pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
+#    pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
 
     # call lib function
     pipe_func(*pipe_args)
-    
     return
 
 def mat_ops(app_data):

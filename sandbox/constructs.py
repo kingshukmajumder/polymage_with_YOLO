@@ -212,13 +212,15 @@ class Abs(InbuiltFunction):
 
 class Mat_Inverse(InbuiltFunction):
     def __init__(self, *_args):
+        #TODO : assert for no arguments
         InbuiltFunction.__init__(self, *_args)
 
     def getType(self):
         return getType(self._args[0])
 
     def clone(self):
-        return Abs(self._args[0].clone())
+        print(self._args)
+        return Mat_Inverse('Matrix', self._args[0].clone(), self._args[1].clone())
 
     def __str__(self):
         function_call = "int *IPIV = new int["+self._args[0].__str__()+"+1];" + \
@@ -230,6 +232,9 @@ class Mat_Inverse(InbuiltFunction):
             "delete IPIV;" + \
             "delete WORK"
         return function_call
+
+    def getObjects(self, objType):
+        return self.collect(objType)
 
 class Cast(AbstractExpression):
     def __init__(self, _typ, _expr):
@@ -272,6 +277,8 @@ class Cast(AbstractExpression):
     def macro_expand(self):
         self._expr = self._expr.macro_expand()
         return self
+
+
 
 
 class Select(AbstractExpression):
@@ -998,6 +1005,7 @@ class Function(object):
     @defn.setter
     def defn(self, _def):
         assert(self._body == [])
+        print(len(_def))
         assert(len(_def) > 0), str(_def) + " " + str(self._name)
         case_type = 0
         non_case_type = 0
@@ -1044,6 +1052,12 @@ class Function(object):
         for interval in self._varDomain:
             objs += interval.collect(objType)
         return list(set(objs))
+
+    def collect(self, objType):
+        objs = []
+        if (type(self) is objType):
+            objs = [self]
+        return objs
 
     def hasBoundedIntegerDomain(self):
         boundedIntegerDomain = True
@@ -1267,6 +1281,7 @@ class Matrix(Function):
     def dimensions(self):
         return self._dims
 
+    #TODO: change the name to be consistent with the rest of the code
     @property
     def isInput(self):
         if self.defn == []:
@@ -1287,8 +1302,16 @@ class Matrix(Function):
 
     def __str__(self):
         dim_str = ", ".join([dim.__str__() for dim in self._dims])
-        return self._name.__str__() + "(" + dim_str + ")"
+        return self._name.__str__() #+ "(" + dim_str + ")"
 
+    def clone(self, input=False):
+        var = [v.clone() for v in self._variables]
+        dimensions = self.dimensions.copy()
+        newFunc = Matrix(self._typ, self._name, dimensions)
+        if not self.isInput:
+            newBody = [c.clone() for c in self._body]
+            newFunc.defn = newBody
+        return newFunc
 
     def __mul__(self, other):
         mat1 = self
@@ -1334,6 +1357,12 @@ class Matrix(Function):
         prod_matrix.defn = [matmul_as_reduction(x,y)]
         return prod_matrix
 
+    def collect(self, objType):
+        objs = []
+        if (type(self) is objType):
+            objs = [self]
+        return objs
+
     @staticmethod
     def det(mat):
         # TODO: Add implementation
@@ -1341,11 +1370,17 @@ class Matrix(Function):
 
     @staticmethod
     def inverse(mat):
-        assert(len(mat.dimensions) == 2)
-        cond = Condition(mat.dimensions[0], "==", mat.dimensions[1])
+        assert (len(mat.dimensions) == 2)
         x = mat.variables[0]
         y = mat.variables[1]
-        rows = mat.intervals[0]
-        inv = Function(([x,y],[rows,rows]),mat.type,"_inv")
-        inv.defn = [Case(cond, Mat_Inverse('Matrix', mat, mat.dimensions[0]))]
+        mat_clone = Matrix(mat.type, mat.name + "_clone", mat.dimensions, [x,y])
+        mat_clone.defn = [mat(x,y)]
+        # mat_clone = mat.clone(True)
+        cond = Condition(mat_clone.dimensions[0], "==", mat_clone.dimensions[1])
+        rows = mat_clone.intervals[0]
+        cols = mat_clone.intervals[1]
+        print("Rows and cols" +rows.__str__() + cols.__str__())
+        inv = Function(([x,y],[rows,cols]),mat_clone.type,"_inv")
+        inv.defn = [Case(cond, Mat_Inverse('Matrix', mat_clone, mat_clone.dimensions[0]))]
+        # inv.defn = [Mat_Inverse('Matrix', mat, mat.dimensions[0])]
         return inv

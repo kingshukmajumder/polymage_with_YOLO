@@ -605,6 +605,22 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
                                  scratch_map, prologue_stmts)
                  for arg in shifted_args ]
         return array(*args)
+    if isinstance(exp, Function):
+        ref_comp = pipe.func_map[exp]
+        array = ref_comp.array
+        scratch = ref_comp.scratch
+        num_args = len(exp.domain)
+        shifted_args = []
+        for i in range(num_args):
+            scratch_arg = (exp.arguments[i] -
+                           exp.domain[i].lowerBound)
+            if scratch and scratch[i]:
+                scratch_arg = substitute_vars(exp.arguments[i], scratch_map)
+            shifted_args.append(simplify_expr(scratch_arg))
+        args = [generate_c_expr(pipe, arg, cparam_map, cvar_map,
+                                scratch_map, prologue_stmts)
+                for arg in shifted_args]
+        return array(*args)
     if isinstance(exp, Select):
         c_cond = generate_c_cond(pipe, exp.condition,
                                  cparam_map, cvar_map,
@@ -670,6 +686,10 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
         cexpr1 = generate_c_expr(pipe, exp.arguments[0], cparam_map, cvar_map)
         cexpr2 = generate_c_expr(pipe, exp.arguments[1], cparam_map, cvar_map)
         return genc.CPowf(cexpr1, cexpr2)
+    if isinstance(exp, Mat_Inverse):
+        cexpr1 = generate_c_expr(pipe, exp.arguments[0], cparam_map, cvar_map)
+        cexpr2 = generate_c_expr(pipe, exp.arguments[1], cparam_map, cvar_map)
+        return genc.CMat_Inv(cexpr1, cexpr2)
     if isinstance(exp, RandomFloat):
         return genc.CRandomFloat()
     if isinstance(exp, Log):
@@ -843,7 +863,6 @@ def generate_reduction_scan_loops(pipe, group, comp, pipe_body, cparam_map):
 
 def generate_code_for_group(pipeline, g, body, alloc_arrays,
                             out_arrays, cparam_map, outputs):
-
     g.polyRep.generate_code()
     group_part_map = g.polyRep.poly_parts
     sorted_comps = g.get_sorted_comps()

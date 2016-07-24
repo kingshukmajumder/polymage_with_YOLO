@@ -12,8 +12,8 @@ from constructs import *
 
 def mat_ops(pipe_data):
 
-    R = Parameter(Int, "R")
-    C = Parameter(Int, "C")
+    R = Parameter(UInt, "R")
+    C = Parameter(UInt, "C")
 
     pipe_data['R'] = R
     pipe_data['C'] = C
@@ -21,8 +21,11 @@ def mat_ops(pipe_data):
     x = Variable(UInt, 'x')
     y = Variable(UInt, 'y')
 
+    row = Interval(UInt, 0, R-1)
+    col = Interval(UInt, 0, C-1)
+
     mat1 = Matrix(Float, "mat1", [R, C], [x, y])
-    mat2 = Matrix(Float, "mat3", [R, C], [x, y])
+    #mat2 = Matrix(Float, "mat3", [R, C], [x, y])
     '''
     # Scalar multiplication
     scalar_mul = Matrix(Float, "scalar_mul", [R, C], [x, y])
@@ -62,5 +65,28 @@ def mat_ops(pipe_data):
     inv = Matrix.inverse(mat1)
     return inv
 
+    #Iy = Function(([x, y], [row, col]), Float, "Iy")
+    #Iy.defn = [Sin(mat1(x,y))]
+    #return Iy
+
+
     #new = div * mat1
     #return new
+
+    #cond = Condition(x, '>=', 0) & Condition(x, '<=', R-1) & \
+    #       Condition(y, '<=', C-1) & Condition(y, '>=', 0)
+
+    # A pipeline with completely aimless random sequence of computations
+    # to test the math functions support
+
+    # sin(image1)
+
+    #cos = Function(([x, y], [row, col]), Float, "_cos")
+    #cos.defn = [ Cos(mat1(x, y)) ]
+
+
+    #sin = Function(([x, y], [row, col]), Float, "_sin")
+    #sin.defn = [ Case(cond, Cos(mat1(x, y))) ]
+
+    #return cos
+

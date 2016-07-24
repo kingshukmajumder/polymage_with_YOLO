@@ -29,6 +29,7 @@ from fractions import gcd
 from expr_types import *
 from constructs import *
 
+
 class AbstractExpression(object):
     """ AbstractExpression class is a tree representation for expressions
     involving binary arithmetic comparison and unary operations over function,
@@ -305,13 +306,21 @@ class Xor(AbstractBinaryOpNode):
 
 class InbuiltFunction(AbstractExpression):
     def __init__(self, *_args):
-        _args = [ Value.numericToValue(arg) for arg in _args] 
-        print('Arguments')
+        #TODO: move the assertion to the derived types
+        _args = [ Value.numericToValue(arg) for arg in _args]
+        flag = 0
         for arg in _args:
             if arg == 'Matrix':
-                break
+                flag = 1
+                continue
+            if flag == 1:
+                flag = 0
+                continue
             assert(isinstance(arg, AbstractExpression))
-        self._args = _args[1:]
+        if _args[0] == 'Matrix':
+            self._args = _args[1:]
+        else:
+            self._args = _args
 
     @property
     def arguments(self):
@@ -338,6 +347,7 @@ class InbuiltFunction(AbstractExpression):
     def macro_expand(self):
         # TODO: check if maybe arguments need to be macro expanded?
         return self
+
 
 class AbstractUnaryOpNode(AbstractExpression):
     def __init__(self, _child, _op=None): 

@@ -157,6 +157,8 @@ def auto_group(pipeline):
                 for comp in g_child.comps:
                     if isinstance(comp.func, Reduction):
                         is_reduction_grp = True
+                    if comp.func.getObjects(Mat_Inverse):
+                        is_reduction_grp = True
                     if comp.func.is_const_func:
                         is_const_grp = True
 
