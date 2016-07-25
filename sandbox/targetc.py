@@ -1,5 +1,5 @@
-#
-# Copyright 2014-2016 Vinay Vasista, Ravi Teja Mullapudi, Uday Bondhugula,
+#0
+#0 Copyright 2014-2016 Vinay Vasista, Ravi Teja Mullapudi, Uday Bondhugula,
 # and others from Multicore Computing Lab, Department of Computer Science
 # and Automation, Indian Institute of Science
 #
@@ -335,6 +335,7 @@ class CLibraryFunction(CName):
 c_malloc = CLibraryFunction('malloc', 'stdlib.h')
 c_pool_malloc = CLibraryFunction('pool_allocate', 'simple_pool_allocator.h')
 c_memalign = CLibraryFunction('memalign', 'malloc.h')
+c_memcpy = CLibraryFunction('memcpy', 'string.h')
 c_memset = CLibraryFunction('memset', 'string.h')
 c_free = CLibraryFunction('free', 'stdlib.h')
 c_pool_free = CLibraryFunction('pool_deallocate', 'simple_pool_allocator.h')

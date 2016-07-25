@@ -28,10 +28,14 @@ def test_t_stencil_1d():
 
     p_est = [ (R, 1024)]
 
+    opts = []
+    opts += 'optimize_storage'
+
     # build the pipeline
     pipeline = buildPipeline([tstencil],
                              param_estimates = p_est,
-                             pipe_name = "tstencil_1d")
+                             pipe_name = "tstencil_1d",
+                             options = opts)
 
     filename = "test_t_stencil_1d_graph"
     dot_file = filename+".dot"

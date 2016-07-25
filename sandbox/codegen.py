@@ -1008,10 +1008,30 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
             type_name = str(array_typ)
             buf_decl = type_name + " *" + unique_name + "[2]"
             body.add(genc.CStatement(buf_decl))
+
             buf0_assign = unique_name+"[0] = "+comp.array[0].name
             buf1_assign = unique_name+"[1] = "+comp.array[1].name
             body.add(genc.CStatement(buf0_assign))
             body.add(genc.CStatement(buf1_assign))
+
+            # If the stencil input function is live out to some other group,
+            # we have to retain its contents and not use it within the
+            # ping-pong buffer. This will be taken care of during storage
+            # remapping. Thus, if this is the case, we would have allocated a
+            # new array in the above step. To trigger off the tstencil
+            # computation with modulo buffering, memcpy the contents of the
+            # tstencil input function to this new array.
+            input_func = comp.func._stencil.input_func
+            input_clone = pipeline._clone_map[input_func]
+            input_comp = pipeline.func_map[input_clone]
+            input_array = input_comp.array
+            buf_array = comp.array[0]
+            if buf_array.name != input_array.name:
+                size = input_array.get_total_size()
+                typ_size = genc.CSizeof(input_array.typ)
+                size_expr = typ_size * size
+                memcpy_stmt = genc.c_memcpy(buf_array, input_array, size_expr)
+                body.add(genc.CStatement(memcpy_stmt))
 
         if comp in g.polyRep.poly_parts:
             continue
@@ -1037,6 +1057,20 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
             generate_c_naive_from_isl_ast(pipeline, polyrep, ast, body,
                                           cparam_map, pooled, perfect_loopnest)
             pass
+
+    if g.is_tstencil_type:
+        # Point the resultant array from tstencil computation to the correct
+        # one in the tbuf, using the time dimension parameter from the TStencil
+        # definition. Final result after ping-ponging will be stored in
+        # tbuf[(T+1)%2], where T is the TStencil timesteps parameter.
+        comp = g.comps[0]
+        #import pudb; pudb.set_trace();
+        timestep_param = comp.func._timesteps
+        final_index = (timestep_param + 1) % 2
+        copy_back = comp.array[1].name + " = "
+        copy_back += "_tbuf_"+str(id(comp.func.name))
+        copy_back += "["+str(final_index)+"]"
+        body.add(genc.CStatement(copy_back))
 
     return
 
