@@ -31,7 +31,7 @@ from liveness import *
 
 # LOG CONFIG #
 storage_logger = logging.getLogger("storage_mapping.py")
-storage_logger.setLevel(logging.DEBUG)
+storage_logger.setLevel(logging.DEBUG-2)
 LOG = storage_logger.log
 
 class TypeSizeMap(object):
@@ -631,13 +631,16 @@ def create_physical_arrays(pipeline):
     set_arrays_for_comps(pipeline, created_arrays, flat_scratch)
 
     # collect users for each array created
+    #import pudb; pudb.set_trace();
     array_writers = {}
     for comp in pipeline.comps:
-        arrays = [comp.array]
+        arrays = []
         if comp.is_tstencil_type:
             # map for tuple as well tuple elements
             arrays.append(comp.array[0])
             arrays.append(comp.array[1])
+        else:
+            arrays.append(comp.array)
         for array in arrays:
             if array not in array_writers:
                 array_writers[array] = []
@@ -675,8 +678,14 @@ def create_array_freelist(pipeline):
         LOG(log_level, "Array Users:")
         for array in array_writers:
             if True in [comp.is_liveout for comp in array_writers[array]]:
-                LOG(log_level, "\t%-*s" % (15, array.name) + ": " + \
-                    str([comp.func.name for comp in array_writers[array]]))
+                if isinstance(array, tuple):
+                    LOG(log_level, "\t%-*s" % (15, array[0].name) + ": " + \
+                        str([comp.func.name for comp in array_writers[array[0]]]))
+                    LOG(log_level, "\t%-*s" % (15, array[1].name) + ": " + \
+                        str([comp.func.name for comp in array_writers[array[1]]]))
+                else:
+                    LOG(log_level, "\t%-*s" % (15, array.name) + ": " + \
+                        str([comp.func.name for comp in array_writers[array]]))
         # ***
         log_level = logging.DEBUG-1
         LOG(log_level, "\n_______")
@@ -702,7 +711,12 @@ def create_array_freelist(pipeline):
 
     # ignore all arrays used by pipeline outputs
     out_comps = [pipeline.func_map[func] for func in pipeline.outputs]
-    output_arrays = [comp.array for comp in out_comps]
+    output_arrays = []
+    for comp in out_comps:
+        if comp.is_tstencil_type:
+            output_arrays.append(comp.array[1])
+        else:
+            output_arrays.append(comp.array)
     for array in output_arrays:
         array_writers.pop(array)
 
@@ -732,6 +746,14 @@ def create_array_freelist(pipeline):
         # find the group with schedule time = user_sched
         group = schedule_g[user_sched]
         free_arrays[group].append(array)
+
+    # Add pipeline-output tstencil's temp buffers to freelist
+    for output in pipeline.outputs:
+        out_comp = pipeline.func_map[output]
+        g = out_comp.group
+        if out_comp.is_tstencil_type:
+            if out_comp.array[0] not in free_arrays[g]:
+                free_arrays[g].append(out_comp.array[0])
 
     # ***
     logs(liveness_map2, array_writers, last_use, free_arrays)
