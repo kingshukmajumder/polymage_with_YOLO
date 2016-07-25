@@ -1307,7 +1307,7 @@ class Matrix(Function):
     def clone(self, input=False):
         var = [v.clone() for v in self._variables]
         dimensions = self.dimensions.copy()
-        newFunc = Matrix(self._typ, self._name, dimensions)
+        newFunc = Matrix(self._typ, self._name, dimensions, var)
         if not self.isInput:
             newBody = [c.clone() for c in self._body]
             newFunc.defn = newBody
@@ -1375,12 +1375,11 @@ class Matrix(Function):
         y = mat.variables[1]
         mat_clone = Matrix(mat.type, mat.name + "_clone", mat.dimensions, [x,y])
         mat_clone.defn = [mat(x,y)]
-        # mat_clone = mat.clone(True)
         cond = Condition(mat_clone.dimensions[0], "==", mat_clone.dimensions[1])
         rows = mat_clone.intervals[0]
         cols = mat_clone.intervals[1]
         print("Rows and cols" +rows.__str__() + cols.__str__())
         inv = Function(([x,y],[rows,cols]),mat_clone.type,"_inv")
         inv.defn = [Case(cond, Mat_Inverse('Matrix', mat_clone, mat_clone.dimensions[0]))]
-        # inv.defn = [Mat_Inverse('Matrix', mat, mat.dimensions[0])]
         return inv
+        # return mat_clone
