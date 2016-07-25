@@ -31,7 +31,7 @@ from liveness import *
 
 # LOG CONFIG #
 storage_logger = logging.getLogger("storage_mapping.py")
-storage_logger.setLevel(logging.DEBUG-2)
+storage_logger.setLevel(logging.DEBUG)
 LOG = storage_logger.log
 
 class TypeSizeMap(object):

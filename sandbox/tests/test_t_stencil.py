@@ -24,7 +24,7 @@ def test_t_stencil_1d():
 
     stencil = Stencil(f, [x], [1, 2, 3])
     tstencil = TStencil(([x], [xrow]), Float, "out", T)
-    tstencil.defn = stencil + img(x-1)
+    tstencil.defn = [ stencil + img(x-1) ]
 
     p_est = [ (R, 1024)]
 
@@ -68,7 +68,7 @@ def test_t_stencil_2d():
     kernel = [[1, 1, 1], [1, 0, 1], [1, 1, 1]]
     stencil = Stencil(img, [x, y], kernel)
     tstencil = TStencil(([x, y], [row, col]), Float, "out", T)
-    tstencil.defn = (stencil + 10*img(x, y))
+    tstencil.defn = [ stencil + 10*img(x, y) ]
 
     p_est = [ (R, 1024), (C, 1024) ]
 
@@ -113,7 +113,7 @@ def test_t_stencil_3d():
               [[0, 1, 0], [1, 0, 1], [0, 1, 0]]]
     stencil = Stencil(img, [x, y, z], kernel)
     tstencil = TStencil(([x, y, z], [plane, row, col]), Float, "out", T)
-    tstencil.defn = (stencil + 10*img(x, y, z))
+    tstencil.defn = [ stencil + 10*img(x, y, z) ]
 
     p_est = [ (P, 1024), (R, 1024), (C, 1024) ]
 

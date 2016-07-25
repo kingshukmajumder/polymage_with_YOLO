@@ -714,30 +714,30 @@ class PolyRep(object):
         # --- these are required to leave space for ghost zones ---
 
 
-       #  safe_domains = []
-       #  domain = comp.func.domain
-       #  kernel_sizes = get_valid_kernel_sizes(comp.func.kernel)
-       #  origins = comp.func.origin
-       #  for i in range(len(comp.func.domain)):
-       #      autolog(header("building restriction for domain"))
-       #      interval = domain[i]
-       #      size = kernel_sizes[i]
-       #      origin = origins[i]
+        #  safe_domains = []
+        #  domain = comp.func.domain
+        #  kernel_sizes = get_valid_kernel_sizes(comp.func.kernel)
+        #  origins = comp.func.origin
+        #  for i in range(len(comp.func.domain)):
+        #      autolog(header("building restriction for domain"))
+        #      interval = domain[i]
+        #      size = kernel_sizes[i]
+        #      origin = origins[i]
 
-       #      new_lower_bound = interval.lowerBound + origin
-       #      new_upper_bound = interval.upperBound - (size - origin - 1)
+        #      new_lower_bound = interval.lowerBound + origin
+        #      new_upper_bound = interval.upperBound - (size - origin - 1)
 
-       #      safe_interval = Interval(interval.typ,
-       #                               new_lower_bound,
-       #                               new_upper_bound)
-       #      safe_domains.append(safe_interval)
+        #      safe_interval = Interval(interval.typ,
+        #                               new_lower_bound,
+        #                               new_upper_bound)
+        #      safe_domains.append(safe_interval)
 
-       #  var_names = [var.name for var in comp.func.variables]
-       #  [ineqs, eqs] = format_domain_constraints(safe_domains, var_names)
-       #  # HACK: rename this, it's no longer just the time constraint
-       #  # but also the domain constraints
-       #  time_constraint_map = add_constraints(time_constraint_map,
-       #                                       ineqs, eqs)
+        #  var_names = [var.name for var in comp.func.variables]
+        #  [ineqs, eqs] = format_domain_constraints(safe_domains, var_names)
+        #  # HACK: rename this, it's no longer just the time constraint
+        #  # but also the domain constraints
+        #  time_constraint_map = add_constraints(time_constraint_map,
+        #                                       ineqs, eqs)
 
         # --- add constraints from kernel accesses ----
         # build an indexed kernel
@@ -822,8 +822,8 @@ class PolyRep(object):
                                             tstencil_domains,
                                             schedule_names, param_names,
                                             context_conds)
-       # ------
-       # CREATE POLY PARTS FOR T STENCIL
+        # ------
+        # CREATE POLY PARTS FOR T STENCIL
         sched_m = sched_map.copy()
         align, scale = \
             aln_scl.default_align_and_scale(sched_m, max_dim, shift=True)

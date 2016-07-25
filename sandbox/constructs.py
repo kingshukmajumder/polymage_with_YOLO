@@ -1077,7 +1077,7 @@ class TStencil(Function):
         self._timesteps = _timesteps
 
         self.time_var = Variable(Int, "time")
-        self._body = None
+        self._body = []
         # hold on to the original definition, because it is lost
         # during macro expansion
         self._original_def = None
@@ -1200,18 +1200,22 @@ class TStencil(Function):
 
     @defn.setter
     def defn(self, _def):
-        assert(self._body == None)
-        assert isinstance(_def, AbstractExpression)
-        self._original_def = _def.clone()
+        assert(self._body == [])
+        assert(len(_def) == 1), str(_def) + " " + str(self._name)
 
-        stencil_list = _def.collect(Stencil)
+        assert isinstance(_def[0], (Case, AbstractExpression)), str(case)
+        # assert isinstance(_def, AbstractExpression)
+        self._original_def = _def[0].clone()
+
+        stencil_list = _def[0].collect(Stencil)
         print("stencil_list: %s" % stencil_list)
 
-        assert(len(stencil_list) == 1, "Expected exactly 1 stencil in defn.")
+        assert (len(stencil_list) == 1, "Expected exactly 1 stencil in defn.")
         self._stencil = stencil_list[0]
 
-        ghost_zone_cond = self.create_ghost_zone_condition()
-        self._body = [Case(ghost_zone_cond, _def)]
+        if not isinstance(_def[0], Case):
+            ghost_zone_cond = self.create_ghost_zone_condition()
+            self._body = [Case(ghost_zone_cond, _def[0])]
 
         assert(self._stencil.iter_vars == self._variables)
 
@@ -1267,7 +1271,7 @@ class TStencil(Function):
                                     "ghost zone padding")
 
         body_case = self._body[0]
-        new_tstencil.defn = self._original_def
+        new_tstencil.defn = [self._original_def]
 
         return new_tstencil
     @property
