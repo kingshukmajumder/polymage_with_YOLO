@@ -59,11 +59,19 @@ def build_mg_cycle(app_data):
         mg = w_cycle(app_data)
 
     n = pipe_data['n']
+    T1 = pipe_data['T1']
+    T2 = pipe_data['T2']
+    Tc = pipe_data['Tc']
 
     live_outs = [mg]
     pipe_name = app_data['cycle_name']
     p_estimates = [(n, app_data['n'])]
-    p_constraints = [ Condition(n, "==", app_data['n']) ]
+    p_constraints = [
+        Condition(n, "==", app_data['n']),
+        Condition(T1, "==", app_data['nu1']),
+        Condition(T2, "==", app_data['nu2']),
+        Condition(Tc, "==", app_data['nuc'])
+    ]
     t_size = [8, 8, 32]
     g_size = 6
     opts = []
