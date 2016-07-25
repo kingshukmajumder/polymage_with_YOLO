@@ -453,12 +453,12 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
         autolog("%s%s" % (header("in_domain"), in_domain), TAG)
         autolog("%s%s" % (header("in_schedule"), in_schedule), TAG)
         pluto = libpluto.LibPluto()
-        options = pluto.create_options()
-        options.partlbtile = True
+        pluto_options = pluto.create_options()
+        pluto_options.partlbtile = True
         optimised_sched = pluto.schedule(isl_ctx,
                 isl.UnionSet.from_basic_set(in_domain),
                 in_schedule,
-                options).copy()
+                pluto_options).copy()
 
         autolog("pluto optimised schedule: %s" % optimised_sched, TAG)
 
@@ -504,7 +504,7 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
         remapping = pluto.get_remapping(isl_ctx,
                 isl.UnionSet.from_basic_set(in_domain),
                 in_schedule,
-                options)
+                pluto_options)
 
 
         # TODO: check if the 0th matrix is the right one. Maybe the 1st matrix is correct?

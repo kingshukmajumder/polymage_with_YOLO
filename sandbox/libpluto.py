@@ -429,7 +429,7 @@ class LibPluto(object):
         # HACK: don't free, try to figure out why there's a segfault
         # self.so.pluto_options_free(raw_options_ptr)
 
-    def schedule(self, ctx, domains, dependences, options):
+    def schedule(self, ctx, domains, dependences, pluto_options):
 
         if isinstance(domains, isl.BasicSet):
             domains = isl.UnionSet.from_basic_set(domains)
@@ -439,7 +439,7 @@ class LibPluto(object):
         if isinstance(dependences, isl.BasicMap):
             dependences = isl.UnionMap.from_basic_map(dependences)
         assert isinstance(dependences, isl.UnionMap)
-        assert isinstance(options, PlutoOptions)
+        assert isinstance(pluto_options, PlutoOptions)
 
         autolog(header("domains") + str(domains), TAG)
         autolog(header("depdendences") + str(dependences), TAG)
@@ -450,7 +450,7 @@ class LibPluto(object):
 
         self.so.pluto_schedule_str(domains_str, dependences_str,
                                           schedule_strbuf_ptr,
-                                          options._raw_ptr)
+                                          pluto_options._raw_ptr)
 
         assert schedule_strbuf_ptr[0] != self.ffi.NULL, \
             ("unable to get schedule from PLUTO")
@@ -464,14 +464,13 @@ class LibPluto(object):
         remapping_ptr = self.ffi.new("Remapping **");
 
         self.so.pluto_get_remapping_str(domains_str, dependences_str, 
-                remapping_ptr, options._raw_ptr)
+                remapping_ptr, pluto_options._raw_ptr)
 
         remapping = Remapping(self, remapping_ptr[0])
 
         return schedule
 
-
-    def get_remapping(self, ctx, domains, dependences, options):
+    def get_remapping(self, ctx, domains, dependences, pluto_options):
         if isinstance(domains, isl.BasicSet):
             domains = isl.UnionSet.from_basic_set(domains)
 
@@ -480,7 +479,7 @@ class LibPluto(object):
         if isinstance(dependences, isl.BasicMap):
             dependences = isl.UnionMap.from_basic_map(dependences)
         assert isinstance(dependences, isl.UnionMap)
-        assert isinstance(options, PlutoOptions)
+        assert isinstance(pluto_options, PlutoOptions)
 
         autolog(header("domains") + str(domains), TAG)
         autolog(header("depdendences") + str(dependences), TAG)
@@ -491,7 +490,7 @@ class LibPluto(object):
         remapping_ptr = self.ffi.new("Remapping **");
 
         self.so.pluto_get_remapping_str(domains_str, dependences_str, 
-                remapping_ptr, options._raw_ptr)
+                remapping_ptr, pluto_options._raw_ptr)
 
         remapping = Remapping(self, remapping_ptr[0])
 
@@ -504,8 +503,8 @@ if __name__ == "__main__":
     pluto = LibPluto()
 
     ctx = isl.Context.alloc()
-    opts = pluto.create_options()
-    opts.partlbtile = 1
+    pluto_opts = pluto.create_options()
+    pluto_opts.partlbtile = 1
     
     domains = isl.UnionSet.read_from_str(ctx, (
         " [R, T] -> { S_0[i0, i1] : 0 <= i0 <= T and 0 <= i1 <= R - 1; }"))
@@ -516,7 +515,7 @@ if __name__ == "__main__":
         "S_0[i0, i1] -> S_0[i0 + 1, i1 - 1] : 0 <= i0 <= T - 1 and 1 <= i1 <= R - 2; "
         "S_0[i0, i1] -> S_0[i0 + 1, i1 + 1] : 0 <= i0 <= T - 1 and 1 <= i1 <= R - 2; }"))
 
-    sched  = pluto.schedule(ctx, domains, deps, opts)
-    remapping = pluto.get_remapping(ctx, domains, deps, opts)
+    sched  = pluto.schedule(ctx, domains, deps, pluto_opts)
+    remapping = pluto.get_remapping(ctx, domains, deps, pluto_opts)
     print("schedule: %s" % sched)
     print("remapping: %s" % remapping)
