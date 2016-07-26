@@ -105,7 +105,7 @@ class CPowf(Powf):
     def __init__(self, _expr1, _expr2):
         Powf.__init__(self, _expr1, _expr2)
 
-class CMat_Inv(Powf):
+class CMat_Inv(Mat_Inverse):
     def __init__(self, _expr1, _expr2):
         Mat_Inverse.__init__(self, _expr1, _expr2)
 

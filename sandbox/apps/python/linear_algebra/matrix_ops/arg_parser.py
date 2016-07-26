@@ -25,6 +25,11 @@ def parse_args():
                       dest='img_file',
                       help='input image file path')
 
+    parser.add_option('-b', '--blas',
+                      action='store',
+                      dest='blas',
+                      help='Specify the type of blas call')
+
     parser.add_option('-x', '--rows',
                       action='store',
                       dest='rows',

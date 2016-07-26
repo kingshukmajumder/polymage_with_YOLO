@@ -8,8 +8,9 @@ ROOT="../../../../"
 # app inputs
 IMG=$(ROOT)"/../images/venice_wikimedia.jpg"
 RUNS=1
+BLAS=CBLAS
 
-APP_ARGS=
+APP_ARGS= --blas="${BLAS}"
 OPT_ARGS=--pool_alloc --optimize_storage --early_free
 TOOL_ARGS=--graph-gen --runs=${RUNS} --display --timer
 CXX_ARGS=--cxx="${CXX}" --cxx_flags="${CXX_FLAGS}"
