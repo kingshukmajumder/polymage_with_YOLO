@@ -192,10 +192,11 @@ class ArcTan(InbuiltFunction):
         return Double
 
     def clone(self):
-        return ArcTan(self._args[0].clone())
+        return ArcTan(self._args[0].clone(), self._args[1].clone())
 
     def __str__(self):
-        return "std::atan(" +  self._args[0].__str__() +  ")"
+        return "std::atan(" +  self._args[0].__str__() +  \
+                    self._args[1].__str__() ")"
 
 class Sqrt(InbuiltFunction):
     def __init__(self, _expr):
@@ -234,7 +235,10 @@ class Abs(InbuiltFunction):
         return Abs(self._args[0].clone())
 
     def __str__(self):
-        return "std::abs(" +  self._args[0].__str__() +  ")"
+        if (getType(self._args[0]) == Double): 
+            return "std::abs(" +  self._args[0].__str__() +  ")"
+        else:
+            return "std::fabsf(" +  self._args[0].__str__() +  ")"
 
 class Cast(AbstractExpression):
     def __init__(self, _typ, _expr):
@@ -1088,7 +1092,6 @@ class Function(object):
         else:
             return self._name
 
-class Image(Function):
     def __init__(self, _typ, _name, _dims):
         _dims = [ Value.numericToValue(dim) for dim in _dims ]
         # Have to evaluate if a  stronger constraint

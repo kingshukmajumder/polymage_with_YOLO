@@ -57,7 +57,7 @@ def init_images(app_data):
     pipe_data['nDoGLayers'] = nDoGLayers 
     # No. of Octaves is calculate using eZSift's Algorithm  
     nOCT = int(log2(min(rows,cols)))- 4
-    pipe_data['nOCT'] = nOCT           
+    pipe_data['nOCT'] = nOCT
 
     ######################################################################
     # Determine the Coeff Calcs
@@ -72,6 +72,7 @@ def init_images(app_data):
     nBins = 36
     app_data['nBins'] = nBins
     app_data['SIFT_CONTR_THR'] = (float)8.0
+    app_data['SIFT_IB'] = 5     
 
     ######################################################################
 
