@@ -892,7 +892,7 @@ class Reduce(object):
         return self._expr
     @property 
     def op_type(self):
-        return self._expr
+        return self._op_typ
 
     def replace_refs(self, ref_to_expr_map):
         self._expr = substitute_refs(self._expr, ref_to_expr_map)
@@ -984,6 +984,14 @@ class Function(object):
         return self._const
 
     @property
+    def idiom_match_found(self):
+        return self._idiom_match_found
+
+    @property
+    def idiom(self):
+        return self._idiom
+
+    @property
     def variableDomain(self):
         return (self._variables, self._varDomain)
            
@@ -1029,6 +1037,12 @@ class Function(object):
             # MOD -> if _def is not a Case, shouldnt it be disallowed after
             # the first definition?
             self._body.append(case)
+
+    def set_idiom_match_found(self,match_found):
+        self._idiom_match_found = match_found
+
+    def set_idiom(self,idiom):
+        self._idiom = idiom
 
     def __call__(self, *args):
         assert(len(args) == len(self._variables))
@@ -1352,10 +1366,12 @@ class Matrix(Function):
         matmul_as_reduction = Reduction(var_dom, red_dom, mat1.type, name)
         matmul_as_reduction.defn = [Case(cond, Reduce(matmul_as_reduction(x, y), mat1(x, z) * mat2(z, y), Op.Sum))]
 
-        name = 'prod_' + mat1.name + '_' + mat2.name
-        prod_matrix = Matrix(mat1.type, name, [mat1.dimensions[0],mat2.dimensions[total_dimension_mat2-1]], [x,y])
-        prod_matrix.defn = [matmul_as_reduction(x,y)]
-        return prod_matrix
+        return matmul_as_reduction
+
+        #name = 'prod_' + mat1.name + '_' + mat2.name
+        #prod_matrix = Matrix(mat1.type, name, [mat1.dimensions[0],mat2.dimensions[total_dimension_mat2-1]], [x,y])
+        #prod_matrix.defn = [matmul_as_reduction(x,y)]
+        #return prod_matrix
 
     def collect(self, objType):
         objs = []

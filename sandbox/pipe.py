@@ -413,6 +413,7 @@ class Group:
 
         self._comps_schedule = None
         self._liveness_map = None
+        self._can_be_mapped_to_lib = False
 
     @property
     def id_(self):
@@ -457,6 +458,10 @@ class Group:
     @property
     def root_comps(self):
         return self._inputs
+
+    @property
+    def can_be_mapped_to_lib(self):
+        return self._can_be_mapped_to_lib
 
     @property
     def comps_schedule(self):
@@ -594,6 +599,10 @@ class Group:
 
     def set_comp_and_parts_sched(self):
         self._comps_schedule = schedule_within_group(self)
+        return
+
+    def set_can_be_mapped_to_lib(self,lib_call):
+        self._can_be_mapped_to_lib = lib_call
         return
 
     def set_liveness_map(self, _liveness_map):
@@ -744,6 +753,8 @@ class Pipeline:
             base_schedule(g)
             # grouping and tiling
             fused_schedule(self, g, self._param_estimates)
+            # idiom matching algorithm
+            idiom_recognition(self, g)
 
         # group
         self._grp_schedule = schedule_groups(self)
@@ -1183,3 +1194,64 @@ class Pipeline:
 
         return
 
+
+
+def idiom_recognition(pipeline, group):
+    g_poly_parts = group.polyRep.poly_parts
+    g_all_parts = []
+    for comp in g_poly_parts:
+        g_all_parts.extend(g_poly_parts[comp])
+    matrix_mul_found = match_idiom_matrix_mul(g_all_parts)
+    blas = True
+    if matrix_mul_found:
+        if blas:
+            group.set_can_be_mapped_to_lib(True)
+            # replace_with_lib_call(group,g_all_parts)
+        print("Idiom Match Found")
+    else:
+        print("No match found")
+    return
+
+# def replace_with_lib_call(group,g_all_parts):
+    # comp_map = group.get_ordered_comps
+    # comps = group.comps
+    # dim = 0 # changing the schedule and the polypart of the space
+    # schedule_names = ['_t']
+    # grp_params = []
+    # for comp in comps:
+    #     grp_params = grp_params + comp.func.getObjects(Parameter)
+    # grp_params = list(set(grp_params))
+
+    # transformed_func = Function(([],[]), Float, comp.func.name + "_mul")
+    # transformed_func.defn = [0]
+    #
+    # comp._func = transformed_func
+
+    # new_comp_object = ComputeObject(transformed_func)
+    #
+    # for parent in comp.parents:
+    #     new_comp_object.add_parent(parent)
+    # for child in comp.children:
+    #     new_comp_object.add_child(child)
+    # new_comp_object.set_group(group)
+    # new_comp_object.set_grp_level(comp.group_level)
+    # new_comp_object.set_level(comp.level)
+    # if comp.orig_storage_class:
+    #     new_comp_object.set_orig_storage_class(comp.orig_storage_class)
+    # if comp.storage_class:
+    #     new_comp_object.set_storage_class(comp.storage_class)
+    # if comp.array:
+    #     new_comp_object.set_storage_object(comp.array)
+    #
+    # group._comps = [new_comp_object]
+
+    # param_names = [param.name for param in grp_params]
+    #
+    # context_conds = \
+    #     group.polyRep.format_param_constraints(group.polyRep.param_constraints, grp_params)
+    #
+    # group.polyRep.extract_polyrep_from_function(comp, dim, schedule_names,
+    #                                    param_names, context_conds,
+    #                                    comp_map[comp] + 1,
+    #                                    group.polyRep.param_constraints)
+    # return

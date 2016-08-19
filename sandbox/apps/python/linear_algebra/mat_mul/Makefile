@@ -1,18 +1,19 @@
 #CXX=icpc
 #CXX_FLAGS=-openmp -ipo -O3 -xhost
 CXX=g++
-CXX_FLAGS=-fopenmp -O3 -march=native -ftree-vectorize
+CXX_FLAGS=-fopenmp -O3 -march=native -ftree-vectorize 
 PYTHON=python3
 ROOT="../../../../"
 
 # app inputs
 IMG=$(ROOT)"/../images/venice_wikimedia.jpg"
 RUNS=1
+BLAS=true
 
-APP_ARGS=
+APP_ARGS= --blas="${BLAS}"
 OPT_ARGS=--pool_alloc --optimize_storage --early_free
 TOOL_ARGS=--graph-gen --runs=${RUNS} --display --timer
-CXX_ARGS=--cxx="${CXX}" --cxx_flags="${CXX_FLAGS}"
+CXX_ARGS=--cxx="${CXX}" --cxx_flags="${CXX_FLAGS}" 
 
 all: new
 

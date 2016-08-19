@@ -1,7 +1,7 @@
 import sys
 import subprocess
 
-def gen_compile_string(app_data):
+def gen_compile_string(app_data,in_file,out_file):
     ROOT = app_data['ROOT']
     arg_data = app_data['app_args']
     # CXX compiler and flags :
@@ -10,16 +10,19 @@ def gen_compile_string(app_data):
     #fi
 
     # Include Flags :
+    include = ""
     if bool(arg_data.pool_alloc):
         include = "-I"+ROOT+"/memory_allocation/ "+\
-                  ROOT+"/memory_allocation/simple_pool_allocator.cpp"
-    else:
-        include = ""
+                  ROOT+"/memory_allocation/simple_pool_allocator.cpp "
+    if arg_data.blas:
+          if bool(arg_data.blas):
+            include += "-I /opt/OpenBLAS/include -L /opt/OpenBLAS/lib -lopenblas "
 
     # Shared library Flags
     shared = "-fPIC -shared"
 
     compile_str = cxx + " " \
+                + in_file + " -o " + out_file + " "\
                 + cxx_flags + " " \
                 + include + " " \
                 + shared + " " \
@@ -29,10 +32,11 @@ def gen_compile_string(app_data):
     return
 
 def c_compile(in_file, out_file, app_data):
-    gen_compile_string(app_data)
+    #compile_str = " " + in_file + " -o " + out_file
+    gen_compile_string(app_data,in_file,out_file)
 
     compile_str = app_data['cxx_string']
-    compile_str += " " + in_file + " -o " + out_file
+    #compile_str += " " + in_file + " -o " + out_file
 
     print("")
     print("[cpp_compiler]: compiling", in_file, "to", out_file, "...")

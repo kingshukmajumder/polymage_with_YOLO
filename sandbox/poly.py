@@ -214,6 +214,8 @@ class PolyPart(object):
         # liveness in the group containing the part
         self._is_liveout = _liveout
 
+        self._is_idiom = False
+
     @property
     def align(self):
         return list(self._align)
@@ -232,6 +234,12 @@ class PolyPart(object):
     @property
     def level(self):
         return self._level_no
+    @property
+    def is_idiom(self):
+        return self._is_idiom
+    @property
+    def idiom(self):
+        return self._idiom
 
     def set_align(self, align):
         self._align = [i for i in align]
@@ -436,6 +444,12 @@ class PolyPart(object):
         for dep in self.deps:
             depstr = depstr + dep.__str__() + '\n'
         return partStr + depstr
+
+    def set_is_idiom(self,is_idiom):
+        self._is_idiom = is_idiom
+
+    def set_idiom(self, idiom):
+        self._idiom = idiom
 
 class PolyDomain(object):
     def __init__(self, _dom_set, _comp):

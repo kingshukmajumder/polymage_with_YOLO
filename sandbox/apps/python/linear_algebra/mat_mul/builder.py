@@ -15,7 +15,6 @@ from constructs import *
 def codegen(pipe, file_name, app_data):
     print("")
     print("[builder]: writing the code to", file_name, "...")
-
     code = pipe.generate_code(is_extern_c_func=True,
                               are_io_void_ptrs=True)
 
@@ -79,6 +78,8 @@ def build_matmul(app_data):
         opts += ['optimize_storage']
     if app_data['pool_alloc']:
         opts += ['pool_alloc']
+    if app_data['blas']:
+        opts += ['blas']
 
     pipe = buildPipeline(live_outs,
                          param_estimates=p_estimates,

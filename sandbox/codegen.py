@@ -346,11 +346,17 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
             generate_c_expr(pipe, acc_expr, cparam_map, cvar_map, scratch_map)
         arglist.append(c_expr)
     prologue = []
-    expr = generate_c_expr(pipe, poly_part.expr,
+    if poly_part.is_idiom:
+        #todo something
+        expr = "cblas_dgemm(CblasRowMajor, CblasNoTrans,CblasNoTrans, R1, R2, C1, 1.0, mat1, C1, mat2, R2, 0.0, redn_prod_mat1_mat2, R2)"
+        # expr = generate_c_expr(pipe, poly_part.expr,
+        #                        cparam_map, cvar_map,
+        #                        scratch_map, prologue_stmts=prologue)
+    else:
+        expr = generate_c_expr(pipe, poly_part.expr,
                            cparam_map, cvar_map,
                            scratch_map, prologue_stmts = prologue)
-    assign = genc.CAssign(array(*arglist), expr)
-
+        assign = genc.CAssign(array(*arglist), expr)
     if prologue is not None:
         for s in prologue:
             body.add(s)
@@ -366,7 +372,10 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
         #incr = genc.CAssign(var, var + 1)
         #body.add(incr)
     else:
-        body.add(assign)
+        if poly_part.is_idiom:
+            body.add(genc.CStatement(expr))
+        else:
+            body.add(assign)
         #var = genc.CVariable(genc.c_int, "_c_" + poly_part.comp.func.name)
         #incr = genc.CAssign(var, var + 1)
         #body.add(inc)
@@ -849,10 +858,70 @@ def generate_reduction_scan_loops(pipe, group, comp, pipe_body, cparam_map):
             assert("Invalid case instance:"+str(case) and \
                    False)
 
+def check_if_group_has_idiom(group):
+    if not group.can_be_mapped_to_lib:
+        return
+    comp_map = group.get_ordered_comps
+    comps = group.comps
+    dim = 0  # changing the schedule and the polypart of the space
+    # schedule_names = ['_t']
+    schedule_names = []
+    grp_params = []
+    for comp in comps:
+        grp_params = grp_params + comp.func.getObjects(Parameter)
+    grp_params = list(set(grp_params))
+
+    group.set_can_be_mapped_to_lib(True)
+
+    x = Variable(UInt, 'x')
+    row = Interval(UInt, 0, 0)
+    transformed_func = Function(([x], [row]), Float, comp.func.name + "_mul")
+    transformed_func.defn = [0]
+    transformed_func.set_idiom(comp)
+
+    comp._func = transformed_func
+
+    new_comp_object = pipe.ComputeObject(transformed_func)
+
+    for parent in comp.parents:
+        new_comp_object.add_parent(parent)
+    for child in comp.children:
+        new_comp_object.add_child(child)
+    new_comp_object.set_group(group)
+    new_comp_object.set_grp_level(comp.group_level)
+    new_comp_object.set_level(comp.level)
+    if comp.orig_storage_class:
+        new_comp_object.set_orig_storage_class(comp.orig_storage_class)
+    if comp.storage_class:
+        new_comp_object.set_storage_class(comp.storage_class)
+    if comp.array:
+        new_comp_object.set_storage_object(comp.array)
+
+    group._comps = [new_comp_object]
+
+    param_names = [param.name for param in grp_params]
+
+    context_conds = \
+        group.polyRep.format_param_constraints(group.polyRep.param_constraints, grp_params)
+
+    group.polyRep.extract_polyrep_from_function(comp, dim, schedule_names,
+                                                param_names, context_conds,
+                                                comp_map[comp] + 1,
+                                                group.polyRep.param_constraints)
+    return transformed_func
+
 def generate_code_for_group(pipeline, g, body, alloc_arrays,
                             out_arrays, cparam_map, outputs):
+    transformed_func = check_if_group_has_idiom(g)
+
     g.polyRep.generate_code()
     group_part_map = g.polyRep.poly_parts
+
+    if transformed_func:
+        for comp in group_part_map:
+            part = group_part_map[comp]
+            part[0].set_is_idiom(True)
+            part[0].set_idiom(transformed_func.idiom)
     sorted_comps = g.get_sorted_comps()
 
     # ***

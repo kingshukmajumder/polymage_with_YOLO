@@ -347,7 +347,6 @@ def enable_tile_scratchpad(group_parts):
 
 def fused_schedule(pipeline, group, param_estimates):
     """Generate an optimized schedule for the stage."""
-
     g_poly_parts = group.polyRep.poly_parts
     g_all_parts = []
     for comp in g_poly_parts:
@@ -425,6 +424,29 @@ def get_group_height(group_parts):
     min_height = min( [ part.level for part in group_parts ] )
     max_height = max( [ part.level for part in group_parts ] )
     return max_height - min_height
+
+
+def match_idiom_matrix_mul(parts):
+    zero_found = False
+    reduction_found = False
+    for part in parts:
+        if isinstance(part.func,Reduction):
+            if part.expr == 0:
+                zero_found = True
+            if isinstance(part.expr,Reduce):
+                expr = part.expr
+                reduce_op = part.expr.op_type
+                reduce_expr = expr.expression
+                if isinstance(reduce_expr, AbstractBinaryOpNode) and reduce_op == Op.Sum:
+                    if isinstance(reduce_expr.left, Reference) \
+                            and isinstance(reduce_expr.right, Reference):
+                        if isinstance(reduce_expr.left.objectRef, Matrix) \
+                                and isinstance(reduce_expr.right.objectRef, Matrix):
+                            if reduce_expr.op == '*':
+                                reduction_found = True
+    if zero_found and reduction_found:
+        return True
+    return False
 
 def overlap_tile(pipeline, group_parts, slope_min, slope_max):
     comp_dim = 0

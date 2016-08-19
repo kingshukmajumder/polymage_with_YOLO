@@ -12,8 +12,8 @@ def init_images(app_data):
     app_args = app_data['app_args']
 
     # input matrix: 
-    rows1, cols1 = 32,256
-    rows2, cols2 = 256,128
+    rows1, cols1 = 32,32
+    rows2, cols2 = 32,32
     mat1 = np.full((rows1,cols1),7)
     mat2 = np.full((rows2,cols2),7)
 
@@ -55,7 +55,7 @@ def get_input(app_data):
     app_data['early_free'] = bool(app_args.early_free)
     # pool allocate option
     app_data['pool_alloc'] = bool(app_args.pool_alloc)
-
+    app_data['blas'] = app_args.blas
     return
 
 def init_all(app_data):
