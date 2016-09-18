@@ -1,6 +1,6 @@
 /*
  *
- * ACACES 2016 Homework
+ * E0358 2016 Homework
  *
  * Modify pipeline_naive to make it run faster
  *

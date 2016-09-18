@@ -53,7 +53,7 @@ or
 #### Toggle between app modes:
 * **' '** : OpenCV [1]
     * (_space_)
-* **'n'** : ACACES **N**aive
+* **'n'** : E0358 **N**aive
 * **'o'** : PolyOpt **O**pt
 * **'p'** : **P**IL [2]
 * **'j'** : Numba [2]

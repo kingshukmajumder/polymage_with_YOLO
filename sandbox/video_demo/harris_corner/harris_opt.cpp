@@ -2,7 +2,9 @@
  *
  * E0358 2016 Homework
  *
- * pipeline_naive is a simple parallelized version
+ * Modify pipeline_opt to make it run faster; to start with, it's the same as
+ * pipeline_naive in harris_naive.cpp
+ * 
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +15,7 @@
 #define isl_min(x,y) ((x) < (y) ? (x) : (y))
 #define isl_max(x,y) ((x) > (y) ? (x) : (y))
 #define isl_floord(n,d) (((n)<0) ? -((-(n)+(d)-1)/(d)) : (n)/(d))
-extern "C" void  pipeline_naive(int  C, int  R, void * img_void_arg, void * harris_void_arg)
+extern "C" void  pipeline_opt(int  C, int  R, void * img_void_arg, void * harris_void_arg)
 {
   unsigned char * img;
   img = (unsigned char *) (img_void_arg);

@@ -11,12 +11,12 @@ CXX_FLAGS=-fopenmp -O3 -march=native -fPIC -shared
 
 LIB_SRC=../simple_pool_allocator.cpp
 
-all: $(APP)
+all: $(APP).so
 
-polymage: $(APP).so
+opt: $(APP).so
 naive: $(APP)_naive.so
 
-$(APP).so: $(APP)_polymage.cpp
+$(APP).so: $(APP)_opt.cpp
 	$(CXX) $(CXX_FLAGS) $(LIB_SRC) $< -o $@
 
 $(APP)_naive.so: $(APP)_naive.cpp

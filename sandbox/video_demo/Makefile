@@ -1,15 +1,15 @@
 DIRS = bilateral_grid harris_corner local_laplacian unsharp_mask
 
-all: naive polymage
+all: naive opt
 
 naive:
 	    @-for d in $(DIRS); do \
 			        make -C $$d naive; \
 					        done
 
-polymage:
+opt:
 	    @-for d in $(DIRS); do \
-			        make -C $$d polymage; \
+			        make -C $$d opt; \
 					        done
 
 clean:
