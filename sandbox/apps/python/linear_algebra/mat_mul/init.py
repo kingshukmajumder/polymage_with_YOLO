@@ -20,11 +20,11 @@ def init_images(app_data):
     # convert to float image
     IN = np.array(mat1)
     IN1 = np.array(mat2)
-    IN = IN.astype(np.float32).ravel()
-    IN1 = IN1.astype(np.float32).ravel()
+    IN = IN.astype(np.float64).ravel()
+    IN1 = IN1.astype(np.float64).ravel()
 
     # final output image
-    OUT = np.zeros((rows1, cols2), np.float32).ravel()
+    OUT = np.zeros((rows1, cols2), np.float64).ravel()
 
     img_data = {}
     img_data['IN'] = IN
@@ -55,7 +55,7 @@ def get_input(app_data):
     app_data['early_free'] = bool(app_args.early_free)
     # pool allocate option
     app_data['pool_alloc'] = bool(app_args.pool_alloc)
-    app_data['blas'] = app_args.blas
+    app_data['blas'] = bool(app_args.blas)
     return
 
 def init_all(app_data):

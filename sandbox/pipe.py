@@ -47,7 +47,6 @@ from inline import *
 from liveness import *
 from storage_mapping import *
 
-
 # LOG CONFIG #
 pipe_logger = logging.getLogger("pipe.py")
 pipe_logger.setLevel(logging.DEBUG)
@@ -61,23 +60,7 @@ def get_parents_from_func(func, non_image=True):
                                      not (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput)) ]
     else:
         refs = [ ref for ref in refs if not ref.objectRef == func ]
-    func_parents = [ref.objectRef for ref in refs]
-    matObjects = getMatInvObjects(func)
-    if matObjects:
-        func_parents.extend(matObjects)
-    return list(set(func_parents))
-
-def getMatInvObjects(func):
-    functions = func.getObjects(Matrix)
-    return functions
-
-def getMatInputs(func):
-    mat_inputs = []
-    inputs = getMatInvObjects(func)
-    for inp in inputs:
-        if inp.isInput:
-            mat_inputs.append(inp)
-    return mat_inputs
+    return list(set([ref.objectRef for ref in refs]))
 
 def get_funcs_and_dep_maps(outputs):
     """
@@ -1197,15 +1180,16 @@ class Pipeline:
 
 
 def idiom_recognition(pipeline, group):
+    blas = 'blas' in pipeline.options
+    if not blas:
+        return
     g_poly_parts = group.polyRep.poly_parts
     g_all_parts = []
     for comp in g_poly_parts:
         g_all_parts.extend(g_poly_parts[comp])
     matrix_mul_found = match_idiom_matrix_mul(g_all_parts)
-    blas = True
     if matrix_mul_found:
-        if blas:
-            group.set_can_be_mapped_to_lib(True)
+        group.set_can_be_mapped_to_lib(True)
             # replace_with_lib_call(group,g_all_parts)
         print("Idiom Match Found")
     else:

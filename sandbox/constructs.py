@@ -210,32 +210,6 @@ class Abs(InbuiltFunction):
     def __str__(self):
         return "std::abs(" +  self._args[0].__str__() +  ")"
 
-class Mat_Inverse(InbuiltFunction):
-    def __init__(self, *_args):
-        #TODO : assert for no arguments
-        InbuiltFunction.__init__(self, *_args)
-
-    def getType(self):
-        return getType(self._args[0])
-
-    def clone(self):
-        print(self._args)
-        return Mat_Inverse('Matrix', self._args[0].clone(), self._args[1].clone())
-
-    def __str__(self):
-        function_call = "int *IPIV = new int["+self._args[0].__str__()+"+1];" + \
-            "int LWORK = "+self._args[0].__str__()+"*"+self._args[0].__str__()+";" + \
-            "double *WORK = new double[LWORK];" + \
-            "int INFO;" + \
-            "dgetrf_(&"+self._args[0].__str__()+",&"+self._args[0].__str__()+",A,&"+self._args[0].__str__()+",IPIV,&INFO);" + \
-            "dgetri_(&"+self._args[0].__str__()+",A,&"+self._args[0].__str__()+",IPIV,WORK,&LWORK,&INFO);" + \
-            "delete IPIV;" + \
-            "delete WORK"
-        return function_call
-
-    def getObjects(self, objType):
-        return self.collect(objType)
-
 class Cast(AbstractExpression):
     def __init__(self, _typ, _expr):
         _expr = Value.numericToValue(_expr)
@@ -277,8 +251,6 @@ class Cast(AbstractExpression):
     def macro_expand(self):
         self._expr = self._expr.macro_expand()
         return self
-
-
 
 
 class Select(AbstractExpression):
@@ -1013,7 +985,6 @@ class Function(object):
     @defn.setter
     def defn(self, _def):
         assert(self._body == [])
-        print(len(_def))
         assert(len(_def) > 0), str(_def) + " " + str(self._name)
         case_type = 0
         non_case_type = 0
@@ -1066,12 +1037,6 @@ class Function(object):
         for interval in self._varDomain:
             objs += interval.collect(objType)
         return list(set(objs))
-
-    def collect(self, objType):
-        objs = []
-        if (type(self) is objType):
-            objs = [self]
-        return objs
 
     def hasBoundedIntegerDomain(self):
         boundedIntegerDomain = True
@@ -1373,29 +1338,13 @@ class Matrix(Function):
         #prod_matrix.defn = [matmul_as_reduction(x,y)]
         #return prod_matrix
 
-    def collect(self, objType):
-        objs = []
-        if (type(self) is objType):
-            objs = [self]
-        return objs
+    # def collect(self, objType):
+    #     objs = []
+    #     if (type(self) is objType):
+    #         objs = [self]
+    #     return objs
 
     @staticmethod
     def det(mat):
         # TODO: Add implementation
         return mat.dimensions[0]
-
-    @staticmethod
-    def inverse(mat):
-        assert (len(mat.dimensions) == 2)
-        x = mat.variables[0]
-        y = mat.variables[1]
-        mat_clone = Matrix(mat.type, mat.name + "_clone", mat.dimensions, [x,y])
-        mat_clone.defn = [mat(x,y)]
-        cond = Condition(mat_clone.dimensions[0], "==", mat_clone.dimensions[1])
-        rows = mat_clone.intervals[0]
-        cols = mat_clone.intervals[1]
-        print("Rows and cols" +rows.__str__() + cols.__str__())
-        inv = Function(([x,y],[rows,cols]),mat_clone.type,"_inv")
-        inv.defn = [Case(cond, Mat_Inverse('Matrix', mat_clone, mat_clone.dimensions[0]))]
-        return inv
-        # return mat_clone

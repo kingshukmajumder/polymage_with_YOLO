@@ -614,10 +614,6 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
                                  scratch_map, prologue_stmts)
                  for arg in shifted_args ]
         return array(*args)
-    if isinstance(exp, Matrix):
-        ref_comp = pipe.func_map[exp]
-        array = ref_comp.array
-        return array;
     if isinstance(exp, Select):
         c_cond = generate_c_cond(pipe, exp.condition,
                                  cparam_map, cvar_map,
@@ -683,10 +679,6 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
         cexpr1 = generate_c_expr(pipe, exp.arguments[0], cparam_map, cvar_map)
         cexpr2 = generate_c_expr(pipe, exp.arguments[1], cparam_map, cvar_map)
         return genc.CPowf(cexpr1, cexpr2)
-    if isinstance(exp, Mat_Inverse):
-        cexpr2 = generate_c_expr(pipe, exp.arguments[1], cparam_map, cvar_map)
-        cexpr1 = generate_c_expr(pipe, exp.arguments[0], cparam_map, cvar_map)
-        return genc.CMat_Inv(cexpr1, cexpr2)
     if isinstance(exp, RandomFloat):
         return genc.CRandomFloat()
     if isinstance(exp, Log):

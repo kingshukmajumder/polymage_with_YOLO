@@ -27,8 +27,6 @@ from fractions import gcd
 
 # TODO remove this at some point
 from expr_types import *
-from constructs import *
-
 
 class AbstractExpression(object):
     """ AbstractExpression class is a tree representation for expressions
@@ -310,17 +308,8 @@ class InbuiltFunction(AbstractExpression):
         _args = [ Value.numericToValue(arg) for arg in _args]
         flag = 0
         for arg in _args:
-            if arg == 'Matrix':
-                flag = 1
-                continue
-            if flag == 1:
-                flag = 0
-                continue
             assert(isinstance(arg, AbstractExpression))
-        if _args[0] == 'Matrix':
-            self._args = _args[1:]
-        else:
-            self._args = _args
+        self._args = _args
 
     @property
     def arguments(self):
@@ -347,7 +336,6 @@ class InbuiltFunction(AbstractExpression):
     def macro_expand(self):
         # TODO: check if maybe arguments need to be macro expanded?
         return self
-
 
 class AbstractUnaryOpNode(AbstractExpression):
     def __init__(self, _child, _op=None): 

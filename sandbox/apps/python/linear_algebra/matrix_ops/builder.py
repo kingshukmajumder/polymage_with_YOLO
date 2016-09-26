@@ -101,8 +101,8 @@ def create_lib(build_func, pipe_name, app_data):
             pipe = build_func(app_data)
 
             # draw the pipeline graph to a png file
-            #if graph_gen:
-            #    generate_graph(pipe, pipe_name, app_data)
+            if graph_gen:
+                generate_graph(pipe, pipe_name, app_data)
 
             # generate pipeline cpp source
             codegen(pipe, pipe_src, app_data)
