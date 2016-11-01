@@ -41,13 +41,13 @@ def w_jacobi(U_, F_, l, name, app_data, T):
 
     if U_ != None:
         stencil = Stencil(U_, [z, y, x], kernel)
-        W_.defn = (stencil - c * F_(z, y, x))
+        W_.defn = [stencil - c * F_(z, y, x)]
     else:
         stencil_input = Function(([z, y, x], [extent[l], extent[l], extent[l]]),
                                  Double, 'stencil_input')
         stencil_input.defn = [0]
         stencil = Stencil(stencil_input, [z, y, x], kernel)
-        W_.defn = (stencil - c * F_(z, y, x))
+        W_.defn = [stencil - c * F_(z, y, x)]
 
     # if l == L:
     #     set_ghosts(W_, ghosts[l], U_(z, y, x))
