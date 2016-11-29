@@ -33,6 +33,7 @@ bounds_logger.setLevel(logging.ERROR)
 
 LOG = bounds_logger.log
 
+
 def bounds_check_pass(pipeline):
     """
     Bounds check pass analyzes if function values used in the compute
@@ -42,6 +43,9 @@ def bounds_check_pass(pipeline):
     references.
     """
     inp_groups = {}
+    # Adding a new variable to collect all the dependencies
+    # Check refs currently returns the dependencies
+    deps = []
     for inp_func in pipeline.inputs:
         inp_comp = pipeline.func_map[inp_func]
         inp_groups[inp_func] = \
@@ -50,11 +54,14 @@ def bounds_check_pass(pipeline):
 
     for group in pipeline.groups:
         for child in group.children:
-            check_refs(child, group)
+            deps = deps + check_refs(child, group)
         for inp in group.image_refs:
-            check_refs(group, inp_groups[inp])
+            deps = deps + check_refs(group, inp_groups[inp])
+
+    pipeline.dependencies = deps
     return
 
+# TODO: Adding a change to return all the dependencies - Need to be done later
 def check_refs(child_group, parent_group):
     # Check refs works only on non-fused groups. It can be made to
     # work with fused groups as well. However, it might serve very
@@ -66,6 +73,7 @@ def check_refs(child_group, parent_group):
     parent_func = parent_comp.func
     child_comp = child_group.comps[0]
     child_func = child_comp.func
+    deps = []
 
     # Only verifying if both child and  parent group have a polyhedral
     # representation
@@ -90,11 +98,10 @@ def check_refs(child_group, parent_group):
                                  if ref.objectRef == parent_func and
                                     affine_ref(ref) ]
 
-            log_level = logging.DEBUG
-            deps = []
             parent_dom = parent_group.polyRep.poly_doms[parent_comp]
             for ref in child_refs:
                 deps += extract_value_dependence(child_part, ref, parent_dom)
+                log_level = logging.DEBUG
                 LOG(log_level, "ref : "+str(ref))
             for dep in deps:
                 diff = dep.rel.range().subtract(parent_dom.dom_set)
@@ -117,4 +124,4 @@ def check_refs(child_group, parent_group):
                     raise TypeError("Reference out of domain", child_group,
                                      parent_group, diff)
 
-    return
+    return deps

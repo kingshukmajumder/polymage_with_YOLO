@@ -56,6 +56,7 @@ def get_input(app_data):
     # pool allocate option
     app_data['pool_alloc'] = bool(app_args.pool_alloc)
     app_data['blas'] = bool(app_args.blas)
+    app_data['matrix'] = bool(app_args.matrix)
     return
 
 def init_all(app_data):

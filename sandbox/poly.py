@@ -440,7 +440,7 @@ class PolyPart(object):
         partStr = "Schedule: " + self.sched.__str__() + '\n'\
                   "Expression: " + self.expr.__str__() + '\n'\
                   "Predicate: " + self.pred.__str__() + '\n'
-        depstr = ""
+        depstr = "Dependencies: "
         for dep in self.deps:
             depstr = depstr + dep.__str__() + '\n'
         return partStr + depstr
@@ -488,7 +488,9 @@ class PolyDep(object):
         return self._rel
 
     def __str__(self):
-        return self.rel.__str__()
+        str = self.producer_obj.__str__() + "|| " + self.rel.__str__() + "|| " + \
+              self.consumer_obj.__str__()
+        return str
 
 class PolyRep(object):
     """ The PolyRep class is the polyhedral representation of a 
@@ -516,6 +518,7 @@ class PolyRep(object):
         # For now, let this be. Compilation optimizations can come later.
 
         self.extract_polyrep_from_group(_param_constraints)
+
 
     def extract_polyrep_from_group(self, param_constraints):
         # dict: comp_obj -> level_no
@@ -616,6 +619,7 @@ class PolyRep(object):
                                       schedule_names, param_names,
                                       context_conds, level_no,
                                       param_constraints):
+
         self.poly_doms[comp] = \
             self.extract_poly_dom_from_comp(comp, param_constraints)
         sched_map = self.create_sched_space(comp.func.variables,
@@ -871,6 +875,7 @@ class PolyRep(object):
 
         # Note the align and scale lists are cloned otherwise all the parts
         # will be sharing the same alignment and scaling
+
         if not broken_parts:
             poly_part = PolyPart(sched_map, expr, pred, comp,
                                  list(align), list(scale), level_no)

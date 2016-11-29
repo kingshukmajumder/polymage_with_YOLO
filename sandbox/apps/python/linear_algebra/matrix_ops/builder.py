@@ -77,6 +77,8 @@ def build_matops(app_data):
         opts += ['pool_alloc']
     if app_data['blas']:
         opts += ['blas']
+    if app_data['matrix']:
+        opts += ['matrix']
 
     pipe = buildPipeline(live_outs,
                          param_estimates=p_estimates,

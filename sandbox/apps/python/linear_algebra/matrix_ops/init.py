@@ -55,6 +55,8 @@ def get_input(app_data):
 
     app_data['blas'] = bool(app_args.blas)
 
+    app_data['matrix'] = bool(app_args.matrix)
+
     return
 
 def init_all(app_data):
