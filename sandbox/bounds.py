@@ -85,16 +85,39 @@ def check_refs(child_group, parent_group):
 
             log_level = logging.DEBUG
             deps = []
+
+            
             parent_dom = parent_group.polyRep.poly_doms[parent_comp]
+            # the domain set of the parent
+            parent_dom_set = None
+            # assuming it is Tstencil, we need to project out the time 
+            # dimension
+            import islpy as isl; # TERRIBLE: FIXME HACK TODO
+            if parent_comp.is_tstencil_type:
+                full_space = parent_dom.dom_set.get_space()
+                # drop the leading time dimension so it doesn't mess with
+                # the constraint assignment we do
+                # All the constraint stuff doesn't know about the fake
+                # time dimension
+                removed_time_space = full_space.copy().drop_dims(isl.dim_type.out, 0, 1)
+                parent_dom_set = isl.BasicSet.universe(removed_time_space)
+
+            else:
+                # otherwise, just return the full set
+                parent_dom_set = isl.BasicSet.universe(parent_dom.dom_set.get_space())
+
+
+            assert parent_dom_set is not None
+
             for ref in child_refs:
-                deps += extract_value_dependence(child_part, ref, parent_dom)
+                deps += extract_value_dependence(child_part, ref, parent_dom_set)
                 LOG(log_level, "ref : "+str(ref))
             for dep in deps:
                 # import pudb; pudb.set_trace()
-                diff = dep.rel.range().subtract(parent_dom.dom_set)
+                diff = dep.rel.range().subtract(parent_dom_set)
                 # ***
                 ref_str = "referenced    = "+str(dep.rel.range())
-                dom_str = "parent domain = "+str(parent_dom.dom_set)
+                dom_str = "parent domain = "+str(parent_dom_set)
                 log_level = logging.DEBUG
                 LOG(log_level, ref_str)
                 LOG(log_level, dom_str)
@@ -106,6 +129,11 @@ def check_refs(child_group, parent_group):
                     LOG(log_level, "Reference out of domain")
                     LOG(log_level, ref_str)
                     LOG(log_level, dom_str)
+                    LOG(log_level, "Child Dom:\n%s" % dep)
+                    LOG(log_level, "Parent Dom:\n%s" % parent_dom)
+                    LOG(log_level, "Child group:\n%s\n%s" % (child_group, child_comp))
+                    LOG(log_level, "Parent group:\n%s\n%s" % (parent_group, parent_comp))
+                    LOG(log_level, "diff:\n%s" % diff)
                     LOG(log_level, "_______________________")
                     # ***
                     raise TypeError("Reference out of domain", child_group,

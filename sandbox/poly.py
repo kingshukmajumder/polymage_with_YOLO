@@ -144,19 +144,33 @@ def add_constraints(obj, ineqs, eqs):
 
     return obj
 
-def extract_value_dependence(part, ref, ref_poly_dom):
+def extract_value_dependence(part, ref, ref_poly_dom_set):
     # Dependencies are calculated between values. There is no storage
     # mapping done yet.
     assert(part.sched)
     deps = []
-    access_region = isl.BasicSet.universe(ref_poly_dom.dom_set.get_space())
+
+    # name it something more descriptive
+    # TODO: make this the parameter?
+    access_region = ref_poly_dom_set
+
     part_dom = \
-        part.sched.domain().align_params(ref_poly_dom.dom_set.get_space())
+        part.sched.domain().align_params(access_region.get_space())
+
     access_region = access_region.align_params(part_dom.get_space())
 
     rel = isl.BasicMap.from_domain_and_range(part_dom, access_region)
     dim_out = rel.dim(isl._isl.dim_type.out)
+
+    # source_dims = None
+    # HACK: Tstencil has an extra dummy dimension for time
+    # which we need to ignore!
+    # if ref_comp.is_tstencil_type:
+    #    source_dims = [ ('out', i) for i in range(1, dim_out)]
+    # else:
+    #    source_dims = [ ('out', i) for i in range(0, dim_out)]
     source_dims = [ ('out', i) for i in range(0, dim_out)]
+
     num_args = len(ref.arguments)
 
     for i in range(0, num_args):
@@ -175,6 +189,12 @@ def extract_value_dependence(part, ref, ref_poly_dom):
     return deps 
 
 class PolyPart(object):
+    # HACK
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "PolyPart: sched: %s " % self.sched
     def __init__(self, _sched, _expr, _pred, _comp,
                  _align, _scale, _level_no, _liveout = True):
         self.sched = _sched
@@ -508,6 +528,7 @@ class PolyRep(object):
         self.extract_polyrep_from_group(_param_constraints)
 
     def extract_polyrep_from_group(self, param_constraints):
+        # import pudb; pudb.set_trace()
         # dict: comp_obj -> level_no
         comp_map = self.group.get_ordered_comps
         num_objs = len(comp_map.items())
@@ -592,6 +613,7 @@ class PolyRep(object):
         return context_conds
 
     def extract_poly_dom_from_comp(self, comp, param_constraints):
+        # import pudb; pudb.set_trace()
         var_names = [ var.name for var in comp.func.variables ]
         dom_map_names = [ name +'\'' for name in var_names ]
 
@@ -618,24 +640,29 @@ class PolyRep(object):
         poly_dom.set_tuple_id(id_)
         isl_set_id_user(id_, poly_dom)
 
+        autolog("space:\n %s" % space, "extract_poly_dom_from_comp")
+        autolog("domain map:\n%s" % space, "extract_poly_dom_from_comp")
         return poly_dom
 
     def extract_polyrep_from_function(self, comp, max_dim,
                                       schedule_names, param_names,
                                       context_conds, level_no,
                                       param_constraints):
+
+        # import pudb; pudb.set_trace()
+
         self.poly_doms[comp] = \
             self.extract_poly_dom_from_comp(comp, param_constraints)
-        print(">>>poly dom: %s" % self.poly_doms[comp])
+        autolog(">>>poly dom: %s" % self.poly_doms[comp])
         sched_map = self.create_sched_space(comp.func.variables,
                                             comp.func.domain,
                                             schedule_names, param_names,
                                             context_conds)
-        print(">>>sched_map: %s" % sched_map)
+        autolog(">>>sched_map: %s" % sched_map)
         self.create_poly_parts_from_definition(comp, max_dim, sched_map,
                                                level_no, schedule_names,
                                                comp.func.domain)
-        print(">>>poly parts: %s" % "\n\t".join(map(str, self.poly_parts[comp])))
+        autolog(">>>poly parts: %s" % "\n\t".join(map(str, self.poly_parts[comp])))
 
     def extract_polyrep_from_reduction(self, comp, max_dim,
                                        schedule_names, param_names,
@@ -682,7 +709,6 @@ class PolyRep(object):
         # time -> _i0 | x -> _i1 | y -> _i2 | ... | (nth_dim) -> _in
         # original_basic_map = sched_map.copy()
         
-
         if isinstance(sched_map, isl.BasicMap):
             sched_map = isl.Map.from_basic_map(sched_map)
 
@@ -949,6 +975,12 @@ class PolyRep(object):
                 for part in parts:
                     self.poly_parts[comp].append(part)
 
+
+
+        autolog(list(map(lambda x: str(x.sched),
+                         self.poly_parts[comp])),
+                         "poly parts for comp (\n%s)" % (comp._func))
+
         # TODO adding a boundary padding and default to the function 
         # will help DSL usability. 
 
@@ -1099,6 +1131,7 @@ class PolyRep(object):
         # Note the align and scale lists are cloned otherwise all the parts
         # will be sharing the same alignment and scaling
         if not broken_parts:
+            # import pudb; pudb.set_trace()
             poly_part = PolyPart(sched_map, expr, pred, comp,
                                  list(align), list(scale), level_no)
             # Create a user pointer, tuple name and add it to the map

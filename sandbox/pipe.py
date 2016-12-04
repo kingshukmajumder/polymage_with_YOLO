@@ -128,6 +128,12 @@ class ComputeTypes:
 
 
 class ComputeObject:
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "%s" % self._func
+
     def __init__(self, _func, _is_output=False):
 
         self._set_type(_func)
@@ -398,6 +404,14 @@ class Group:
         group. A group also maintains a polyhedral representation of the 
         computation objects when possible.
     """
+
+    # HACK: this is quite terrible
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "%s: %s" % (self.id_, self.comps)
+
     # Construct a group from a set of language functions / reductions
     def __init__(self, _ctx, _comp_objs, \
                  _param_constraints):
@@ -829,7 +843,7 @@ class Pipeline:
         # ALLOCATION
         self._array_writers_map = create_physical_arrays(self)
         self._free_arrays = create_array_freelist(self)
-
+        
         # use graphviz to create pipeline graph
         self._pipeline_graph = self.draw_pipeline_graph()
 
@@ -982,6 +996,7 @@ class Pipeline:
             # add to the list of pipeline groups
             groups.append(group)
 
+        # import pudb; pudb.set_trace()
         for group in groups:
             group.find_and_set_parents()
             group.find_and_set_children()
@@ -1269,5 +1284,4 @@ class Pipeline:
             LOG(log_level, "  "+comp.func.name)
             LOG(log_level, "    "+str(storage))
 
-        return
 
