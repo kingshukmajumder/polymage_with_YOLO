@@ -156,8 +156,11 @@ def piecewise_inline_check(child_group, parent_group, no_split = False):
             # Compute dependence relations between child and parent
             deps = []
             for ref in child_refs:
+                parent_dom = parent_doms[parent_comp]
+                parent_dom_set = \
+                    isl.BasicSet.universe(parent_dom.dom_set.get_space())
                 deps += extract_value_dependence(child_part, ref,
-                            parent_doms[parent_comp])
+                            parent_dom_set)
             # Check if all the values come from the same parent part
             dep_to_part_map = {}
             for dep in deps:
