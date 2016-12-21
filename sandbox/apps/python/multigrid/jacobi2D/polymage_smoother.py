@@ -35,12 +35,12 @@ def w_jacobi(U_, F_, l, name, app_data, T):
     else:
         # Initialize U_ ourselves with 0
         #
-        # TODO: introducing a ZeroFunction (UnityFunction) construct would help
-        # in 'memset'ting or initializing such functions.
-        U0 = Function(([y, x], [extent[l], extent[l]]),
-                      Double, 'stencil_input')
-        U0.defn = [0]
-        stencil = Stencil(U0, [y, x], kernel)
+        # TODO: introducing a ZeroFunction (and UnityFunction) construct would help
+        # in 'memset'ting or initializing such functions with 0 (and 1, resp.)
+        U = Function(([y, x], [extent[l], extent[l]]),
+                     Double, 'zero_'+str(l))
+        U.defn = [0]
+        stencil = Stencil(U, [y, x], kernel)
         W_.defn = [stencil - c * F_(y, x)]
 
     return W_
