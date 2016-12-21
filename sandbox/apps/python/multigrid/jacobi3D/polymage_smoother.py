@@ -21,13 +21,41 @@ def w_jacobi(U_, F_, l, name, app_data, T):
 
     extent = pipe_data['extent']
 
-    coeff = c * invhh[l]
+    k = c * invhh[l]
 
-    z_kernel = [[0, coeff, 0], [coeff, 1 - 6 * coeff, coeff], [0, coeff, 0]]
-    z_minus_1_kernel = [[0, 0, 0], [0, coeff, 0], [0, 0, 0]]
-    z_plus_1_kernel = [[0, 0, 0], [0, coeff, 0], [0, 0, 0]]
+    # common kernels
+    row_0 = [0, 0, 0]
+    row_mid_k = [0, k, 0]
 
-    kernel = [z_minus_1_kernel, z_kernel, z_plus_1_kernel]
+    # mid plane kernel in z-dimension
+    z_mid_plane = [row_mid_k, [k, 1-6*k, k], row_mid_k]
+    """
+        [[0,     k, 0], \
+         [k, 1-6*k, k], \
+         [0,     k, 0]]
+    """
+
+    # other plane kernels in z-dimension
+    z_point = [row_0, row_mid_k, row_0]
+    """
+        [[0, 0, 0], \
+         [0, k, 0], \
+         [0, 0, 0]]
+    """
+
+    kernel = [z_point, z_mid_plane, z_point]
+    """
+       [
+        [[0, 0, 0], \
+         [0, k, 0], \
+         [0, 0, 0]], \
+        [[0,     k, 0], \
+         [k, 1-6*k, k], \
+         [0,     k, 0]]
+        [[0, 0, 0], \
+         [0, k, 0], \
+         [0, 0, 0]]]
+    """
 
     W_ = TStencil(([z, y, x], [extent[l], extent[l], extent[l]]), Double, str(name), T)
 
