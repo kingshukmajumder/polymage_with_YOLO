@@ -57,14 +57,15 @@ def w_jacobi(U_, F_, l, name, app_data, T):
          [0, 0, 0]]]
     """
 
-    W_ = TStencil(([z, y, x], [extent[l], extent[l], extent[l]]), Double, str(name), T)
+    W_ = TStencil(([z, y, x], [extent[l], extent[l], extent[l]]),
+                  Double, str(name), T)
 
     if U_ != None:
         stencil = Stencil(U_, [z, y, x], kernel)
         W_.defn = [stencil - c * F_(z, y, x)]
     else:
         stencil_input = Function(([z, y, x], [extent[l], extent[l], extent[l]]),
-                                 Double, 'stencil_input')
+                                 Double, 'stencil_input_'+str(l))
         stencil_input.defn = [0]
         stencil = Stencil(stencil_input, [z, y, x], kernel)
         W_.defn = [stencil - c * F_(z, y, x)]
