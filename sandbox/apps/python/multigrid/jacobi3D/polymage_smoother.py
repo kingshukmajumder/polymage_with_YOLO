@@ -14,18 +14,12 @@ def w_jacobi(U_, F_, l, name, app_data, T):
     y = pipe_data['y']
     x = pipe_data['x']
 
-    # L = app_data['L']
-
     invhh = pipe_data['invhh']
 
     jacobi_c = pipe_data['jacobi_c']
     c = jacobi_c[l]
 
     extent = pipe_data['extent']
-    interior = pipe_data['interior']
-    # ghosts = pipe_data['ghosts']
-
-    # inner_box = interior[l]['inner_box']
 
     coeff = c * invhh[l]
 
@@ -37,8 +31,6 @@ def w_jacobi(U_, F_, l, name, app_data, T):
 
     W_ = TStencil(([z, y, x], [extent[l], extent[l], extent[l]]), Double, str(name), T)
 
-    #import pudb; pudb.set_trace();
-
     if U_ != None:
         stencil = Stencil(U_, [z, y, x], kernel)
         W_.defn = [stencil - c * F_(z, y, x)]
@@ -48,10 +40,5 @@ def w_jacobi(U_, F_, l, name, app_data, T):
         stencil_input.defn = [0]
         stencil = Stencil(stencil_input, [z, y, x], kernel)
         W_.defn = [stencil - c * F_(z, y, x)]
-
-    # if l == L:
-    #     set_ghosts(W_, ghosts[l], U_(z, y, x))
-    # else:
-    #     set_ghosts(W_, ghosts[l], 0.0)
 
     return W_
