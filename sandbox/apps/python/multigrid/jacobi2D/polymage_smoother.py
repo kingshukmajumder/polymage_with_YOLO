@@ -22,10 +22,15 @@ def w_jacobi(U_, F_, l, name, app_data, T):
 
     k = c * invhh[l]
 
-    kernel = \
-        [[0,     k, 0], \
-         [k, 1-4*k, k], \
+    # common kernel
+    row_k = [0, k, 0]
+
+    kernel = [row_k, [k, 1-4*k, k], row_k]
+    """
+        [[0,     k, 0],
+         [k, 1-4*k, k],
          [0,     k, 0]]
+    """
 
     # determine the input to the stencil function
     if U_ != None:
