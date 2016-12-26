@@ -1292,9 +1292,21 @@ class Matrix(Function):
             newFunc.defn = newBody
         return newFunc
 
+    def convertReductionToMatrix(self, reduction):
+        var = [v.clone() for v in reduction.variables]
+        dimensions = reduction.variableDomain
+        newFunc = Matrix(reduction._typ, reduction._name, dimensions, var)
+        newBody = [c.clone() for c in reduction._body]
+        newFunc.defn = newBody
+        return newFunc
+
     def __mul__(self, other):
         mat1 = self
+        # if not isinstance(other, Matrix):
+        #     mat2 = self.convertReductionToMatrix(other)
+        # else:
         mat2 = other
+
         assert (isinstance(mat2, Matrix))
         assert (mat1.type == mat2.type)
         assert (len(mat1.dimensions) == len(mat2.dimensions))
@@ -1313,13 +1325,16 @@ class Matrix(Function):
         var_dom = (variables, intervals)
 
         z = Variable(UInt, 'prod_var_' + mat1.name + '_' + mat2.name)
-        x = variables[0]
-        y = variables[1]
+
+        reduction_variable = variables.copy()
+        reduction_variable.append(z)
+
 
         reduction_interval = intervals.copy()
         reduction_interval.append(mat2.intervals[0])
 
-        red_dom = ([x,y,z],reduction_interval)
+        # red_dom = ([x,y,z],reduction_interval)
+        red_dom = (reduction_variable, reduction_interval)
         name = 'redn_prod_' + mat1.name + '_' + mat2.name
 
         # NOTE: This is the constraint given to isl, as a promise, that
@@ -1328,15 +1343,24 @@ class Matrix(Function):
         # this information.
         cond = Condition(mat1.dimensions[1], "==", mat2.dimensions[0])
 
+        variables1 = []
+        variables2 = []
+        variables1 = variables1.__add__(variables[0:variables.__len__() - 1])
+        variables1.append(z)
+        variables2.append(z)
+        variables2 = variables2.__add__(variables[1:variables.__len__()])
+
         matmul_as_reduction = Reduction(var_dom, red_dom, mat1.type, name)
-        matmul_as_reduction.defn = [Case(cond, Reduce(matmul_as_reduction(x, y), mat1(x, z) * mat2(z, y), Op.Sum))]
+        matmul_as_reduction.defn = [Case(cond, Reduce(matmul_as_reduction(*variables),
+                                                      mat1(*variables1) * mat2(*variables2),
+                                                      Op.Sum))]
 
         return matmul_as_reduction
 
-        #name = 'prod_' + mat1.name + '_' + mat2.name
-        #prod_matrix = Matrix(mat1.type, name, [mat1.dimensions[0],mat2.dimensions[total_dimension_mat2-1]], [x,y])
-        #prod_matrix.defn = [matmul_as_reduction(x,y)]
-        #return prod_matrix
+        # name = 'prod_' + mat1.name + '_' + mat2.name
+        # prod_matrix = Matrix(mat1.type, name, [mat1.dimensions[0],mat2.dimensions[total_dimension_mat2-1]], [x,y])
+        # prod_matrix.defn = [matmul_as_reduction(x,y)]
+        # return prod_matrix
 
     # def collect(self, objType):
     #     objs = []
