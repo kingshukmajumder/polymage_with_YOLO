@@ -945,6 +945,8 @@ class Function(object):
         #   value at each point in the function domain is uniquely defined.
         self._body      = []
 
+        self._mat_func = False
+
     @property
     def name(self):
         return self._name
@@ -955,6 +957,7 @@ class Function(object):
     def is_const_func(self):
         return self._const
 
+    # Property to check if the function is of Matrix type
     @property
     def is_mat_func(self):
         return  self._mat_func
@@ -1069,6 +1072,7 @@ class Function(object):
             _const = "const"
         newFunc = Function(varDom, self._typ, self._name, _const)
         newFunc.defn = newBody
+        newFunc.is_mat_func = self.is_mat_func
         return newFunc
 
     def __str__(self):
@@ -1226,6 +1230,7 @@ class Reduction(Function):
         newRed = Reduction(varDom, redDom, self._typ, self._name)
         newRed.defn = newBody
         newRed.default = self._default.clone()
+        newRed.is_mat_func = self.is_mat_func
         return newRed
 
     def __str__(self):

@@ -440,11 +440,16 @@ def match_idiom_matrix_mul(parts):
                 if isinstance(reduce_expr, AbstractBinaryOpNode) and reduce_op == Op.Sum:
                     if isinstance(reduce_expr.left, Reference) \
                             and isinstance(reduce_expr.right, Reference):
-                        if isinstance(reduce_expr.left.objectRef, Matrix) \
-                                and isinstance(reduce_expr.right.objectRef, Matrix):
+                        if is_object_matrix(reduce_expr.left.objectRef) \
+                                and is_object_matrix(reduce_expr.right.objectRef):
                             if reduce_expr.op == '*':
                                 reduction_found = True
     if zero_found and reduction_found:
+        return True
+    return False
+
+def is_object_matrix(obj):
+    if isinstance(obj, Matrix) or (isinstance(obj, Function) and obj.is_mat_func):
         return True
     return False
 
