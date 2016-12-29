@@ -26,9 +26,11 @@ def matmul(pipe_data):
     y = Variable(UInt, 'y')
     z = Variable(UInt, 'z')
     
-    mat1 = Matrix(Double, "mat1", [R1, C1])
-    mat2 = Matrix(Double, "mat2", [R2, C2])
+    mat1 = Matrix(Double, "mat1", [R1, C1], [x, y])
+    mat2 = Matrix(Double, "mat2", [R2, C2], [x, y])
 
     mul = mat1 * mat2
+    mul1 = mat1 * mul
+    mul2 = mul1 * mul
 
-    return mul
+    return mul2

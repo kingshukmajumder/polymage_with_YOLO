@@ -956,6 +956,14 @@ class Function(object):
         return self._const
 
     @property
+    def is_mat_func(self):
+        return  self._mat_func
+
+    @is_mat_func.setter
+    def is_mat_func(self, _is_mat_func):
+        self._mat_func = _is_mat_func
+
+    @property
     def idiom_match_found(self):
         return self._idiom_match_found
 
@@ -1075,6 +1083,18 @@ class Function(object):
                    "(" + var_str + ") = " + case_str + '\n'
         else:
             return self._name
+
+    def __mul__(self, other):
+        mat1 = self
+        mat2 = other
+
+        assert (mat1.is_mat_func)
+        if not isinstance(mat2, Matrix):
+            assert(mat2.is_mat_func)
+
+        assert (mat1.typ == mat2.typ)
+        assert(len(mat1.variables) == len(mat2.variables))
+        return Matrix.mat_multiplication(mat1, mat2)
 
 class Image(Function):
     def __init__(self, _typ, _name, _dims):
@@ -1235,7 +1255,7 @@ class Matrix(Function):
         for dim in _dims:
             assert(isinstance(dim, AbstractExpression))
         self._dims = _dims
-        self._type = _typ
+        self._typ = _typ
         self._name = _name
         intervals = []
         variables = []
@@ -1302,25 +1322,46 @@ class Matrix(Function):
 
     def __mul__(self, other):
         mat1 = self
-        # if not isinstance(other, Matrix):
-        #     mat2 = self.convertReductionToMatrix(other)
-        # else:
         mat2 = other
+        # Initial checks to make sure that the parameters are only Matrices.
+        if not isinstance(mat2, Matrix):
+            assert(mat2.is_mat_func)
+        assert (mat1.typ == mat2.typ)
+        if isinstance(mat2, Matrix):
+            assert (len(mat1.dimensions) == len(mat2.dimensions))
+        else:
+            assert(len(mat1.dimensions) == len(mat2.variables))
+            assert(mat2.is_mat_func)
 
-        assert (isinstance(mat2, Matrix))
-        assert (mat1.type == mat2.type)
-        assert (len(mat1.dimensions) == len(mat2.dimensions))
+        return Matrix.mat_multiplication(mat1, mat2)
 
+    @staticmethod
+    def det(mat):
+        # TODO: Add implementation
+        return mat.dimensions[0]
+
+    @staticmethod
+    def mat_multiplication(mat1,mat2):
         variables = []
         intervals = []
 
-        total_dimension_mat1 = mat1.dimensions.__len__()
-        variables = variables.__add__(mat1.variables[0:total_dimension_mat1 - 1])
-        intervals = intervals.__add__(mat1.intervals[0:total_dimension_mat1 - 1])
+        if isinstance(mat1, Matrix):
+            total_dimension_mat1 = mat1.dimensions.__len__()
+            intervals = intervals.__add__(mat1.intervals[0:total_dimension_mat1 - 1])
+        else:
+            total_dimension_mat1 = mat1.variables.__len__()
+            intervals = intervals.__add__(mat1.domain[1:total_dimension_mat1])
 
-        total_dimension_mat2 = mat2.dimensions.__len__()
+        variables = variables.__add__(mat1.variables[0:total_dimension_mat1 - 1])
+
+        if isinstance(mat2, Matrix):
+            total_dimension_mat2 = mat2.dimensions.__len__()
+            intervals = intervals.__add__(mat2.intervals[1:total_dimension_mat2])
+        else:
+            total_dimension_mat2 = mat2.variables.__len__()
+            intervals = intervals.__add__(mat2.domain[1:total_dimension_mat2])
+
         variables = variables.__add__(mat2.variables[1:total_dimension_mat2])
-        intervals = intervals.__add__(mat2.intervals[1:total_dimension_mat2])
 
         var_dom = (variables, intervals)
 
@@ -1329,11 +1370,12 @@ class Matrix(Function):
         reduction_variable = variables.copy()
         reduction_variable.append(z)
 
-
         reduction_interval = intervals.copy()
-        reduction_interval.append(mat2.intervals[0])
+        if isinstance(mat2, Matrix):
+            reduction_interval.append(mat2.intervals[0])
+        else:
+            reduction_interval.append(mat2.domain[0])
 
-        # red_dom = ([x,y,z],reduction_interval)
         red_dom = (reduction_variable, reduction_interval)
         name = 'redn_prod_' + mat1.name + '_' + mat2.name
 
@@ -1341,7 +1383,14 @@ class Matrix(Function):
         # the parameters of the dimension in which matrices are reduced
         # are equal. The bounds check pass will fail if we don't supply
         # this information.
-        cond = Condition(mat1.dimensions[1], "==", mat2.dimensions[0])
+        if isinstance(mat2, Matrix) and isinstance(mat1, Matrix):
+            cond = Condition(mat1.dimensions[1], "==", mat2.dimensions[0])
+        elif isinstance(mat2, Function) and isinstance(mat1, Matrix):
+            cond = Condition(mat1.intervals[1].upperBound, "==", mat2.domain[0].upperBound)
+        elif isinstance(mat2, Matrix) and isinstance(mat1, Function):
+            cond = Condition(mat2.intervals[1].upperBound, "==", mat1.domain[0].upperBound)
+        elif isinstance(mat2, Function) and isinstance(mat1, Function):
+            cond = Condition(mat2.domain[1].upperBound, "==", mat1.domain[0].upperBound)
 
         variables1 = []
         variables2 = []
@@ -1350,25 +1399,11 @@ class Matrix(Function):
         variables2.append(z)
         variables2 = variables2.__add__(variables[1:variables.__len__()])
 
-        matmul_as_reduction = Reduction(var_dom, red_dom, mat1.type, name)
+        matmul_as_reduction = Reduction(var_dom, red_dom, mat1.typ, name)
         matmul_as_reduction.defn = [Case(cond, Reduce(matmul_as_reduction(*variables),
                                                       mat1(*variables1) * mat2(*variables2),
                                                       Op.Sum))]
+        matmul_as_reduction.is_mat_func = True
 
         return matmul_as_reduction
 
-        # name = 'prod_' + mat1.name + '_' + mat2.name
-        # prod_matrix = Matrix(mat1.type, name, [mat1.dimensions[0],mat2.dimensions[total_dimension_mat2-1]], [x,y])
-        # prod_matrix.defn = [matmul_as_reduction(x,y)]
-        # return prod_matrix
-
-    # def collect(self, objType):
-    #     objs = []
-    #     if (type(self) is objType):
-    #         objs = [self]
-    #     return objs
-
-    @staticmethod
-    def det(mat):
-        # TODO: Add implementation
-        return mat.dimensions[0]
