@@ -241,6 +241,14 @@ class PolyPart(object):
     def idiom(self):
         return self._idiom
 
+    @idiom.setter
+    def idiom(self, _idiom):
+        self._idiom = _idiom
+
+    @is_idiom.setter
+    def is_idiom(self, _is_idiom):
+        self._is_idiom = _is_idiom
+
     def set_align(self, align):
         self._align = [i for i in align]
         return

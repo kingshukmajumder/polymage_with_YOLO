@@ -844,6 +844,10 @@ class Op(object):
     Min = 2
     Max = 3
 
+class Idiom_type(object):
+    mat_mat_mul = 0
+    mat_vec_mul = 1
+
 class Reduce(object):
     def __init__(self, _red_ref, _expr, _op_typ):
         assert isinstance(_red_ref, Reference)

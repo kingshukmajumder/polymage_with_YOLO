@@ -128,7 +128,6 @@ class ComputeObject:
         self._func = _func
         self._parents = []
         self._children = []
-
         self._size = self.compute_size()
 
         self._group = None
@@ -684,12 +683,16 @@ class Pipeline:
         # Checking bounds
         bounds_check_pass(self)
 
+
+
         if 'matrix' in self.options:
             # Generate Schedule
             log_level = logging.INFO
             LOG(log_level, "Identified as Matrix Operation")
             LOG(log_level, "Using Matrix pipeline")
-            self._grp_schedule = self.get_matrix_pipeline_schedule()
+            final_schedule = self.get_matrix_pipeline_schedule()
+            self.set_comp_schedule(final_schedule)
+            self._grp_schedule = schedule_groups(self)
 
             #Perform Idiom Recognition
             for group in self._groups:
@@ -752,21 +755,22 @@ class Pipeline:
 
         ''' SCHEDULING '''
 
-        for g in self.groups:
-            # alignment and scaling
-            align_and_scale(self, g)
-            # base schedule
-            base_schedule(g)
-            # grouping and tiling
-            fused_schedule(self, g, self._param_estimates)
-            # idiom matching algorithm
-            idiom_recognition(self, g)
+        if not 'matrix' in self.options:
+            for g in self.groups:
+                # alignment and scaling
+                align_and_scale(self, g)
+                # base schedule
+                base_schedule(g)
+                # grouping and tiling
+                fused_schedule(self, g, self._param_estimates)
+                # idiom matching algorithm
+                idiom_recognition(self, g)
 
-        # group
-        self._grp_schedule = schedule_groups(self)
-        # comps and poly parts
-        for group in self._grp_schedule:
-            group.set_comp_and_parts_sched()
+            # group
+            self._grp_schedule = schedule_groups(self)
+            # comps and poly parts
+            for group in self._grp_schedule:
+                group.set_comp_and_parts_sched()
 
         self._liveouts_schedule = schedule_liveouts(self)
 
@@ -888,6 +892,10 @@ class Pipeline:
             self.isl_id_comp_map[function_name] = isl_id
         return
 
+    def set_comp_schedule(self, complete_schedule):
+
+        return
+
     def get_dep_for_pluto(self, poly_dependency):
         # Accepts Polydep and return dependency in Pluto compatible format
         sched = poly_dependency.rel.copy()
@@ -958,8 +966,13 @@ class Pipeline:
         if deps_union_map:
             LOG(log_level,"Dependencies across statements")
             LOG(log_level,deps_union_map.to_str())
+        else:
+            # If no dependencies found, then send empty UnionMap to Pluto
+            LOG(log_level, "No dependencies found")
+            deps_union_map = isl.UnionMap.read_from_str(self._ctx, '[R1, R2, C2, C1] -> { S_0[x, y, prod_var_mat1_mat2] -> S_0[x1, y1, z1] : R1 = 32 and R2 = 32 and C2 = 32 and C1 = 32 and 0 <= x <= 31 and 0 <= y <= 31 and 0 <= prod_var_mat1_mat2 <= 31 and x1 = x and y1 = y and z1 = prod_var_mat1_mat2 + 1 }')
+            # deps_union_map = isl.UnionMap.read_from_str(self._ctx, '{}')
 
-        # Pluto call
+            # Pluto call
         pluto = LibPluto()
         pluto_options = pluto.create_options()
         out_schedule = pluto.schedule(self._ctx, domain_union_set, deps_union_map, pluto_options)
@@ -1339,10 +1352,36 @@ def idiom_recognition(pipeline, group):
     matrix_mul_found = match_idiom_matrix_mul(g_all_parts)
     if matrix_mul_found:
         group.set_can_be_mapped_to_lib(True)
-            # replace_with_lib_call(group,g_all_parts)
+        replace_expr_with_matched_idiom(g_all_parts, group, Idiom_type.mat_mat_mul)
         LOG(log_level,"Idiom Match Found")
     else:
         LOG(log_level,"No match found")
+    return
+
+def replace_expr_with_matched_idiom(g_all_parts, group, idiom):
+    if idiom == Idiom_type.mat_mat_mul:
+        reductionDomain = g_all_parts[0].func.reductionDomain
+        mat1_dim1 = (reductionDomain[0].upperBound + 1).__str__()
+        mat1_dim2 = (reductionDomain[1].upperBound + 1).__str__()
+        mat2_dim2 = (reductionDomain[2].upperBound + 1).__str__()
+        if g_all_parts[0].expr == 0:
+            g_all_parts[1].is_idiom = True
+            g_all_parts[1].idiom = "cblas_dgemm(CblasRowMajor, CblasNoTrans,CblasNoTrans, " \
+                                  + mat1_dim1 + ", " + mat1_dim2 + ", " + mat2_dim2 + ", 1.0, mat1 , "\
+                                  + mat2_dim2 + ", mat2 , " + mat1_dim2 + ", 0.0, mat3 , " + mat1_dim2 + ")"
+            # Since the function can be replaced with a library call, we are removing the in and out
+            # dimensions from the scheducle. Note: We maintain the '_t' dimension in order to maintain
+            # the order in which this function appears in the whole program
+            g_all_parts[1].sched = g_all_parts[1].sched.remove_dims(isl._isl.dim_type.in_, 0, 3)
+            g_all_parts[1].sched = g_all_parts[1].sched.remove_dims(isl._isl.dim_type.out, 1, 3)
+        else:
+            g_all_parts[0].is_idiom = True
+            g_all_parts[0].idiom = "cblas_dgemm(CblasRowMajor, CblasNoTrans,CblasNoTrans, " \
+                                  + mat1_dim1 + ", " + mat1_dim2 + ", " + mat2_dim2 + ", 1.0, mat1 , "\
+                                  + mat2_dim2 + ", mat2 , " + mat1_dim2 + ", 0.0, mat3 , " + mat1_dim2 + ")"
+            g_all_parts[0].sched = g_all_parts[0].sched.remove_dims(isl._isl.dim_type.in_, 0, 3)
+            g_all_parts[0].sched = g_all_parts[0].sched.remove_dims(isl._isl.dim_type.out, 1, 3)
+        print("Matrix multiplication Idiom Match")
     return
 
 # def replace_with_lib_call(group,g_all_parts):
