@@ -951,6 +951,9 @@ class Function(object):
 
         self._mat_func = False
 
+        self.no_return_value = False
+        self._dimensions = []
+
     @property
     def name(self):
         return self._name
@@ -960,6 +963,15 @@ class Function(object):
     @property
     def is_const_func(self):
         return self._const
+
+    @property
+    def no_return_value(self):
+        return self._no_return_value
+
+    @no_return_value.setter
+    def no_return_value(self, _value):
+        self._no_return_value = _value
+
 
     # Property to check if the function is of Matrix type
     @property
@@ -973,6 +985,14 @@ class Function(object):
     @property
     def idiom_match_found(self):
         return self._idiom_match_found
+
+    @property
+    def dimensions(self):
+        return self._dimensions
+
+    @dimensions.setter
+    def dimensions(self, dims):
+        self._dimensions = dims
 
     @property
     def idiom(self):
@@ -1077,6 +1097,7 @@ class Function(object):
         newFunc = Function(varDom, self._typ, self._name, _const)
         newFunc.defn = newBody
         newFunc.is_mat_func = self.is_mat_func
+        newFunc.dimensions = self.dimensions
         return newFunc
 
     def __str__(self):
@@ -1103,6 +1124,10 @@ class Function(object):
         assert (mat1.typ == mat2.typ)
         assert(len(mat1.variables) == len(mat2.variables))
         return Matrix.mat_multiplication(mat1, mat2)
+
+    def set_variables_and_intervals(self, var, intr):
+        self._variables = var
+        self._varDomain = intr
 
 class Image(Function):
     def __init__(self, _typ, _name, _dims):
@@ -1152,6 +1177,8 @@ class Reduction(Function):
         # Can this be done automatically
         self._redVariables = _redDom[0]
         self._redDomain = _redDom[1]
+        self._reductionDimensions = []
+        self._reductionDimensions = []
 
         # Intial value of each accumulator cell. Default is set to zero of the
         # given type
@@ -1173,6 +1200,14 @@ class Reduction(Function):
     @property
     def reductionVariables(self):
         return self._redVariables
+
+    @property
+    def reductionDimensions(self):
+        return self._reductionDimensions
+
+    @reductionDimensions.setter
+    def reductionDimensions(self, rednDims):
+        self._reductionDimensions = rednDims
 
     @property
     def defn(self):
@@ -1235,6 +1270,8 @@ class Reduction(Function):
         newRed.defn = newBody
         newRed.default = self._default.clone()
         newRed.is_mat_func = self.is_mat_func
+        newRed.reductionDimensions = self.reductionDimensions
+        newRed.dimensions = self.dimensions
         return newRed
 
     def __str__(self):
@@ -1353,15 +1390,19 @@ class Matrix(Function):
     def mat_multiplication(mat1,mat2):
         variables = []
         intervals = []
+        dimensions = []
+        redn_dimensions = []
 
         if isinstance(mat1, Matrix):
             total_dimension_mat1 = mat1.dimensions.__len__()
             intervals = intervals.__add__(mat1.intervals[0:total_dimension_mat1 - 1])
         else:
             total_dimension_mat1 = mat1.variables.__len__()
-            intervals = intervals.__add__(mat1.domain[1:total_dimension_mat1])
+            intervals = intervals.__add__(mat1.domain[0:total_dimension_mat1-1])
 
         variables = variables.__add__(mat1.variables[0:total_dimension_mat1 - 1])
+        dimensions = dimensions.__add__(mat1.dimensions[0:total_dimension_mat1 - 1])
+        redn_dimensions = redn_dimensions.__add__(mat1.dimensions)
 
         if isinstance(mat2, Matrix):
             total_dimension_mat2 = mat2.dimensions.__len__()
@@ -1371,6 +1412,8 @@ class Matrix(Function):
             intervals = intervals.__add__(mat2.domain[1:total_dimension_mat2])
 
         variables = variables.__add__(mat2.variables[1:total_dimension_mat2])
+        dimensions = dimensions.__add__(mat2.dimensions[1:total_dimension_mat2])
+        redn_dimensions = redn_dimensions.__add__(mat2.dimensions[1:total_dimension_mat2])
 
         var_dom = (variables, intervals)
 
@@ -1413,6 +1456,8 @@ class Matrix(Function):
                                                       mat1(*variables1) * mat2(*variables2),
                                                       Op.Sum))]
         matmul_as_reduction.is_mat_func = True
+        matmul_as_reduction.dimensions = dimensions
+        matmul_as_reduction.reductionDimensions = redn_dimensions
 
         return matmul_as_reduction
 

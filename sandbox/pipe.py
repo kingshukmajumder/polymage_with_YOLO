@@ -1351,7 +1351,6 @@ def idiom_recognition(pipeline, group):
         g_all_parts.extend(g_poly_parts[comp])
     matrix_mul_found = match_idiom_matrix_mul(g_all_parts)
     if matrix_mul_found:
-        group.set_can_be_mapped_to_lib(True)
         replace_expr_with_matched_idiom(g_all_parts, group, Idiom_type.mat_mat_mul)
         LOG(log_level,"Idiom Match Found")
     else:
@@ -1364,23 +1363,38 @@ def replace_expr_with_matched_idiom(g_all_parts, group, idiom):
         mat1_dim1 = (reductionDomain[0].upperBound + 1).__str__()
         mat1_dim2 = (reductionDomain[1].upperBound + 1).__str__()
         mat2_dim2 = (reductionDomain[2].upperBound + 1).__str__()
+
         if g_all_parts[0].expr == 0:
-            g_all_parts[1].is_idiom = True
-            g_all_parts[1].idiom = "cblas_dgemm(CblasRowMajor, CblasNoTrans,CblasNoTrans, " \
-                                  + mat1_dim1 + ", " + mat1_dim2 + ", " + mat2_dim2 + ", 1.0, mat1 , "\
-                                  + mat2_dim2 + ", mat2 , " + mat1_dim2 + ", 0.0, mat3 , " + mat1_dim2 + ")"
-            # Since the function can be replaced with a library call, we are removing the in and out
-            # dimensions from the scheducle. Note: We maintain the '_t' dimension in order to maintain
-            # the order in which this function appears in the whole program
-            g_all_parts[1].sched = g_all_parts[1].sched.remove_dims(isl._isl.dim_type.in_, 0, 3)
-            g_all_parts[1].sched = g_all_parts[1].sched.remove_dims(isl._isl.dim_type.out, 1, 3)
+            poly_part = g_all_parts[1]
         else:
-            g_all_parts[0].is_idiom = True
-            g_all_parts[0].idiom = "cblas_dgemm(CblasRowMajor, CblasNoTrans,CblasNoTrans, " \
-                                  + mat1_dim1 + ", " + mat1_dim2 + ", " + mat2_dim2 + ", 1.0, mat1 , "\
-                                  + mat2_dim2 + ", mat2 , " + mat1_dim2 + ", 0.0, mat3 , " + mat1_dim2 + ")"
-            g_all_parts[0].sched = g_all_parts[0].sched.remove_dims(isl._isl.dim_type.in_, 0, 3)
-            g_all_parts[0].sched = g_all_parts[0].sched.remove_dims(isl._isl.dim_type.out, 1, 3)
+            poly_part = g_all_parts[0]
+
+        comp_dim = 0
+        poly_part.is_idiom = True
+        poly_part.idiom = "cblas_dgemm(CblasRowMajor, CblasNoTrans,CblasNoTrans, " \
+                          + mat1_dim1 + ", " + mat1_dim2 + ", " + mat2_dim2 + ", 1.0, mat1 , "\
+                          + mat2_dim2 + ", mat2 , " + mat1_dim2 + ", 0.0, mat3 , " + mat1_dim2 + ")"
+        tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
+        poly_part.sched = poly_part.sched.drop_constraints_involving_dims(isl._isl.dim_type.in_,
+                                                                               0, 3)
+        poly_part.sched = poly_part.sched.remove_dims(isl._isl.dim_type.in_, 0, 3)
+        poly_part.sched = poly_part.sched.add_dims(isl._isl.dim_type.in_, 1)
+        poly_part.sched = poly_part.sched.set_dim_name(isl._isl.dim_type.in_,0,'i1')
+        name = poly_part.sched.get_dim_name(isl._isl.dim_type.in_, comp_dim)
+        eqs = []
+        ineqs = []
+        coeff = {}
+        coeff[('in', name)] = 1
+        eqs.append(coeff)
+
+        for i in (1, 2, 3):
+            name = poly_part.sched.get_dim_name(isl._isl.dim_type.out, i)
+            coeff = {}
+            coeff[('out', name)] = 1
+            eqs.append(coeff)
+
+        poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
+        poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)
         print("Matrix multiplication Idiom Match")
     return
 
