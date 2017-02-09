@@ -18,12 +18,12 @@ def print_usage():
 def print_config(app_data):
     app_args = app_data['app_args']
     rows1 = app_data['rows1']
-    cols2 = app_data['cols2']
+    cols1 = app_data['cols1']
     print_line()
     print("# Problem Settings #")
     print("")
     print("[main]: mode        =", app_args.mode)
     #print("[main]: image       =", app_args.img_file)
-    print("[main]: Output matrix size  =", rows1, "x", cols2)
+    print("[main]: Output matrix size  =", rows1, "x", cols1)
     print("[main]: nruns       =", app_args.runs)
     print_line()

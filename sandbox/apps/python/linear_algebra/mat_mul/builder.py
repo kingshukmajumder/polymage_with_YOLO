@@ -50,24 +50,24 @@ def build_matmul(app_data):
 
     out_matmul = matmul(pipe_data)
     
-    R1 = pipe_data['R1']
-    C1 = pipe_data['C1']
-    R2 = pipe_data['R2']
-    C2 = pipe_data['C2']
+    R = pipe_data['R']
+    C = pipe_data['C']
+    #R2 = pipe_data['R2']
+    #C2 = pipe_data['C2']
 
     live_outs = [out_matmul]
     pipe_name = app_data['app']
 
     rows1 = app_data['rows1']
     cols1 = app_data['cols1']
-    rows2 = app_data['rows2']
-    cols2 = app_data['cols2']
+    #rows2 = app_data['rows2']
+    #cols2 = app_data['cols2']
 
-    p_estimates = [(R1, rows1), (C1, cols1), (R2, rows2), (C2, cols2)]
-    p_constraints = [ Condition(R1, "==", rows1), \
-                      Condition(C1, "==", cols1), \
-                      Condition(R2, "==", rows2), \
-                      Condition(C2, "==", cols2), \
+    p_estimates = [(R, rows1), (C, cols1)] #, (R2, rows2), (C2, cols2)]
+    p_constraints = [ Condition(R, "==", rows1), \
+                      Condition(C, "==", cols1) \
+                      #Condition(R2, "==", rows2), \
+                      #Condition(C2, "==", cols2), \
                     ]
     t_size = [16, 16]
     g_size = 1

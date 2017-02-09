@@ -277,10 +277,10 @@ class PlutoOptions(object):
         self._pluto_ffi = pluto_ffi
         self._raw_options_ptr = raw_options_ptr
         self._raw_options_ptr.parallel = 1
-        #self._raw_options_ptr.partlbtile = 1
-        self._raw_options_ptr.lbtile = 1
-        self._raw_options_ptr.tile = 1
+        # self._raw_options_ptr.partlbtile = 1
+        self._raw_options_ptr.lbtile = 0
         self._raw_options_ptr.debug = 1
+        self._raw_options_ptr.tile = 1
 
     @property
     def partlbtile(self):

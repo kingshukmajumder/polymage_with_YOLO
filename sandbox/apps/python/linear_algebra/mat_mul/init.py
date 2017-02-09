@@ -12,30 +12,34 @@ def init_images(app_data):
     app_args = app_data['app_args']
 
     # input matrix: 
-    rows1, cols1 = 32,32
-    rows2, cols2 = 32,32
+    rows1, cols1 = 128,128
+    #rows2, cols2 = 128,128
     mat1 = np.full((rows1,cols1),7)
-    mat2 = np.full((rows2,cols2),7)
+    mat2 = np.full((rows1,cols1),7)
+    mat3 = np.full((rows1,cols1),7)
 
     # convert to float image
     IN = np.array(mat1)
     IN1 = np.array(mat2)
+    IN2 = np.array(mat3)
     IN = IN.astype(np.float64).ravel()
     IN1 = IN1.astype(np.float64).ravel()
+    IN2 = IN2.astype(np.float64).ravel()
 
     # final output image
-    OUT = np.zeros((rows1, cols2), np.float64).ravel()
+    OUT = np.zeros((rows1, cols1), np.float64).ravel()
 
     img_data = {}
     img_data['IN'] = IN
     img_data['IN1'] = IN1
+    img_data['IN2'] = IN2
     img_data['OUT'] = OUT
 
     app_data['img_data'] = img_data
     app_data['rows1'] = rows1
     app_data['cols1'] = cols1
-    app_data['rows2'] = rows2
-    app_data['cols2'] = cols2
+    # app_data['rows2'] = rows2
+    #app_data['cols2'] = cols2
 
     return
 

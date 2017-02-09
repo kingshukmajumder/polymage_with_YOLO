@@ -13,12 +13,13 @@ from utils import *
 def call_pipe(app_data):
     rows1 = app_data['rows1']
     cols1 = app_data['cols1']
-    rows2 = app_data['rows2']
-    cols2 = app_data['cols2']
+    #rows2 = app_data['rows2']
+    #cols2 = app_data['cols2']
 
     img_data = app_data['img_data']
     IN = img_data['IN']
     IN1 = img_data['IN1']
+    IN2 = img_data['IN2']
     OUT = img_data['OUT']
 
     # lib function name
@@ -28,11 +29,12 @@ def call_pipe(app_data):
     # lib function args
     pipe_args = []
     pipe_args += [ctypes.c_int(cols1)]
-    pipe_args += [ctypes.c_int(cols2)]
+    #pipe_args += [ctypes.c_int(cols2)]
     pipe_args += [ctypes.c_int(rows1)]
-    pipe_args += [ctypes.c_int(rows2)]
+    #pipe_args += [ctypes.c_int(rows2)]
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(IN2.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
 
     # call lib function
