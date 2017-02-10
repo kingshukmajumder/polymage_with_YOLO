@@ -398,6 +398,7 @@ class Group:
         self._comps_schedule = None
         self._liveness_map = None
         self._can_be_mapped_to_lib = False
+        self._dependencies = []
 
     @property
     def id_(self):
@@ -453,6 +454,14 @@ class Group:
     @property
     def liveness_map(self):
         return self._liveness_map
+
+    @property
+    def dependencies(self):
+        return self._dependencies
+
+    @dependencies.setter
+    def dependencies(self, deps):
+        self._dependencies = deps
 
     def set_comp_group(self):
         for comp in self.comps:
@@ -690,8 +699,13 @@ class Pipeline:
             log_level = logging.INFO
             LOG(log_level, "Identified as Matrix Operation")
             LOG(log_level, "Using Matrix pipeline")
+            # Merge all the elements into a single group before passing to Pluto
+            while not len(self.groups) == 1:
+                self.merge_groups(self.groups[0], self.groups[1])
+            # Grouping and Scheduling is taken care by Pluto
             final_schedule = self.get_matrix_pipeline_schedule()
-            self.set_comp_schedule(final_schedule)
+
+            self._level_order_groups = self.order_group_objs()
             self._grp_schedule = schedule_groups(self)
 
             #Perform Idiom Recognition
@@ -731,10 +745,11 @@ class Pipeline:
                 # Run the grouping algorithm
                 auto_group(self)
                 pass
+            self._level_order_groups = self.order_group_objs()
 
         ''' GRAPH UPDATES '''
         # level order traversal of groups
-        self._level_order_groups = self.order_group_objs()
+
         self._groups = self.get_sorted_groups()
 
         for group in self.groups:
@@ -778,9 +793,11 @@ class Pipeline:
         # liveouts
         self._liveness_map = liveness_for_pipe_outputs(self)
         # groups
-        for group in self.groups:
-            liveness_for_group_comps(group, group.children_map,
+        if not 'matrix' in self.options:
+            for group in self.groups:
+                liveness_for_group_comps(group, group.children_map,
                                      group.comps_schedule)
+
 
         ''' STORAGE '''
         # MAPPING
@@ -790,6 +807,7 @@ class Pipeline:
         # classify the storage based on type, dimensionality and size
         self._storage_class_map = classify_storage(self)
         # remap logical storage
+
         self._storage_map = remap_storage(self)
 
         # ALLOCATION
@@ -892,10 +910,6 @@ class Pipeline:
             self.isl_id_comp_map[function_name] = isl_id
         return
 
-    def set_comp_schedule(self, complete_schedule):
-
-        return
-
     def get_dep_for_pluto(self, poly_dependency):
         # Accepts Polydep and return dependency in Pluto compatible format
         sched = poly_dependency.rel.copy()
@@ -915,6 +929,8 @@ class Pipeline:
             pluto_function_name = map.get_tuple_name(isl._isl.dim_type.in_)
             function_name = self.pluto_to_polymage_fname_map[pluto_function_name]
             map = map.set_tuple_name(isl._isl.dim_type.in_, function_name)
+            # Adding into function schedule map, so we can identify the correct polypart
+            self.function_schedule_map[function_name] = map
             if polymage_schedule is None:
                 polymage_schedule = isl.UnionMap.from_map(map)
             else:
@@ -930,15 +946,15 @@ class Pipeline:
         i = 0;
 
         # Collect Domians
+        main_poly_part = []
         for group in self._groups:
-            comp = group.comps[0]
-            poly_parts = group.polyRep.poly_parts[comp]
-            main_poly_part = []
-            main_poly_part.append(poly_parts[0])
+            for comp in group.comps:
+                poly_parts = group.polyRep.poly_parts[comp]
+                main_poly_part.extend(poly_parts)
             for poly_part in main_poly_part:
                 in_schedule = poly_part.sched.copy()
                 domain = in_schedule.domain()
-                self.add_entry_to_map(domain,comp)
+                # self.add_entry_to_map(domain,comp)
                 domain = self.get_updated_pluto_domain(self, i, domain)
                 i = i + 1
                 # This is done in all places, because we cannot assign types to object
@@ -949,19 +965,20 @@ class Pipeline:
                     set = isl.Set.from_basic_set(domain)
                     domain_union_set = domain_union_set.add_set(set)
 
+            # Collect Dependencies
+            # TODO: Add the code to extract dependencies from read and write refs directly
+            for dep in group.dependencies:
+                if False and not (isinstance(dep.producer_obj, Matrix) and dep.producer_obj.isInput):
+                    deps_basic_map = self.get_dep_for_pluto(dep)
+                    if deps_union_map is None:
+                        deps_union_map = isl.UnionMap.from_basic_map(deps_basic_map)
+                    else:
+                        map = isl.Map.from_basic_map(deps_basic_map)
+                        deps_union_map = deps_union_map.add_map(map)
+
         LOG(log_level, "Statements converted to Pluto (S0, S1 ......)")
         LOG(log_level, "Domain for all statements")
         LOG(log_level, domain_union_set.to_str())
-
-        # Collect Dependencies
-        for dep in self.dependencies:
-            if not dep.producer_obj.isInput:
-                deps_basic_map = self.get_dep_for_pluto(dep)
-                if deps_union_map is None:
-                    deps_union_map = isl.UnionMap.from_basic_map(deps_basic_map)
-                else:
-                    map = isl.Map.from_basic_map(deps_basic_map)
-                    deps_union_map = deps_union_map.add_map(map)
 
         if deps_union_map:
             LOG(log_level,"Dependencies across statements")
@@ -969,10 +986,13 @@ class Pipeline:
         else:
             # If no dependencies found, then send empty UnionMap to Pluto
             LOG(log_level, "No dependencies found")
-            deps_union_map = isl.UnionMap.read_from_str(self._ctx, '[R1, R2, C2, C1] -> { S_0[x, y, prod_var_mat1_mat2] -> S_0[x1, y1, z1] : R1 = 32 and R2 = 32 and C2 = 32 and C1 = 32 and 0 <= x <= 31 and 0 <= y <= 31 and 0 <= prod_var_mat1_mat2 <= 31 and x1 = x and y1 = y and z1 = prod_var_mat1_mat2 + 1 }')
+            # TODO: Currently adding the manuall, till we can get deps by using isl. Remove when done
+            str = '[R, C] -> { S_0[x, y, prod_var_mat1_mat2] -> S_4[x, y] : R = 128 and C = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat2 <= 127; S_2[x, y, prod_var_mat1_mat3] -> S_2[x, y, 1 + prod_var_mat1_mat3] : C = 128 and R = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat3 <= 127; S_0[x, y, prod_var_mat1_mat2] -> S_0[x, y, 1 + prod_var_mat1_mat2] : C = 128 and R = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat2 <= 127; S_2[x, y, prod_var_mat1_mat3] -> S_4[x, y] : R = 128 and C = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat3 <= 127; }'
+            deps_union_map = isl.UnionMap.read_from_str(self._ctx, str)
+            LOG(log_level, deps_union_map.to_str())
             # deps_union_map = isl.UnionMap.read_from_str(self._ctx, '{}')
 
-            # Pluto call
+        # Pluto call
         pluto = LibPluto()
         pluto_options = pluto.create_options()
         out_schedule = pluto.schedule(self._ctx, domain_union_set, deps_union_map, pluto_options)
@@ -980,14 +1000,45 @@ class Pipeline:
         LOG(log_level,"Schedule recieved from Pluto:")
         LOG(log_level,out_schedule)
 
-        # Replace the schedule with the function names
+        # Extract basic maps from UnionMap
         if out_schedule.n_map() > 0:
             maps = self.split_unionmaps_to_maps(out_schedule)
 
+        # Replace the schedule with the correct function names
         polymage_schedules = self.get_polymage_from_pluto_schedule(maps)
-
         LOG(log_level, "Schedule after converting to Polymage:")
         LOG(log_level,polymage_schedules)
+
+
+        # Need to append these schedules to the corresponding polyparts
+        for poly_part in main_poly_part:
+            in_schedule = poly_part.sched
+            in_domain = in_schedule.domain()
+            func_sched_name = in_schedule.get_tuple_name(isl._isl.dim_type.in_)
+            new_sched = self.function_schedule_map[func_sched_name]
+
+            # Removes any scalar dimensions
+            new_sched = new_sched.copy().get_basic_maps()[0]
+            num_out_dim = new_sched.range().n_dim()
+            # Assigning dimension name for out dimension. Required for building ast
+            for i in range(0, num_out_dim):
+                new_sched = new_sched.set_dim_name(isl.dim_type.out, i, 'o' + i.__str__())
+
+            # Intersect with domain in order to bound the schedule to the required space
+            new_sched = new_sched.intersect_domain(in_domain)
+
+            # Replace in dimensions with variable names
+            if isinstance(comp.func, Reduction) and not (poly_part.is_default_part):
+                for i, var in enumerate(poly_part.func.reductionVariables):
+                    new_sched = new_sched.set_dim_name(isl.dim_type.in_, i, var.name)
+            else:
+                for i, var in enumerate(poly_part.func.variables):
+                    new_sched = new_sched.set_dim_name(isl.dim_type.in_, i, var.name)
+            poly_part.sched = new_sched
+            # Mark parallel and vector loops
+            mark_par_and_vec(poly_part, self._param_estimates)
+            #TODO: Add mar_par_for_tiled_loops
+
         return polymage_schedules
 
     def split_unionmaps_to_maps(self,union_map):
@@ -1359,11 +1410,6 @@ def idiom_recognition(pipeline, group):
 
 def replace_expr_with_matched_idiom(g_all_parts, group, idiom):
     if idiom == Idiom_type.mat_mat_mul:
-        reductionDomain = g_all_parts[0].func.reductionDomain
-        mat1_dim1 = (reductionDomain[0].upperBound + 1).__str__()
-        mat1_dim2 = (reductionDomain[1].upperBound + 1).__str__()
-        mat2_dim2 = (reductionDomain[2].upperBound + 1).__str__()
-
         if g_all_parts[0].expr == 0:
             poly_part = g_all_parts[1]
         else:
@@ -1371,9 +1417,6 @@ def replace_expr_with_matched_idiom(g_all_parts, group, idiom):
 
         comp_dim = 0
         poly_part.is_idiom = True
-        poly_part.idiom = "cblas_dgemm(CblasRowMajor, CblasNoTrans,CblasNoTrans, " \
-                          + mat1_dim1 + ", " + mat1_dim2 + ", " + mat2_dim2 + ", 1.0, mat1 , "\
-                          + mat2_dim2 + ", mat2 , " + mat1_dim2 + ", 0.0, mat3 , " + mat1_dim2 + ")"
         tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
         poly_part.sched = poly_part.sched.drop_constraints_involving_dims(isl._isl.dim_type.in_,
                                                                                0, 3)

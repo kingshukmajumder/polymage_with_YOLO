@@ -270,8 +270,13 @@ def mark_par_and_vec(poly_part, param_estimates):
     parallel_dim = None
     vec_dim = None
     dim_in = p.sched.dim(isl._isl.dim_type.in_)
+    domain = []
+    if isinstance(p.comp.func, Reduction):
+        domain = p.comp.func.reductionDomain
+    else:
+        domain = p.comp.func.domain
     for dim in range(0, dim_in):
-        interval = p.comp.func.domain[dim]
+        interval = domain[dim]
         # Since size could be estimated so can interval size be
         intr_size = get_dim_size(interval, param_estimates)
 
