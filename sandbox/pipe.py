@@ -1028,7 +1028,7 @@ class Pipeline:
             new_sched = new_sched.intersect_domain(in_domain)
 
             # Replace in dimensions with variable names
-            if isinstance(comp.func, Reduction) and not (poly_part.is_default_part):
+            if isinstance(poly_part.comp.func, Reduction) and not (poly_part.is_default_part):
                 for i, var in enumerate(poly_part.func.reductionVariables):
                     new_sched = new_sched.set_dim_name(isl.dim_type.in_, i, var.name)
             else:
