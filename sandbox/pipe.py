@@ -292,6 +292,11 @@ class ComputeObject:
 
         return
 
+    # New method for matrix. TODO: Currently sets all to liveout
+    def compute_liveness_for_matrix(self):
+        self._is_liveout = True;
+        return
+
     def compute_size(self, sizes=None):
         '''
         For each dimension of the compute object, find the interval size and
@@ -533,6 +538,17 @@ class Group:
         self._live_outs = liveouts
         return
 
+    #TODO: Currently all the functions in Matrix are liveouts.
+    def compute_liveness_for_matrix(self):
+        liveouts = []
+        for comp in self.comps:
+            comp.compute_liveness_for_matrix()
+            if comp.is_liveout:
+                liveouts.append(comp)
+
+        self._live_outs = liveouts
+        return
+
     def is_fused(self):
         return len(self.comps) > 1
 
@@ -704,9 +720,10 @@ class Pipeline:
                 self.merge_groups(self.groups[0], self.groups[1])
             # Grouping and Scheduling is taken care by Pluto
             final_schedule = self.get_matrix_pipeline_schedule()
-
             self._level_order_groups = self.order_group_objs()
             self._grp_schedule = schedule_groups(self)
+            for group in self._grp_schedule:
+                group._comps_schedule = naive_sched_comps(group)
 
             #Perform Idiom Recognition
             for group in self._groups:
@@ -754,7 +771,10 @@ class Pipeline:
 
         for group in self.groups:
             # update liveness of compute objects in each new group
-            group.compute_liveness()
+            if 'matrix' in self.options:
+                group.compute_liveness_for_matrix()
+            else:
+                group.compute_liveness()
             # children map for comps within the group
             group.collect_comps_children()
         self._liveouts = self.collect_liveouts()
@@ -793,10 +813,9 @@ class Pipeline:
         # liveouts
         self._liveness_map = liveness_for_pipe_outputs(self)
         # groups
-        if not 'matrix' in self.options:
-            for group in self.groups:
-                liveness_for_group_comps(group, group.children_map,
-                                     group.comps_schedule)
+        for group in self.groups:
+            liveness_for_group_comps(group, group.children_map,
+                                 group.comps_schedule)
 
 
         ''' STORAGE '''
