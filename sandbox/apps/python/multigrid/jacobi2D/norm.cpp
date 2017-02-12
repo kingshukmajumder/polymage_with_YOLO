@@ -34,7 +34,7 @@ extern "C" void pipeline_norm(int N, void *f_void_arg, void *uex_void_arg, void 
                   + u[(i0+1)*(N+2) + (i1  )]
                   + u[(i0  )*(N+2) + (i1-1)]
                   + u[(i0  )*(N+2) + (i1+1)]
-                  - u[(i0  )*(N+2) + (i1  )] * 6.0
+                  - u[(i0  )*(N+2) + (i1  )] * 4.0
                   ) * invhh
                   - f[(i0  )*(N+2) + (i1  )];
 
