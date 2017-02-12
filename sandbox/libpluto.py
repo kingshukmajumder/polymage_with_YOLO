@@ -441,8 +441,8 @@ class LibPluto(object):
         assert isinstance(dependences, isl.UnionMap)
         assert isinstance(pluto_options, PlutoOptions)
 
-        autolog(header("domains") + str(domains), TAG)
-        autolog(header("depdendences") + str(dependences), TAG)
+        #autolog(header("domains") + str(domains), TAG)
+        #autolog(header("depdendences") + str(dependences), TAG)
 
         domains_str = domains.to_str().encode('utf-8')
         dependences_str = dependences.to_str().encode('utf-8')
@@ -481,8 +481,8 @@ class LibPluto(object):
         assert isinstance(dependences, isl.UnionMap)
         assert isinstance(pluto_options, PlutoOptions)
 
-        autolog(header("domains") + str(domains), TAG)
-        autolog(header("depdendences") + str(dependences), TAG)
+        #autolog(header("domains") + str(domains), TAG)
+        #autolog(header("depdendences") + str(dependences), TAG)
 
         domains_str = domains.to_str().encode('utf-8')
         dependences_str = dependences.to_str().encode('utf-8')
@@ -517,5 +517,5 @@ if __name__ == "__main__":
 
     sched  = pluto.schedule(ctx, domains, deps, pluto_opts)
     remapping = pluto.get_remapping(ctx, domains, deps, pluto_opts)
-    print("schedule: %s" % sched)
-    print("remapping: %s" % remapping)
+    #print("schedule: %s" % sched)
+    #print("remapping: %s" % remapping)

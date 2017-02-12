@@ -419,7 +419,7 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
     if group.comps[0].is_tstencil_type:
         TAG = "Fused Schedule - TStencil"
 
-        autolog("diamond tiling pass", TAG)
+        #autolog("diamond tiling pass", TAG)
 
         assert len(group.comps) == 1, ("Tstencil must be in a "
                                       "separate group.")
@@ -432,7 +432,7 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
 
         poly_part = poly_parts[0]
 
-        autolog("original poly_part sched:\n%s" % poly_part.sched, TAG)
+        #autolog("original poly_part sched:\n%s" % poly_part.sched, TAG)
         # -----
         # save the original name of the domain, so we can rename the domain
         # once it passes through PLUTO
@@ -450,8 +450,8 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
         in_schedule = PolyRep.add_tstencil_kernel_constraints(isl_ctx,
                 in_domain, in_schedule, tstencil_comp)
 
-        autolog("%s%s" % (header("in_domain"), in_domain), TAG)
-        autolog("%s%s" % (header("in_schedule"), in_schedule), TAG)
+        #autolog("%s%s" % (header("in_domain"), in_domain), TAG)
+        #autolog("%s%s" % (header("in_schedule"), in_schedule), TAG)
         pluto = libpluto.LibPluto()
         pluto_options = pluto.create_options()
         pluto_options.partlbtile = True
@@ -460,15 +460,17 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
                 in_schedule,
                 pluto_options).copy()
 
-        autolog("pluto optimised schedule: %s" % optimised_sched, TAG)
+        #autolog("pluto optimised schedule: %s" % optimised_sched, TAG)
 
         # -----
         # get the basic maps in the pluto union map, and pick up
         # the basicMap of the schedule we care about
         basic_maps_in_sched = get_maps_from_union_map(optimised_sched)
 
+        '''
         autolog("basic maps in PLUTO optimised schedule:\n%s" %
               "\n".join(list(map(str, basic_maps_in_sched))), TAG)
+        '''
 
         assert len(basic_maps_in_sched) == 1, \
             ("the optimised schedule must have "
@@ -494,7 +496,7 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
             opt_schedule = \
                 opt_schedule.set_dim_name(isl.dim_type.in_, i, var.name)
 
-        autolog(header("Final chosen schedule") +  str(opt_schedule), TAG)
+        #autolog(header("Final chosen schedule") +  str(opt_schedule), TAG)
         poly_part.sched = opt_schedule
 
 

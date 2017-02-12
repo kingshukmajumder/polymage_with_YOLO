@@ -640,8 +640,8 @@ class PolyRep(object):
         poly_dom.set_tuple_id(id_)
         isl_set_id_user(id_, poly_dom)
 
-        autolog("space:\n %s" % space, "extract_poly_dom_from_comp")
-        autolog("domain map:\n%s" % space, "extract_poly_dom_from_comp")
+        #autolog("space:\n %s" % space, "extract_poly_dom_from_comp")
+        #autolog("domain map:\n%s" % space, "extract_poly_dom_from_comp")
         return poly_dom
 
     def extract_polyrep_from_function(self, comp, max_dim,
@@ -653,16 +653,16 @@ class PolyRep(object):
 
         self.poly_doms[comp] = \
             self.extract_poly_dom_from_comp(comp, param_constraints)
-        autolog(">>>poly dom: %s" % self.poly_doms[comp])
+        #autolog(">>>poly dom: %s" % self.poly_doms[comp])
         sched_map = self.create_sched_space(comp.func.variables,
                                             comp.func.domain,
                                             schedule_names, param_names,
                                             context_conds)
-        autolog(">>>sched_map: %s" % sched_map)
+        #autolog(">>>sched_map: %s" % sched_map)
         self.create_poly_parts_from_definition(comp, max_dim, sched_map,
                                                level_no, schedule_names,
                                                comp.func.domain)
-        autolog(">>>poly parts: %s" % "\n\t".join(map(str, self.poly_parts[comp])))
+        #autolog(">>>poly parts: %s" % "\n\t".join(map(str, self.poly_parts[comp])))
 
     def extract_polyrep_from_reduction(self, comp, max_dim,
                                        schedule_names, param_names,
@@ -733,7 +733,7 @@ class PolyRep(object):
 
         constraints_union = isl.UnionMap.empty(time_constraint_map.space)
 
-        autolog(header("constraints union on creation") + str(constraints_union), TAG)
+        #autolog(header("constraints union on creation") + str(constraints_union), TAG)
 
 
         # --- add constraints from kernel dimensions ---
@@ -745,7 +745,7 @@ class PolyRep(object):
         #  kernel_sizes = get_valid_kernel_sizes(comp.func.kernel)
         #  origins = comp.func.origin
         #  for i in range(len(comp.func.domain)):
-        #      autolog(header("building restriction for domain"))
+        #      #autolog(header("building restriction for domain"))
         #      interval = domain[i]
         #      size = kernel_sizes[i]
         #      origin = origins[i]
@@ -977,9 +977,11 @@ class PolyRep(object):
 
 
 
+        '''
         autolog(list(map(lambda x: str(x.sched),
                          self.poly_parts[comp])),
                          "poly parts for comp (\n%s)" % (comp._func))
+        '''
 
         # TODO adding a boundary padding and default to the function 
         # will help DSL usability. 

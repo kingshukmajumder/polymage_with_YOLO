@@ -1104,7 +1104,7 @@ class TStencil(Function):
 
         conditions = []
         for i in range(len(self.domain)):
-            autolog(header("building restriction for domain"))
+            #autolog(header("building restriction for domain"))
             interval = domain[i]
             size = kernel_sizes[i]
             origin = origins[i]
@@ -1208,7 +1208,7 @@ class TStencil(Function):
         self._original_def = _def[0].clone()
 
         stencil_list = _def[0].collect(Stencil)
-        print("stencil_list: %s" % stencil_list)
+        #print("stencil_list: %s" % stencil_list)
 
         assert (len(stencil_list) == 1, "Expected exactly 1 stencil in defn.")
         self._stencil = stencil_list[0]
