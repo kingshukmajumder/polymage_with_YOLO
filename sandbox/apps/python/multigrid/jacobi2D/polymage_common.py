@@ -26,7 +26,13 @@ def set_vars(app_data):
     pipe_data['x'] = x
 
     n = Parameter(Int, "n")
+    T1 = Parameter(Int, "T1")
+    T2 = Parameter(Int, "T2")
+    T3 = Parameter(Int, "T3")
     pipe_data['n'] = n
+    pipe_data['T1'] = T1
+    pipe_data['T2'] = T2
+    pipe_data['Tc'] = T3
 
     # grid size at each level
     N = {}

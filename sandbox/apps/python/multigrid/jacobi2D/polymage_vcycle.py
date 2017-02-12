@@ -20,6 +20,9 @@ def v_cycle(app_data):
     nu1 = app_data['nu1']
     nu2 = app_data['nu2']
     nuc = app_data['nuc']
+    T1 = pipe_data['T1']
+    T2 = pipe_data['T2']
+    Tc = pipe_data['Tc']
 
     # initial guess
     V = Image(Double, "V_", [N[L]+2, N[L]+2])
@@ -53,39 +56,26 @@ def v_cycle(app_data):
             if nuc == 0:
                 return v
 
-            smooth_p1[l] = {}
-            for t in range(0, nuc):
-                if l == L and t == nuc-1:
-                    fname = app_data['cycle_name']
-                else:
-                    fname = "T"+str(t)+"_coarse"
+            if l == L:
+                fname = app_data['cycle_name']
+            else:
+                fname = "Coarse"
 
-                if t == 0:
-                    in_func = v
-                else:
-                    in_func = smooth_p1[l][t-1]
+            smooth_p1[l] = w_jacobi(v, f, l, fname, app_data, Tc)
 
-                smooth_p1[l][t] = w_jacobi(in_func, f, l, fname, app_data)
-
-            return smooth_p1[l][nuc-1]
+            return smooth_p1[l]
         ###################################################
         # all other finer levels
         else:
             ''' PRE-SMOOTHING '''
-            smooth_p1[l] = {}
-            for t in range(0, nu1):
-                fname = "T"+str(t)+"_pre_L"+str(l)
-                if t == 0:
-                    in_func = v
-                else:
-                    in_func = smooth_p1[l][t-1]
+            fname = "Pre_L"+str(l)
 
-                smooth_p1[l][t] = w_jacobi(in_func, f, l, fname, app_data)
+            smooth_p1[l] = w_jacobi(v, f, l, fname, app_data, T1)
 
             if nu1 <= 0:
                 smooth_out = v
             else:
-                smooth_out = smooth_p1[l][nu1-1]
+                smooth_out = smooth_p1[l]
 
             ###############################################
             ''' RESIDUAL '''
@@ -116,7 +106,7 @@ def v_cycle(app_data):
             if nu1 <= 0:
                 correct_in = v
             else:
-                correct_in = smooth_p1[l][nu1-1]
+                correct_in = smooth_p1[l]
 
             ec[l] = interpolate(e_2h[l], correct_in, l, fname, pipe_data)
 
@@ -126,20 +116,13 @@ def v_cycle(app_data):
             ###############################################
 
             ''' POST-SMOOTHING '''
-            smooth_p2[l] = {}
-            for t in range(0, nu2):
-                fname = "T"+str(t)+"_post_L"+str(l)
-                if l == L and t == nu2-1:
-                    fname = app_data['cycle_name']
+            fname = "Post_L"+str(l)
+            if l == L:
+                fname = app_data['cycle_name']
 
-                if t == 0:
-                    in_func = ec[l]
-                else:
-                    in_func = smooth_p2[l][t-1]
-
-                smooth_p2[l][t] = w_jacobi(in_func, f, l, fname, app_data)
+            smooth_p2[l] = w_jacobi(ec[l], f, l, fname, app_data, T2)
  
-            return smooth_p2[l][nu2-1]
+            return smooth_p2[l]
     #######################################################
 
     # one whole v-cycle beginning at the finest level
