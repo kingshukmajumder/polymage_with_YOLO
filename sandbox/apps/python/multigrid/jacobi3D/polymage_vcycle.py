@@ -120,7 +120,7 @@ def v_cycle(app_data):
             if l == L:
                 fname = app_data['cycle_name']
 
-            smooth_p2[l][t] = w_jacobi(ec[l], f, l, fname, app_data, T2)
+            smooth_p2[l] = w_jacobi(ec[l], f, l, fname, app_data, T2)
  
             return smooth_p2[l]
     #######################################################
