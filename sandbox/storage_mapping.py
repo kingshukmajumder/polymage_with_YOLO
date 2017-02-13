@@ -56,7 +56,7 @@ def get_dim_size(dim_storage, const=None):
         denr = dim_storage.coeff.denominator
         param_part = numr * dim_storage.orig_param // denr
     else:
-        param_part = dim_storage.coeff * dim_storage.orig_param
+        param_part = sum([c * o for c, o in zip(dim_storage.coeff, dim_storage.orig_param)])
     size = param_part + const
     size = simplify_expr(size)
 
@@ -67,20 +67,21 @@ class Dimension:
         _param = size_map[0]
         self._orig_param = _param
 
-        if _param == 0:  # constant
-            self._param = '0'
-        else:  # Parameter
-            self._param = _param.name
+        self._param = [i.name for i in _param]
+        #~ if _param == 0:  # constant
+            #~ self._param = '0'
+        #~ else:  # Parameter
+            #~ self._param = _param.name
 
         self._size_expr = size_map[1]
 
         coeff_map = get_affine_var_and_param_coeff(self._size_expr)
         self._const = int(get_constant_from_expr(self._size_expr))
-        self._coeff = 1
+        self._coeff = []
         if not self.is_constant:
-            self._coeff = coeff_map[_param]
+            self._coeff = [coeff_map[i] for i in _param]
         else:
-            self._coeff = self._const
+            self._coeff = [self._const]
 
     @property
     def orig_param(self):
@@ -99,7 +100,7 @@ class Dimension:
         return self._const
     @property
     def is_constant(self):
-        return self._param == '0'
+        return self._param == []
 
     def __str__(self):
         '''

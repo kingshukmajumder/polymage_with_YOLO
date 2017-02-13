@@ -310,17 +310,18 @@ class ComputeObject:
 
         def compute_size_tuple(dim, intervals, sizes, funcname):
             if sizes and sizes[dim] != -1:
-                param = 0  # const
+                param = []  # const
                 size = sizes[dim]
             else:
                 params = intervals[dim].collect(Parameter)
-                assert not len(params) > 1, funcname+", \
-					("+str(dim)+"/"+str(len(params))+'),'+', \
-					'.join([par.name for par in params])
-                if len(params) == 1:
-                    param = params[0]
-                elif len(params) == 0:  # const
-                    param = 0
+                #~ assert not len(params) > 1, funcname+", \
+					#~ ("+str(dim)+"/"+str(len(params))+'),'+', \
+					#~ '.join([par.name for par in params])
+                #~ if len(params) == 1:
+                    #~ param = params[0]
+                #~ elif len(params) == 0:  # const
+                    #~ param = 0
+                param = params
                 size = intervals[dim].upperBound - \
                        intervals[dim].lowerBound + 1
             size = simplify_expr(size)

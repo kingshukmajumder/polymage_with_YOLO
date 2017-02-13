@@ -132,6 +132,19 @@ class RandomFloat(InbuiltFunction): # Random Float b/w 0.0f and 1.0f
     def __str__(self):
         return "(static_cast<float> (rand()) / static_cast<float> (RAND_MAX))"
 
+class Pi(InbuiltFunction):
+    def __init__(self):
+        InbuiltFunction.__init__(self)
+
+    def getType(self):
+        return Double
+
+    def clone(self):
+        return Pi()
+
+    def __str__(self):
+        return "M_PI"
+
 class Exp(InbuiltFunction):
     def __init__(self, _expr):
         InbuiltFunction.__init__(self, _expr)

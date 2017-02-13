@@ -109,6 +109,10 @@ class CRandomFloat(RandomFloat):
     def __init__(self):
         RandomFloat.__init__(self)
 
+class CPi(Pi):
+    def __init__(self):
+        Pi.__init__(self)
+
 class CLog(Log):
     def __init__(self, _expr):
         Log.__init__(self, _expr)
