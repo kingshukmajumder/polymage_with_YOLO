@@ -37,8 +37,7 @@ def window(pipe_data):
     order = Cast(Double, N-1)
     alpha = 0.16
     win = Function(([x, y], [row, col]), Double, "win")
-    win.defn = [ Case(c_hamming, 0.53836
-                        - 0.46164*Cos((2*Pi()*x)/order)),
+    win.defn = [ Case(c_hamming, 0.54 - 0.46*Cos((2*Pi()*x)/order)),
                  Case(c_hanning, 0.5 - 0.5*Cos((2*Pi()*x)/order)),
                  Case(c_bartlett, 1.0 - Abs(2*x/order - 1)),
                  Case(c_blackman, (1-alpha)/2
