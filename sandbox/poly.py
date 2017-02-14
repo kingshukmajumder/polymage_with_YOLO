@@ -613,7 +613,7 @@ class PolyRep(object):
         dom_map = add_constraints(dom_map, ineqs, eqs)
 
         param_conds = self.format_param_constraints(param_constraints, params)
-        [param_ineqs, param_eqs, _] = format_conjunct_constraints(param_conds)
+        [param_ineqs, param_eqs, _] = format_conjunct_constraints(param_conds, False)
         dom_map = add_constraints(dom_map, param_ineqs, param_eqs)
 
         poly_dom = PolyDomain(dom_map.domain(), comp)
@@ -675,7 +675,7 @@ class PolyRep(object):
         sched_map = add_constraints(sched_map, ineqs, eqs)
 
         # Adding the parameter constraints
-        [param_ineqs, param_eqs, _] = format_conjunct_constraints(context_conds)
+        [param_ineqs, param_eqs, _] = format_conjunct_constraints(context_conds, False)
         sched_map = add_constraints(sched_map, param_ineqs, param_eqs)
 
         return sched_map
@@ -708,7 +708,7 @@ class PolyRep(object):
                                  isAffine(cond.lhs) and isAffine(cond.rhs)
                     if(affine):
                         [conjunct_ineqs, conjunct_eqs, new_condition] = \
-                            format_conjunct_constraints(conjunct)
+                            format_conjunct_constraints(conjunct, True)
                         sched_m = add_constraints(sched_m,
                                                   conjunct_ineqs,
                                                   conjunct_eqs)
@@ -1053,7 +1053,7 @@ def format_domain_constraints(domain, var_names):
 
     return [ineq_coeff, eq_coeff]
 
-def format_conjunct_constraints(conjunct):
+def format_conjunct_constraints(conjunct, from_definition):
     # TODO check if the condition is a conjunction
     # print([ cond.__str__() for cond in conjunct ])
     ineq_coeff = []
@@ -1070,7 +1070,7 @@ def format_conjunct_constraints(conjunct):
         left_coeff = map_coeff_to_dim(left_coeff)
         right_coeff = map_coeff_to_dim(right_coeff)
 
-        no_in = all([key[0] != 'in' for key in set(left_coeff) | set(right_coeff)])
+        no_in = from_definition and all([key[0] != 'in' for key in set(left_coeff) | set(right_coeff)])
 
         def constant_div_factor(const):
             m = 1
