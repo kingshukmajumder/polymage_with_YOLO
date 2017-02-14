@@ -613,7 +613,7 @@ class PolyRep(object):
         dom_map = add_constraints(dom_map, ineqs, eqs)
 
         param_conds = self.format_param_constraints(param_constraints, params)
-        [param_ineqs, param_eqs] = format_conjunct_constraints(param_conds)
+        [param_ineqs, param_eqs, _] = format_conjunct_constraints(param_conds)
         dom_map = add_constraints(dom_map, param_ineqs, param_eqs)
 
         poly_dom = PolyDomain(dom_map.domain(), comp)
@@ -675,7 +675,7 @@ class PolyRep(object):
         sched_map = add_constraints(sched_map, ineqs, eqs)
 
         # Adding the parameter constraints
-        [param_ineqs, param_eqs] = format_conjunct_constraints(context_conds)
+        [param_ineqs, param_eqs, _] = format_conjunct_constraints(context_conds)
         sched_map = add_constraints(sched_map, param_ineqs, param_eqs)
 
         return sched_map
@@ -707,13 +707,13 @@ class PolyRep(object):
                         affine = affine and \
                                  isAffine(cond.lhs) and isAffine(cond.rhs)
                     if(affine):
-                        [conjunct_ineqs, conjunct_eqs] = \
+                        [conjunct_ineqs, conjunct_eqs, new_condition] = \
                             format_conjunct_constraints(conjunct)
                         sched_m = add_constraints(sched_m,
                                                   conjunct_ineqs,
                                                   conjunct_eqs)
                         parts = self.make_poly_parts(sched_m, case.expression,
-                                                     None, comp,
+                                                     new_condition, comp,
                                                      align, scale, level_no)
                         for part in parts:
                             self.poly_parts[comp].append(part)
@@ -1058,6 +1058,7 @@ def format_conjunct_constraints(conjunct):
     # print([ cond.__str__() for cond in conjunct ])
     ineq_coeff = []
     eq_coeff = []
+    new_condition = None
     for cond in conjunct:
         coeff = {}
         left_coeff = get_affine_var_and_param_coeff(cond.lhs)
@@ -1068,7 +1069,9 @@ def format_conjunct_constraints(conjunct):
         # Mapping from variable names to the corresponding dimension
         left_coeff = map_coeff_to_dim(left_coeff)
         right_coeff = map_coeff_to_dim(right_coeff)
-        
+
+        no_in = all([key[0] != 'in' for key in set(left_coeff) | set(right_coeff)])
+
         def constant_div_factor(const):
             m = 1
             for coeff in const:
@@ -1079,8 +1082,10 @@ def format_conjunct_constraints(conjunct):
             m = m.numerator
             return m
 
+        if no_in:
+            new_condition = cond if new_condition is None else Condition(new_condition, '&&', cond)
         # Normalizing >= format
-        if (cond.conditional in ['<=','<']):
+        elif (cond.conditional in ['<=','<']):
             coeff = dict( (n, -left_coeff.get(n, 0) + right_coeff.get(n, 0)) \
                           for n in set(left_coeff) | set(right_coeff) )
             d = constant_div_factor(coeff)
@@ -1104,4 +1109,4 @@ def format_conjunct_constraints(conjunct):
             coeff[('constant', 0)] = left_const - right_const
             eq_coeff.append(coeff)
 
-    return [ineq_coeff, eq_coeff]
+    return [ineq_coeff, eq_coeff, new_condition]
