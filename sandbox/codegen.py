@@ -306,14 +306,12 @@ def generate_c_naive_from_accumlate_node(pipe, polyrep, node, body,
         assign = genc.CStatement(lib_expr)
     else:
         op_type = poly_part.expr.op_type
-        if op_type == Op.Max:
-            rhs = genc.CMax(array_ref, expr)
-        elif op_type == Op.Min:
-            rhs = genc.CMin(array_ref, expr)
-        elif op_type == Op.Mul:
-            rhs = array_ref * expr
-        else:
-            rhs = array_ref + expr
+        rhs = {
+            Op.Max: genc.CMax(array_ref, expr),
+            Op.Min: genc.CMin(array_ref, expr),
+            Op.Mul: array_ref * expr,
+            Op.Sum: array_ref + expr
+        }[op_type]
         assign = genc.CAssign(array_ref, rhs)
 
     if prologue is not None:
@@ -860,14 +858,12 @@ def generate_reduction_scan_loops(pipe, group, comp, pipe_body, cparam_map):
             accum_ref = generate_c_expr(pipe, func(*ref_args),
                                         cparam_map, cvar_map)
             op_type = case.op_type
-            if op_type == Op.Max:
-                rhs = genc.CMax(accum_ref, case_expr)
-            elif op_type == Op.Min:
-                rhs = genc.CMin(accum_ref, case_expr)
-            elif op_type == Op.Mul:
-                rhs = accum_ref * case_expr
-            else:
-                rhs = accum_ref + case_expr
+            rhs = {
+                Op.Max: genc.CMax(array_ref, expr),
+                Op.Min: genc.CMin(array_ref, expr),
+                Op.Mul: array_ref * expr,
+                Op.Sum: array_ref + expr
+            }[op_type]
             assign = genc.CAssign(accum_ref, rhs)
             lbody.add(assign, False)
         elif(isinstance(case, Case)):
@@ -882,14 +878,12 @@ def generate_reduction_scan_loops(pipe, group, comp, pipe_body, cparam_map):
                 accum_ref = generate_c_expr(pipe, func(*ref_args),
                                             cparam_map, cvar_map)
                 op_type = case.expression.op_type
-                if op_type == Op.Max:
-                    rhs = genc.CMax(accum_ref, cond_expr)
-                elif op_type == Op.Min:
-                    rhs = genc.CMin(accum_ref, cond_expr)
-                elif op_type == Op.Mul:
-                    rhs = accum_ref * cond_expr
-                else:
-                    rhs = accum_ref + cond_expr
+                rhs = {
+                    Op.Max: genc.CMax(array_ref, expr),
+                    Op.Min: genc.CMin(array_ref, expr),
+                    Op.Mul: array_ref * expr,
+                    Op.Sum: array_ref + expr
+                }[op_type]
                 assign = genc.CAssign(accum_ref, rhs)
                 with cif.if_block as ifblock:
                     ifblock.add(assign)
