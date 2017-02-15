@@ -64,9 +64,9 @@ def test_math():
     iabs = Function(([x, y], [row, col]), Float, "_abs")
     iabs.defn = [ Case(cond, Abs(sqrtf(x, y) - sqrt(x, y))) ]
 
-    # pow(abs, 3)
+    # pow(abs, PI)
     ipow = Function(([x, y], [row, col]), Float, "_pow")
-    ipow.defn = [ Case(cond, Pow(iabs(x, y), 3)) ]
+    ipow.defn = [ Case(cond, Pow(iabs(x, y), Pi())) ]
 
     # image1 > image2 ? pow : exp
     select_cond = Condition(img1(x, y), '>', img2(x, y))
