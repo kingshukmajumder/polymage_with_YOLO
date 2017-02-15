@@ -226,6 +226,27 @@ def get_user_nodes_in_body(body):
                    False)
     return user_nodes
 
+def get_user_nodes_in_body_one_loop(body):
+    user_nodes = []
+    if body.get_type() == isl._isl.ast_node_type.block:
+        num_nodes = (body.block_get_children().n_ast_node())
+        for i in range(0, num_nodes):
+            child = body.block_get_children().get_ast_node(i)
+            user_nodes += get_user_nodes_in_body(child)
+    else:
+        if body.get_type() == isl._isl.ast_node_type.for_:
+            pass
+        elif body.get_type() == isl._isl.ast_node_type.if_:
+            user_nodes += get_user_nodes_in_body(body.if_get_then())
+            if body.if_has_else():
+              user_nodes += get_user_nodes_in_body(body.if_get_else())
+        elif body.get_type() == isl._isl.ast_node_type.user:
+            user_nodes += [body]
+        else:
+            assert("Unexpected isl node type:"+str(node.get_type()) and \
+                   False)
+    return user_nodes
+
 def is_sched_dim_parallel(polyrep, user_nodes, sched_dim_name):
     is_parallel = True
     for node in user_nodes:
@@ -243,6 +264,15 @@ def is_sched_dim_vector(polyrep, user_nodes, sched_dim_name):
         if sched_dim_name not in part.vector_sched_dim:
             is_vector = False
     return is_vector
+
+def get_reductions(polyrep, user_nodes):
+    reductions = []
+    for node in user_nodes:
+        part_id = node.user_get_expr().get_op_arg(0).get_id()
+        part = isl_get_id_user(part_id)
+        if isinstance(part.expr, Reduce):
+            reductions.append(node)
+    return reductions
 
 def get_arrays_for_user_nodes(pipe, polyrep, user_nodes):
     arrays = []
@@ -484,6 +514,8 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
 
             dim_parallel = is_sched_dim_parallel(polyrep, user_nodes, var.name)
             dim_vector = is_sched_dim_vector(polyrep, user_nodes, var.name)
+            reductions = get_reductions(polyrep, get_user_nodes_in_body_one_loop(node.for_get_body()))
+            dim_reduce = len(reductions) > 0
             arrays = get_arrays_for_user_nodes(pipe, polyrep, user_nodes)
 
             # number of loops in the perfectly nested loop
@@ -501,6 +533,33 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
             if dim_vector:
                 vec_pragma = genc.CPragma("ivdep")
                 body.add(vec_pragma)
+
+            if dim_reduce:
+                reduction_strs = []
+                for red in reductions:
+                    pid = red.user_get_expr().get_op_arg(0).get_id()
+                    pp = isl_get_id_user(pid)
+
+                    cm = cvariables_from_variables_and_sched(red,
+                           pp.comp.func.reductionVariables, pp.sched)
+                    prolog = []
+                    array_ref = generate_c_expr(pipe, pp.expr.accumulate_ref,
+                                                cparam_map, cm,
+                                                prologue_stmts = prolog)
+                    op_type_str = {
+                        Op.Max: "max",
+                        Op.Min: "min",
+                        Op.Mul: "*",
+                        Op.Sum: "+"
+                    }[pp.expr.op_type]
+                    reduction_strs.append("reduction(" + op_type_str
+                                          + ": " + array_ref.__str__()
+                                          + ")")
+                omp_par_reduce_str = \
+                    "omp parallel for schedule(static) " \
+                    + ",".join(reduction_strs)
+                omp_pragma = genc.CPragma(omp_par_reduce_str)
+                body.add(omp_pragma)
 
             body.add(loop)
 
