@@ -305,7 +305,16 @@ def generate_c_naive_from_accumlate_node(pipe, polyrep, node, body,
         lib_expr = get_mat_mul_lib_expr(mat1, mat2, out_array_name, reduction_dimension)
         assign = genc.CStatement(lib_expr)
     else:
-        assign = genc.CAssign(array_ref, array_ref + expr)
+        op_type = poly_part.expr.op_type
+        if op_type == Op.Max:
+            rhs = genc.CMax(array_ref, expr)
+        elif op_type == Op.Min:
+            rhs = genc.CMin(array_ref, expr)
+        elif op_type == Op.Mul:
+            rhs = array_ref * expr
+        else:
+            rhs = array_ref + expr
+        assign = genc.CAssign(array_ref, rhs)
 
     if prologue is not None:
         for s in prologue:
@@ -848,9 +857,18 @@ def generate_reduction_scan_loops(pipe, group, comp, pipe_body, cparam_map):
             case_expr = generate_c_expr(pipe, case.expression,
                                         cparam_map, cvar_map)
             ref_args = case.accumulate_ref.arguments
-            accum_ref = generate_c_expr(pipe, obj(*ref_args),
+            accum_ref = generate_c_expr(pipe, func(*ref_args),
                                         cparam_map, cvar_map)
-            assign = genc.CAssign(accum_ref, accum_ref + case_expr)
+            op_type = case.op_type
+            if op_type == Op.Max:
+                rhs = genc.CMax(accum_ref, case_expr)
+            elif op_type == Op.Min:
+                rhs = genc.CMin(accum_ref, case_expr)
+            elif op_type == Op.Mul:
+                rhs = accum_ref * case_expr
+            else:
+                rhs = accum_ref + case_expr
+            assign = genc.CAssign(accum_ref, rhs)
             lbody.add(assign, False)
         elif(isinstance(case, Case)):
             c_cond = generate_c_cond(pipe, case.condition,
@@ -863,7 +881,16 @@ def generate_reduction_scan_loops(pipe, group, comp, pipe_body, cparam_map):
                 ref_args = case.accumulate_ref.arguments
                 accum_ref = generate_c_expr(pipe, func(*ref_args),
                                             cparam_map, cvar_map)
-                assign = genc.CAssign(accum_ref, accum_ref + cond_expr)
+                op_type = case.expression.op_type
+                if op_type == Op.Max:
+                    rhs = genc.CMax(accum_ref, cond_expr)
+                elif op_type == Op.Min:
+                    rhs = genc.CMin(accum_ref, cond_expr)
+                elif op_type == Op.Mul:
+                    rhs = accum_ref * cond_expr
+                else:
+                    rhs = accum_ref + cond_expr
+                assign = genc.CAssign(accum_ref, rhs)
                 with cif.if_block as ifblock:
                     ifblock.add(assign)
             else:
