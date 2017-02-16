@@ -12,8 +12,8 @@ def init_signals(app_data):
     app_args = app_data['app_args']
 
     # input signal
-    length = 256
-    sig = np.repeat([0, 1, 1, 0, 1, 0, 0, 1], 32)
+    length = 50000
+    sig = np.repeat([0, 1, 1, 0, 1, 0, 0, 1], 6250)
 
     # convert to float arrays
     IN = np.array(sig)

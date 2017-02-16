@@ -12,9 +12,9 @@ def init_signals(app_data):
     app_args = app_data['app_args']
 
     # input signal
-    length = 256
+    length = 50000
     win_type = 8
-    sig = np.repeat([0, 1, 1, 0, 1, 0, 0, 1], 32)
+    sig = np.repeat([0, 1, 1, 0, 1, 0, 0, 1], 6250)
 
     # convert to float arrays
     IN = np.array(sig)
