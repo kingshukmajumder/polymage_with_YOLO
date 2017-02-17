@@ -34,6 +34,7 @@ def test_types():
     assert Value(3, UShort) == 3
     assert Value(3, Long) == 3 
     assert Value(3, ULong) == 3
+    assert Value(3.0 + 3.0j, Complex) == 3.0 + 3.0j
 
 def test_interval():
     I = Interval(UInt, Value(3, UInt), Value(5, UInt))

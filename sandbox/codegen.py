@@ -1049,6 +1049,7 @@ def generate_code_for_pipeline(pipeline,
         inc_block.add(genc.CInclude('stdlib.h'))
         inc_block.add(genc.CInclude('malloc.h'))
         inc_block.add(genc.CInclude('cmath'))
+        inc_block.add(genc.CInclude('complex'))
         inc_block.add(genc.CInclude('string.h'))
         if 'pool_alloc' in pipeline.options:
             inc_block.add(genc.CInclude('simple_pool_allocator.h'))

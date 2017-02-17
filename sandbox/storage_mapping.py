@@ -40,7 +40,8 @@ class TypeSizeMap(object):
                        "int16":2, "uint16":2,
                        "int32":4, "uint32":4,
                        "int64":8, "uint64":8,
-                       "float":4, "double":8 }
+                       "float":4, "double":8,
+                       "std::complex<double>":16 }
 
     @classmethod
     def getsize(cls, typ):

@@ -230,7 +230,8 @@ class Cast(AbstractExpression):
                         UChar, Char, 
                         UShort, Short, 
                         UInt, Int, 
-                        ULong, Long]
+                        ULong, Long,
+                        Complex]
         assert(isinstance(_expr, AbstractExpression))
         self._typ  = _typ
         self._expr = _expr

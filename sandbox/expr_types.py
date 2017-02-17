@@ -77,11 +77,18 @@ class ULong(object):
     def c_type_name():
         return 'uint64'
     pass
+class Complex(object):
+    @staticmethod
+    def c_type_name():
+        return 'std::complex<double>'
+    pass
 class Rational(object):
     pass
 
 def result_type(a, b):
-    if a is Double or b is Double:
+    if a is Complex or b in Complex:
+        return Complex
+    elif a is Double or b is Double:
         return Double
     elif a is Float or b is Float:
         return Float

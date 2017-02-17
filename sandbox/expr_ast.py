@@ -195,6 +195,8 @@ class Value(AbstractExpression):
             _value = Value(_value, Int)
         elif type(_value) is float:
             _value = Value(_value, Float)
+        elif type(_value) is complex:
+            _value = Value(_value, Complex)
         # Python 3 has no long
         #elif type(_value) is long:
         #    _value = Value(_value, Long)

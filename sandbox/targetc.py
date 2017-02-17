@@ -83,6 +83,8 @@ class CValue(Value):
     def __str__(self):
         if (self._typ == Float):
             return self._value.__str__()
+        if (self._typ == Complex):
+            return "(" + self._value.real.__str__() + ' + ' + self._value.imag.__str__() + "j)"
         return self._value.__str__()
 
 class CSelect(Select):
@@ -181,7 +183,8 @@ class TypeNameMap(object):
                        "uint32":"unsigned int", "int32":"int",
                        "uint16":"unsigned short", "int16":"short",
                        "uint8":"unsigned char", "int8":"char",
-                       "float32":"float", "float64":"double" }
+                       "float32":"float", "float64":"double",
+                       "complex": "std::complex<double>" }
 
     @classmethod
     def convert(cls, typ):
@@ -207,6 +210,7 @@ c_char = CType("int8")
 c_float = CType("float32")
 c_double = CType("float64")
 c_void = CType("void")
+c_complex = CType("complex")
 
 class TypeMap(object):
     _type_map = { Void: c_void,
@@ -214,7 +218,7 @@ class TypeMap(object):
                   UInt:c_uint, Int:c_int,
                   UShort:c_ushort, Short:c_short,
                   UChar:c_uchar, Char:c_char,
-                  Float:c_float, Double:c_double }
+                  Float:c_float, Double:c_double, Complex:c_complex }
     @classmethod
     def convert(cls, typ):
         assert typ in cls._type_map
