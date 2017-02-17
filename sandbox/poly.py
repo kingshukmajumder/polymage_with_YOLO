@@ -636,6 +636,24 @@ class PolyRep(object):
 
         return poly_dom
 
+    # Function returns two lists:
+    # List of variable names referenced. Example: x, x+1
+    # In case the reference is on a value, then a list constraint that needs to be applied
+    def get_reference_as_string(self, ref):
+        read_var_names = []
+        eqs = []
+        for var in ref.arguments:
+            if isinstance(var, Value):
+                # Finding a random string of size 2 as dim_out name
+                name = random_string(2) + str(var)
+                read_var_names.append(name)
+                coeff = {}
+                coeff[('out', name)] = var.value
+                eqs.append(coeff)
+            else:
+                read_var_names.append(str(var))
+        return read_var_names,eqs
+
     # Function updates the read and write access dictionary for each poly_part
     def update_read_and_write_access(self, comp):
         params = []
@@ -658,7 +676,8 @@ class PolyRep(object):
             else:
                 in_dim_names = var_names
             for ref in part.refs:
-                read_var_names = [var.name for var in ref.arguments]
+                eqs = []
+                read_var_names,eqs = self.get_reference_as_string(ref)
                 read_space = isl.Space.create_from_names(self.ctx, in_=in_dim_names,
                                                     out=read_var_names,
                                                     params=param_names)
@@ -666,13 +685,15 @@ class PolyRep(object):
                 read_basic_map = read_basic_map.set_tuple_name(isl._isl.dim_type.in_,
                                                  part.sched.get_tuple_name(isl._isl.dim_type.in_))
                 read_basic_map = read_basic_map.set_tuple_name(isl._isl.dim_type.out, ref.objectRef.name)
+                if len(eqs) > 0:
+                    read_basic_map = add_constraints(read_basic_map, [], eqs)
                 if read_union_map is None:
                     read_union_map = isl.UnionMap.from_basic_map(read_basic_map)
                 else:
                     map = isl.Map.from_basic_map(read_basic_map)
                     read_union_map = read_union_map.add_map(map)
-
-            self.read_union_map[part] = read_union_map.intersect_domain(part.sched.domain())
+            if read_union_map:
+                self.read_union_map[part] = read_union_map.intersect_domain(part.sched.domain())
 
             write_space = isl.Space.create_from_names(self.ctx, in_=in_dim_names,
                                                      out=var_names,
@@ -686,7 +707,8 @@ class PolyRep(object):
             else:
                 map = isl.Map.from_basic_map(write_basic_map)
                 write_union_map = write_union_map.add_map(map)
-            self.write_union_map[part] = write_union_map.intersect_domain(part.sched.domain())
+            if write_union_map:
+                self.write_union_map[part] = write_union_map.intersect_domain(part.sched.domain())
         return
 
     def extract_polyrep_from_function(self, comp, max_dim,

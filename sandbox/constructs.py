@@ -29,6 +29,7 @@ from expression import *
 import logging
 import targetc as genc
 import math
+from utils import *
 
 logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s")
 
@@ -1417,7 +1418,8 @@ class Matrix(Function):
 
         var_dom = (variables, intervals)
 
-        z = Variable(UInt, 'prod_var_' + mat1.name + '_' + mat2.name)
+        # Generating a random string of 3 as the variable name.
+        z = Variable(UInt, random_string(3))
 
         reduction_variable = variables.copy()
         reduction_variable.append(z)

@@ -22,6 +22,8 @@
 
 import ctypes
 import _ctypes
+import random
+import string
 
 from fractions import gcd
 import x11
@@ -31,6 +33,13 @@ NULL = 'X'
 
 def lcm(a, b):
     return a*b/(gcd(a, b))
+
+
+def random_string(len):
+    return ''.join(random.SystemRandom().choice(
+        string.ascii_lowercase + \
+        string.ascii_uppercase) \
+                   for _ in range(len))
 
 def convert_to_ctype(inp_type, inp_value):
     if inp_type == 'void':
