@@ -168,7 +168,7 @@ def extract_value_dependence(part, ref, ref_poly_dom):
             rel = add_constraints(rel, [], [coeff])
     if not rel.is_empty():
         deps.append(PolyDep(ref.objectRef, part.comp.func, rel))
-    return deps 
+    return deps
 
 class PolyPart(object):
     def __init__(self, _sched, _expr, _pred, _comp,
@@ -216,6 +216,8 @@ class PolyPart(object):
 
         self._is_idiom = False
 
+        self._is_default_part = False
+
     @property
     def align(self):
         return list(self._align)
@@ -248,6 +250,14 @@ class PolyPart(object):
     @is_idiom.setter
     def is_idiom(self, _is_idiom):
         self._is_idiom = _is_idiom
+
+    @property
+    def is_default_part(self):
+        return self._is_default_part;
+
+    @is_default_part.setter
+    def is_default_part(self, default_part):
+        self._is_default_part = default_part
 
     def set_align(self, align):
         self._align = [i for i in align]
@@ -521,6 +531,9 @@ class PolyRep(object):
 
         self._var_count = 0
         self._func_count = 0
+        # Stores read and Write access for each part
+        self.read_union_map = {}
+        self.write_union_map = {}
 
         # TODO: move the following outside __init__()
         # For now, let this be. Compilation optimizations can come later.
@@ -623,6 +636,81 @@ class PolyRep(object):
 
         return poly_dom
 
+    # Function returns two lists:
+    # List of variable names referenced. Example: x, x+1
+    # In case the reference is on a value, then a list constraint that needs to be applied
+    def get_reference_as_string(self, ref):
+        read_var_names = []
+        eqs = []
+        for var in ref.arguments:
+            if isinstance(var, Value):
+                # Finding a random string of size 2 as dim_out name
+                name = random_string(2) + str(var)
+                read_var_names.append(name)
+                coeff = {}
+                coeff[('out', name)] = var.value
+                eqs.append(coeff)
+            else:
+                read_var_names.append(str(var))
+        return read_var_names,eqs
+
+    # Function updates the read and write access dictionary for each poly_part
+    def update_read_and_write_access(self, comp):
+        params = []
+        read_union_map = None
+        write_union_map = None
+        redn_var_names = None
+        for interval in comp.func.domain:
+            params = params + interval.collect(Parameter)
+        params = list(set(params))
+        param_names = [param.name for param in params]
+
+        var_names = [var.name for var in comp.func.variables]
+
+        if (isinstance(comp.func, Reduction)):
+            redn_var_names = [var.name for var in comp.func.reductionVariables]
+
+        for part in self.poly_parts[comp]:
+            if redn_var_names and not part.is_default_part:
+                in_dim_names = redn_var_names
+            else:
+                in_dim_names = var_names
+            for ref in part.refs:
+                eqs = []
+                read_var_names,eqs = self.get_reference_as_string(ref)
+                read_space = isl.Space.create_from_names(self.ctx, in_=in_dim_names,
+                                                    out=read_var_names,
+                                                    params=param_names)
+                read_basic_map = isl.BasicMap.universe(read_space)
+                read_basic_map = read_basic_map.set_tuple_name(isl._isl.dim_type.in_,
+                                                 part.sched.get_tuple_name(isl._isl.dim_type.in_))
+                read_basic_map = read_basic_map.set_tuple_name(isl._isl.dim_type.out, ref.objectRef.name)
+                if len(eqs) > 0:
+                    read_basic_map = add_constraints(read_basic_map, [], eqs)
+                if read_union_map is None:
+                    read_union_map = isl.UnionMap.from_basic_map(read_basic_map)
+                else:
+                    map = isl.Map.from_basic_map(read_basic_map)
+                    read_union_map = read_union_map.add_map(map)
+            if read_union_map:
+                self.read_union_map[part] = read_union_map.intersect_domain(part.sched.domain())
+
+            write_space = isl.Space.create_from_names(self.ctx, in_=in_dim_names,
+                                                     out=var_names,
+                                                     params=param_names)
+            write_basic_map = isl.BasicMap.universe(write_space)
+            write_basic_map = write_basic_map.set_tuple_name(isl._isl.dim_type.in_,
+                                                           part.sched.get_tuple_name(isl._isl.dim_type.in_))
+            write_basic_map = write_basic_map.set_tuple_name(isl._isl.dim_type.out, comp.func.name)
+            if write_union_map is None:
+                write_union_map = isl.UnionMap.from_basic_map(write_basic_map)
+            else:
+                map = isl.Map.from_basic_map(write_basic_map)
+                write_union_map = write_union_map.add_map(map)
+            if write_union_map:
+                self.write_union_map[part] = write_union_map.intersect_domain(part.sched.domain())
+        return
+
     def extract_polyrep_from_function(self, comp, max_dim,
                                       schedule_names, param_names,
                                       context_conds, level_no,
@@ -637,6 +725,8 @@ class PolyRep(object):
         self.create_poly_parts_from_definition(comp, max_dim, sched_map,
                                                level_no, schedule_names,
                                                comp.func.domain)
+        # TODO: Needs to be added only when matrix optimizations is specified
+        self.update_read_and_write_access(comp)
 
     def extract_polyrep_from_reduction(self, comp, max_dim,
                                        schedule_names, param_names,
@@ -660,6 +750,8 @@ class PolyRep(object):
         # Initializing the reduction earlier than any other function
         self.create_poly_parts_from_default(comp, max_dim, dom_map, level_no,
                                             schedule_names)
+        # TODO: Needs to be added only when matrix optimizations is specified
+        self.update_read_and_write_access(comp)
 
     def create_sched_space(self, variables, domains,
                            schedule_names, param_names, context_conds):
@@ -777,6 +869,8 @@ class PolyRep(object):
         poly_part = PolyPart(sched_m, comp.func.default,
                              None, comp,
                              align, scale, level_no-1)
+
+        poly_part.is_default_part = True
 
         id_ = isl_alloc_id_for(self.ctx, comp.func.name, poly_part)
         poly_part.sched = \

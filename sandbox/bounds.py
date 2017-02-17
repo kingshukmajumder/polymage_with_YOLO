@@ -43,9 +43,7 @@ def bounds_check_pass(pipeline):
     references.
     """
     inp_groups = {}
-    # Adding a new variable to collect all the dependencies
-    # Check refs currently returns the dependencies
-    deps = []
+
     for inp_func in pipeline.inputs:
         inp_comp = pipeline.func_map[inp_func]
         inp_groups[inp_func] = \
@@ -54,11 +52,9 @@ def bounds_check_pass(pipeline):
 
     for group in pipeline.groups:
         for child in group.children:
-            deps = deps + check_refs(child, group)
+            check_refs(child, group)
         for inp in group.image_refs:
-            deps = deps + check_refs(group, inp_groups[inp])
-
-    pipeline.dependencies = deps
+            check_refs(group, inp_groups[inp])
     return
 
 # TODO: Adding a change to return all the dependencies - Need to be done later
@@ -124,4 +120,4 @@ def check_refs(child_group, parent_group):
                     raise TypeError("Reference out of domain", child_group,
                                      parent_group, diff)
 
-    return deps
+    return
