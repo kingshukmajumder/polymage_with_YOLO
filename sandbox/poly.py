@@ -540,7 +540,7 @@ class PolyRep(object):
                 if type(comp.func) == Reduction:
                     dim = max(dim, len(comp.func.reductionVariables))
                     dim = max(dim, len(comp.func.variables))
-                elif type(comp.func) == Function or type(comp.func) == Image or type(comp.func) == Matrix:
+                elif type(comp.func) == Function or type(comp.func) == Image or type(comp.func) == Matrix or type(comp.func) == Wave:
                     dim = max(dim, len(comp.func.variables))
             return dim
 
@@ -564,7 +564,7 @@ class PolyRep(object):
                          [ self.getVarName()  for i in range(0, dim) ]
 
         for comp in comp_map:
-            if (type(comp.func) == Function or type(comp.func) == Image or type(comp.func) == Matrix):
+            if (type(comp.func) == Function or type(comp.func) == Image or type(comp.func) == Matrix or type(comp.func) == Wave):
                 self.extract_polyrep_from_function(comp, dim, schedule_names,
                                                    param_names, context_conds,
                                                    comp_map[comp]+1,

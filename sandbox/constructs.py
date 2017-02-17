@@ -1475,3 +1475,55 @@ class Matrix(Function):
 
         return matmul_as_reduction
 
+class Wave(Function):
+    def __init__(self, _typ, _name, _len, _var=None):
+        _len = Value.numericToValue(_len)
+        assert(isinstance(_len, AbstractExpression))
+        self._len = _len
+
+        assert _typ in [Double, Complex]
+        self._typ = _typ
+
+        self._name = _name
+        self._var = _var if _var is not None else Variable(UInt, "_" + _name + str(0))
+
+        variables = [self._var]
+        self._variables = variables
+        intervals = [Interval(UInt, 0, _len - 1)]
+        Function.__init__(self, (variables, intervals), _typ, _name)
+
+    @property
+    def length(self):
+        return self._len
+
+    __len__ = length
+
+    @property
+    def type(self):
+        return self._typ
+
+    @property
+    def variables(self):
+        return self._variables
+
+    @property
+    def isInput(self):
+        if self.defn == []:
+            return True
+        return False
+
+    def __str__(self):
+        return self._name.__str__() + "(" + self._len.__str__() + ", " \
+               + "type = " + str(self._typ) + ")"
+
+    def fft(self, out_name):
+        assert self._typ == Double
+
+        out_type = Complex
+        out_len = self._len // 2 + 1
+        out_vars = self._variables
+
+        out_wave = Wave(out_type, out_name, out_len, out_vars[0])
+        out_wave.defn = [ self(*out_vars) ]
+
+        return out_wave

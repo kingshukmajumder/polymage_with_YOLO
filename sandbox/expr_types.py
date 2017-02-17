@@ -86,7 +86,7 @@ class Rational(object):
     pass
 
 def result_type(a, b):
-    if a is Complex or b in Complex:
+    if a is Complex or b is Complex:
         return Complex
     elif a is Double or b is Double:
         return Double

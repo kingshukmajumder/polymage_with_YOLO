@@ -59,7 +59,8 @@ def get_parents_from_func(func, non_image=True):
     # Filter out self and image references
     if non_image:
         refs = [ ref for ref in refs if not ref.objectRef == func and \
-                                     not (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput)) ]
+                                     not (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput) \
+                                     or (isinstance(ref.objectRef, Wave) and ref.objectRef.isInput)) ]
     else:
         refs = [ ref for ref in refs if not ref.objectRef == func ]
     return list(set([ref.objectRef for ref in refs]))
@@ -211,7 +212,8 @@ class ComputeObject:
         self._is_parents_set = False
         self._is_children_set = False
         self._is_group_set = False
-        self._is_image_typ = isinstance(self.func, Image) or (isinstance(self.func, Matrix) and self.func.isInput)
+        self._is_image_typ = isinstance(self.func, Image) or (isinstance(self.func, Matrix) and self.func.isInput) \
+                             or (isinstance(self.func, Wave) and self.func.isInput)
         self._is_reduction_typ = isinstance(self.func, Reduction)
         return
 
@@ -586,7 +588,8 @@ class Group:
         for comp in self.comps:
             refs += comp.func.getObjects(Reference)
         image_refs = [ref.objectRef for ref in refs \
-                      if isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput)]
+                      if isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput) \
+                      or (isinstance(ref.objectRef, Wave) and ref.objectRef.isInput)]
         image_refs = list(set(image_refs))
         return image_refs
 
@@ -672,7 +675,8 @@ class Pipeline:
         # Clone the functions and reductions
         self._clone_map = {}
         for func in self._orig_funcs:
-            if isinstance(func, Image) or (isinstance(func, Matrix) and func.isInput):
+            if isinstance(func, Image) or (isinstance(func, Matrix) and func.isInput) \
+               or (isinstance(func, Wave) and func.isInput):
                 self._clone_map[func] = func
                 self._inputs.append(func)
             else:
@@ -685,6 +689,8 @@ class Pipeline:
             refs = cln.getObjects(Reference)
             for ref in refs:
                 if not (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix)
+                                                             and ref.objectRef.isInput)
+                                                         or (isinstance(ref.objectRef, Wave)
                                                              and ref.objectRef.isInput)):
                     ref._replace_ref_object(self._clone_map[ref.objectRef])
 
