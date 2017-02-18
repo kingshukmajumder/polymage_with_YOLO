@@ -9,7 +9,8 @@
 CXX=g++
 CXX_FLAGS=-fopenmp -O3 -march=native -fPIC -shared
 
-LIB_SRC=../simple_pool_allocator.cpp
+LIB_SRC=../simple_pool_allocator.cpp ../utils/data_layout_transformer.cpp
+#LIB_SRC=../simple_pool_allocator.cpp ../data_layout_transformer.cpp
 
 all: $(APP)
 
