@@ -26,6 +26,7 @@ from expression import isAffine
 from poly import extract_value_dependence
 import logging
 import pipe
+from constructs import *
 
 # LOG CONFIG #
 bounds_logger = logging.getLogger("bounds.py")

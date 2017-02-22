@@ -862,6 +862,7 @@ class Op(object):
 class Idiom_type(object):
     mat_mat_mul = 0
     mat_vec_mul = 1
+    sig_fft = 2
 
 class Reduce(object):
     def __init__(self, _red_ref, _expr, _op_typ):
@@ -1517,6 +1518,15 @@ class Wave(Function):
     def __str__(self):
         return self._name.__str__() + "(" + self._len.__str__() + ", " \
                + "type = " + str(self._typ) + ")"
+
+    def clone(self):
+        var = [v.clone() for v in self._variables]
+        length = self.length
+        newFunc = Wave(self._typ, self._name, length, var[0])
+        if not self.isInput:
+            newBody = [c.clone() for c in self._body]
+            newFunc.defn = newBody
+        return newFunc
 
     def fft(self, out_name):
         assert self._typ == Double

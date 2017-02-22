@@ -65,3 +65,12 @@ parser.add_option('--blas',
                   help='True : Map matrix function calls to BLAS functions, \
                         False: Do not map matrix function calls to BLAS')
 
+# Include the FFTW library to perform fast Fourier transforms of signals
+parser.add_option('--fft',
+                  action='store_true',
+                  dest='fft',
+                  default=False,
+                  help='True: Include the FFTW library (required when \
+                        performing fast Fourier transforms of signals), \
+                        False: Do not include the FFTW library (there \
+                        are no FFTs in the code)')

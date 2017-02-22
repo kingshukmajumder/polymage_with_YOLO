@@ -311,6 +311,16 @@ def get_mat_mul_lib_expr(mat1,mat2,mat3,dimensions):
                            + mat2_dim2 + ", " + mat2 +", " + mat1_dim2 + ", 0.0, " + mat3 + ", " + mat1_dim2 + ")"
     return lib_expr
 
+def get_sig_fft_lib_exprs(sig_in, arr_out, length):
+    length = length.__str__()
+    lib_exprs = []
+    lib_exprs.append("fftw_plan_var = fftw_plan_dft_r2c_1d(" + length + ", " \
+               + sig_in + ", reinterpret_cast<fftw_complex*>(" + arr_out \
+               + "), FFTW_ESTIMATE)")
+    lib_exprs.append("fftw_execute((fftw_plan) fftw_plan_var)")
+    lib_exprs.append("fftw_destroy_plan((fftw_plan) fftw_plan_var)")
+    return lib_exprs
+
 # TESTME
 def generate_c_naive_from_accumlate_node(pipe, polyrep, node, body,
                                          cparam_map):
@@ -430,7 +440,12 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
         #body.add(incr)
     else:
         if poly_part.is_idiom:
-            body.add(genc.CStatement(expr))
+            out_array_name = get_array_name_from_ref(array(*arglist))
+            sig_in = get_array_name_from_ref(expr)
+            sig_length = poly_part.expr.objectRef.length
+            lib_exprs = get_sig_fft_lib_exprs(sig_in, out_array_name, sig_length)
+            for lib_expr in lib_exprs:
+                body.add(genc.CStatement(lib_expr))
         else:
             if not poly_part.func.no_return_value:
                 body.add(assign)
@@ -1159,6 +1174,14 @@ def generate_code_for_pipeline(pipeline,
             # malloc or the custom pool allocator
             pooled = 'pool_alloc' in pipeline.options
             early_free = 'early_free' in pipeline.options
+
+            fft = 'fft' in pipeline.options
+            if fft:
+                var_type = genc.TypeMap.convert(Void)
+                var_ptr = genc.CPointer(var_type, 1)
+                var = genc.CVariable(var_type, "fftw_plan_var")
+                var_decl = genc.CDeclaration(var_ptr, var)
+                pbody.add(var_decl)
 
             # arrays allocated
             alloc_arrays = []

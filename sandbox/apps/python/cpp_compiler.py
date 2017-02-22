@@ -16,6 +16,8 @@ def gen_compile_string(app_data,in_file,out_file):
                   ROOT+"/memory_allocation/simple_pool_allocator.cpp "
     if bool(arg_data.blas):
         include += "-I /opt/OpenBLAS/include -L /opt/OpenBLAS/lib -lopenblas "
+    if bool(arg_data.fft):
+        include += "-lfftw3 -lm "
 
     # Shared library Flags
     shared = "-fPIC -shared"

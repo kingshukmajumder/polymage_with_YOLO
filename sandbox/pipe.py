@@ -318,8 +318,8 @@ class ComputeObject:
             else:
                 params = intervals[dim].collect(Parameter)
                 #~ assert not len(params) > 1, funcname+", \
-					#~ ("+str(dim)+"/"+str(len(params))+'),'+', \
-					#~ '.join([par.name for par in params])
+                    #~ ("+str(dim)+"/"+str(len(params))+'),'+', \
+                    #~ '.join([par.name for par in params])
                 #~ if len(params) == 1:
                     #~ param = params[0]
                 #~ elif len(params) == 0:  # const
@@ -338,7 +338,7 @@ class ComputeObject:
         # for each dimension
         for dim in range(0, dims):
             dim_size_tuple = \
-				compute_size_tuple(dim, intervals, sizes, self._func.name)
+                compute_size_tuple(dim, intervals, sizes, self._func.name)
             interval_sizes.append(dim_size_tuple)
 
         return interval_sizes
@@ -1497,19 +1497,24 @@ class Pipeline:
 # Function to recognize computations which can be mapped to library calls
 def idiom_recognition(pipeline, group):
     blas = 'blas' in pipeline.options
-    if not blas:
+    fft = 'fft' in pipeline.options
+    if not blas and not fft:
         return
     g_poly_parts = group.polyRep.poly_parts
     for comp in g_poly_parts:
         g_all_comp_parts = []
         g_all_comp_parts.extend(g_poly_parts[comp])
         matrix_mul_found = match_idiom_matrix_mul(g_all_comp_parts)
+        sig_fft_found = match_idiom_sig_fft(g_all_comp_parts)
         if matrix_mul_found:
             if 'matrix' in pipeline.options:
                 isPlutoSchedule = True
             else:
                 isPlutoSchedule = False
             replace_sched_expr_with_matched_idiom(g_all_comp_parts, isPlutoSchedule, Idiom_type.mat_mat_mul)
+            LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
+        elif sig_fft_found:
+            replace_sched_expr_with_matched_idiom(g_all_comp_parts, False, Idiom_type.sig_fft)
             LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
         else:
             LOG(log_level,"No match found for comp: " + comp.func.name)
@@ -1553,6 +1558,23 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom):
             coeff = {}
             coeff[('out', name)] = 1
             eqs.append(coeff)
+
+        poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
+        poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)
+    elif idiom == Idiom_type.sig_fft:
+        poly_part = g_all_parts[0]
+
+        poly_part.is_idiom = True
+        tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
+        eqs = []
+        ineqs = []
+
+        n_dims = poly_part.sched.dim(isl._isl.dim_type.out)
+        i = n_dims - 1
+        name = poly_part.sched.get_dim_name(isl._isl.dim_type.out, i)
+        coeff = {}
+        coeff[('out', name)] = 1
+        eqs.append(coeff)
 
         poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
         poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)

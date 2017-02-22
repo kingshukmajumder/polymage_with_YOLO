@@ -449,6 +449,20 @@ def match_idiom_matrix_mul(parts):
         return True
     return False
 
+def match_idiom_sig_fft(parts):
+    fft_found = False
+    for part in parts:
+        if isinstance(part.func, Wave):
+            if isinstance(part.expr, Reference):
+                if isinstance(part.expr.objectRef, Wave):
+                    lhs = part.func
+                    rhs = part.expr.objectRef
+                    if (lhs.type == Complex and rhs.type == Double and \
+                        lhs.length.__str__() == (rhs.length // 2 + 1).__str__() \
+                        and lhs.variables[0] == rhs.variables[0]):
+                            fft_found = True
+    return fft_found
+
 def is_object_matrix(obj):
     if isinstance(obj, Matrix) or (isinstance(obj, Function) and obj.is_mat_func):
         return True
