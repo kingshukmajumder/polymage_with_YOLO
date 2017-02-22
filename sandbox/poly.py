@@ -218,6 +218,10 @@ class PolyPart(object):
 
         self._is_default_part = False
 
+        # Required for Pluto Schedule
+        # This is later to the correct statement no. in modifed in pipe.py
+        self._stmt_no = _level_no
+
     @property
     def align(self):
         return list(self._align)
@@ -236,6 +240,15 @@ class PolyPart(object):
     @property
     def level(self):
         return self._level_no
+
+    @property
+    def stmt_no(self):
+        return self._stmt_no
+
+    @stmt_no.setter
+    def stmt_no(self, stmt_num):
+        self._stmt_no = stmt_num
+
     @property
     def is_idiom(self):
         return self._is_idiom
