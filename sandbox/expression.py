@@ -377,3 +377,45 @@ def getType(expr):
     elif (isinstance(expr, InbuiltFunction)):
         return expr.getType()
     raise TypeError(type(expr))
+
+def cast_ints_to_floats(expr):
+    expr = Value.numericToValue(expr)
+    assert(isinstance(expr, AbstractExpression))
+    if isinstance(expr, Value):
+        valType = getType(expr)
+        if valType is not Float and valType is not Double \
+                                and valType is not Complex:
+            return Value.numericToValue(float(expr.value))
+        return expr.clone()
+    elif isinstance(expr, constructs.Reference):
+        cast_args = []
+        for arg in expr.arguments:
+            cast_args.append(cast_ints_to_floats(arg))
+        # Equivalent to cloning
+        return expr.objectRef(*cast_args)
+    elif isinstance(expr, AbstractBinaryOpNode):
+        left = cast_ints_to_floats(expr.left)
+        right = cast_ints_to_floats(expr.right)
+        op = expr.op
+        return AbstractBinaryOpNode(left, right, op)
+    elif isinstance(expr, AbstractUnaryOpNode):
+        child = cast_ints_to_floats(expr.child)
+        op = expr.op
+        return AbstractUnaryOpNode(child, op)
+    elif isinstance(expr, constructs.Cast):
+        typ = expr.typ
+        return constructs.Cast(typ, \
+                               cast_ints_to_floats(expr.expression))
+    elif isinstance(expr, constructs.Select):
+        new_cond = cast_ints_to_floats(expr.condition)
+        new_true = cast_ints_to_floats(expr.trueExpression)
+        new_false = cast_ints_to_floats(expr.falseExpression)
+        return constructs.Select(new_cond, new_true, new_false)
+    elif isinstance(expr, InbuiltFunction) \
+      or isinstance(expr, constructs.Variable):
+        exprType = getType(expr)
+        if exprType is not Float and exprType is not Double \
+                                 and exprType is not Complex:
+            return constructs.Cast(Double, expr)
+        return expr.clone()
+    raise TypeError(type(expr))

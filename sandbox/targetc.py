@@ -555,14 +555,15 @@ class CArray(CName):
             # given array. Single chunk allocation.
             cast_type = CPointer(self.typ, 1)
             size_expr = self.get_total_size()
+            new_size_expr = Cast(ULong, cast_ints_to_floats(size_expr))
             #expr = CCast(cast_type, \
             #             c_memalign(64, CSizeof(self.typ) * size_expr))
             if not pooled:
                 expr = CCast(cast_type, \
-                             c_malloc(CSizeof(self.typ) * size_expr))
+                             c_malloc(CSizeof(self.typ) * new_size_expr))
             else:
                 expr = CCast(cast_type, \
-                             c_pool_malloc(CSizeof(self.typ) * size_expr))
+                             c_pool_malloc(CSizeof(self.typ) * new_size_expr))
             block.add(CAssign(self.name, expr))
 
             # block.add(CStatement(c_memset(self.name, 0, \
