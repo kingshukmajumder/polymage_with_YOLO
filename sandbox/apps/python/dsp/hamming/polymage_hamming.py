@@ -17,16 +17,13 @@ def hamming(pipe_data):
     pipe_data['N'] = N
 
     x = Variable(UInt, 'x')
-    y = Variable(UInt, 'y')
 
-    sig = Matrix(Double, "sig", [N, 1], [x, y])
-
-    row, col = Interval(UInt, 0, N-1), Interval(UInt, 0, 0)
+    sig = Wave(Double, "sig", N, x)
 
     order = Cast(Double, N-1)
-    win = Function(([x, y], [row, col]), Double, "win")
+    win = Wave(Double, "win", N, x)
     win.defn = [ 0.54 - 0.46*Cos((2*Pi()*x)/order) ]
 
-    windowed_signal = Function(([x, y], [row, col]), Double, "win_sig")
-    windowed_signal.defn = [ sig(x, y) * win(x, y) ]
+    windowed_signal = Wave(Double, "win_sig", N, x)
+    windowed_signal.defn = [ sig(x) * win(x) ]
     return windowed_signal

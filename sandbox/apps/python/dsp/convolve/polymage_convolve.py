@@ -19,16 +19,15 @@ def convolve(pipe_data):
     pipe_data['N'] = N
 
     x = Variable(Int, 'x')
-    y = Variable(Int, 'y')
     z = Variable(Int, 'z')
 
-    sig1 = Matrix(Double, "sig1", [M, 1])
-    sig2 = Matrix(Double, "sig2", [N, 1])
+    sig1 = Wave(Double, "sig1", M)
+    sig2 = Wave(Double, "sig2", N)
 
-    row1, col1 = Interval(Int, 0, M-1), Interval(Int, 0, 0)
-    row2, col2 = Interval(Int, 0, M+N-2), Interval(Int, 0, 0)
+    row1 = Interval(Int, 0, M-1)
+    row2 = Interval(Int, 0, M+N-2)
 
-    convolution = Reduction(([z, y], [row2, col2]), ([z, x, y], [row2, row1, col1]), Double, "convolution")
+    convolution = Reduction(([z], [row2]), ([z, x], [row2, row1]), Double, "convolution")
     c = Condition(z - x, '<', N) & Condition(z - x, '>=', 0)
-    convolution.defn = [ Case(c, Reduce(convolution(z, y), sig1(x, y) * sig2(z - x, y), Op.Sum)) ]
+    convolution.defn = [ Case(c, Reduce(convolution(z), sig1(x) * sig2(z - x), Op.Sum)) ]
     return convolution

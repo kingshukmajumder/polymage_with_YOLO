@@ -19,24 +19,24 @@ def corr(pipe_data):
     x = Variable(UInt, 'x')
     y = Variable(UInt, 'y')
 
-    sig1 = Matrix(Double, "sig1", [N, 1], [x, y])
-    sig2 = Matrix(Double, "sig2", [N, 1], [x, y])
+    sig1 = Wave(Double, "sig1", N, x)
+    sig2 = Wave(Double, "sig2", N, x)
 
     row, col = Interval(UInt, 0, N-1), Interval(UInt, 0, 0)
     mean1 = Reduction(([y], [col]), ([x, y], [row, col]), Double, "mean1")
-    mean1.defn = [Reduce(mean1(y), sig1(x, y) / N, Op.Sum)]
+    mean1.defn = [Reduce(mean1(y), sig1(x) / N, Op.Sum)]
 
     mean2 = Reduction(([y], [col]), ([x, y], [row, col]), Double, "mean2")
-    mean2.defn = [Reduce(mean2(y), sig2(x, y) / N, Op.Sum)]
+    mean2.defn = [Reduce(mean2(y), sig2(x) / N, Op.Sum)]
 
     cov11 = Reduction(([y], [col]), ([x, y], [row, col]), Double, "cov11")
-    cov11.defn = [Reduce(cov11(y), (sig1(x, y) - mean1(y)) * (sig1(x, y) - mean1(y)) / (N - 1), Op.Sum)]
+    cov11.defn = [Reduce(cov11(y), (sig1(x) - mean1(y)) * (sig1(x) - mean1(y)) / (N - 1), Op.Sum)]
 
     cov12 = Reduction(([y], [col]), ([x, y], [row, col]), Double, "cov12")
-    cov12.defn = [Reduce(cov12(y), (sig1(x, y) - mean1(y)) * (sig2(x, y) - mean2(y)) / (N - 1), Op.Sum)]
+    cov12.defn = [Reduce(cov12(y), (sig1(x) - mean1(y)) * (sig2(x) - mean2(y)) / (N - 1), Op.Sum)]
 
     cov22 = Reduction(([y], [col]), ([x, y], [row, col]), Double, "cov22")
-    cov22.defn = [Reduce(cov22(y), (sig2(x, y) - mean2(y)) * (sig2(x, y) - mean2(y)) / (N - 1), Op.Sum)]
+    cov22.defn = [Reduce(cov22(y), (sig2(x) - mean2(y)) * (sig2(x) - mean2(y)) / (N - 1), Op.Sum)]
 
     corr = Function(([y], [col]), Double, "corr")
     corr.defn = [cov12(y) / Sqrt(cov11(y) * cov22(y))]
