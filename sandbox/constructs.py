@@ -216,7 +216,8 @@ class Abs(InbuiltFunction):
         InbuiltFunction.__init__(self, _expr)
 
     def getType(self):
-        return getType(self._args[0])
+        argType = getType(self._args[0])
+        return Double if argType is Complex else argType
 
     def clone(self):
         return Abs(self._args[0].clone())
@@ -1479,7 +1480,7 @@ class Matrix(Function):
         return matmul_as_reduction
 
 class Wave(Function):
-    def __init__(self, _typ, _name, _len, _var=None):
+    def __init__(self, _typ, _name, _len, _var=None, _is_fft=False):
         _len = Value.numericToValue(_len)
         assert(isinstance(_len, AbstractExpression))
         self._len = _len
@@ -1489,6 +1490,7 @@ class Wave(Function):
 
         self._name = _name
         self._var = _var if _var is not None else Variable(UInt, "_" + _name + str(0))
+        self._is_fft = _is_fft
 
         variables = [self._var]
         self._variables = variables
@@ -1515,6 +1517,10 @@ class Wave(Function):
             return True
         return False
 
+    @property
+    def isFFT(self):
+        return self._is_fft
+
     def __str__(self):
         return self._name.__str__() + "(" + self._len.__str__() + ", " \
                + "type = " + str(self._typ) + ")"
@@ -1522,7 +1528,7 @@ class Wave(Function):
     def clone(self):
         var = [v.clone() for v in self._variables]
         length = self.length
-        newFunc = Wave(self._typ, self._name, length, var[0])
+        newFunc = Wave(self._typ, self._name, length, var[0], self._is_fft)
         if not self.isInput:
             newBody = [c.clone() for c in self._body]
             newFunc.defn = newBody
@@ -1535,7 +1541,19 @@ class Wave(Function):
         out_len = self._len // 2 + 1
         out_vars = self._variables
 
-        out_wave = Wave(out_type, out_name, out_len, out_vars[0])
+        out_wave = Wave(out_type, out_name, out_len, out_vars[0], True)
         out_wave.defn = [ self(*out_vars) ]
+
+        return out_wave
+
+    def ifft(self, out_name, _out_len=None):
+        assert self._typ == Complex
+
+        out_type = Double
+        out_len = 2 * (self._len - 1) if _out_len is None else _out_len
+        out_vars = self._variables
+
+        out_wave = Wave(out_type, out_name, out_len, out_vars[0], True)
+        out_wave.defn = [ Abs(self((out_vars[0] + 1) / 2)) ]
 
         return out_wave

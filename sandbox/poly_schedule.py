@@ -463,6 +463,21 @@ def match_idiom_sig_fft(parts):
                             fft_found = True
     return fft_found
 
+def match_idiom_sig_ifft(parts):
+    ifft_found = False
+    for part in parts:
+        if isinstance(part.func, Wave):
+            if isinstance(part.expr, Abs):
+                if len(part.expr.arguments) == 1 and isinstance(part.expr.arguments[0], Reference):
+                    if isinstance(part.expr.arguments[0].objectRef, Wave):
+                        lhs = part.func
+                        rhs = part.expr.arguments[0].objectRef
+                        if (rhs.type == Complex and lhs.type == Double and \
+                            rhs.length.__str__() == (lhs.length // 2 + 1).__str__() \
+                            and lhs.variables[0] == rhs.variables[0]):
+                                ifft_found = True
+    return ifft_found
+
 def is_object_matrix(obj):
     if isinstance(obj, Matrix) or (isinstance(obj, Function) and obj.is_mat_func):
         return True

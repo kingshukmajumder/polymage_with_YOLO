@@ -321,6 +321,16 @@ def get_sig_fft_lib_exprs(sig_in, arr_out, length):
     lib_exprs.append("fftw_destroy_plan((fftw_plan) fftw_plan_var)")
     return lib_exprs
 
+def get_sig_ifft_lib_exprs(sig_in, arr_out, length):
+    length = length.__str__()
+    lib_exprs = []
+    lib_exprs.append("fftw_plan_var = fftw_plan_dft_c2r_1d(" + length
+               + ", reinterpret_cast<fftw_complex*>(" + sig_in + "), " \
+               + arr_out + ", FFTW_ESTIMATE)")
+    lib_exprs.append("fftw_execute((fftw_plan) fftw_plan_var)")
+    lib_exprs.append("fftw_destroy_plan((fftw_plan) fftw_plan_var)")
+    return lib_exprs
+
 # TESTME
 def generate_c_naive_from_accumlate_node(pipe, polyrep, node, body,
                                          cparam_map):
@@ -441,9 +451,15 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
     else:
         if poly_part.is_idiom:
             out_array_name = get_array_name_from_ref(array(*arglist))
-            sig_in = get_array_name_from_ref(expr)
-            sig_length = poly_part.expr.objectRef.length
-            lib_exprs = get_sig_fft_lib_exprs(sig_in, out_array_name, sig_length)
+            if isinstance(poly_part.expr, Reference):
+                sig_in = get_array_name_from_ref(expr)
+                sig_length = poly_part.expr.objectRef.length
+                lib_exprs = get_sig_fft_lib_exprs(sig_in, out_array_name, sig_length)
+            elif isinstance(poly_part.expr, Abs):
+                sig_in = get_array_name_from_ref(expr)
+                sig_in = sig_in[sig_in.find('(') + 1:]
+                sig_length = array.get_total_size()
+                lib_exprs = get_sig_ifft_lib_exprs(sig_in, out_array_name, sig_length)
             for lib_expr in lib_exprs:
                 body.add(genc.CStatement(lib_expr))
         else:

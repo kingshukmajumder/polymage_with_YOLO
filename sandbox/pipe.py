@@ -1506,6 +1506,7 @@ def idiom_recognition(pipeline, group):
         g_all_comp_parts.extend(g_poly_parts[comp])
         matrix_mul_found = match_idiom_matrix_mul(g_all_comp_parts)
         sig_fft_found = match_idiom_sig_fft(g_all_comp_parts)
+        sig_ifft_found = match_idiom_sig_ifft(g_all_comp_parts)
         if matrix_mul_found:
             if 'matrix' in pipeline.options:
                 isPlutoSchedule = True
@@ -1513,7 +1514,7 @@ def idiom_recognition(pipeline, group):
                 isPlutoSchedule = False
             replace_sched_expr_with_matched_idiom(g_all_comp_parts, isPlutoSchedule, Idiom_type.mat_mat_mul)
             LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
-        elif sig_fft_found:
+        elif sig_fft_found or sig_ifft_found:
             replace_sched_expr_with_matched_idiom(g_all_comp_parts, False, Idiom_type.sig_fft)
             LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
         else:
