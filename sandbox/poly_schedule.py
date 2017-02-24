@@ -95,8 +95,8 @@ def base_schedule(group):
         dim_in = part.sched.dim(isl._isl.dim_type.in_)
         dim_out = part.sched.dim(isl._isl.dim_type.out)
         [ineqs, eqs] = format_schedule_constraints(dim_in, dim_out,
-                                                   NULL,
-                                                   NULL,
+                                                   part.align,
+                                                   part.scale,
                                                    part.level)
         part.sched = add_constraints(part.sched, ineqs, eqs)
 
