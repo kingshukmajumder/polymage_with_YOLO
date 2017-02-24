@@ -530,7 +530,8 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
             dim_parallel = is_sched_dim_parallel(polyrep, user_nodes, var.name)
             dim_vector = is_sched_dim_vector(polyrep, user_nodes, var.name)
             reductions = get_reductions(polyrep, get_user_nodes_in_body_one_loop(node.for_get_body()))
-            dim_reduce = len(reductions) > 0
+            #TODO: Currently assigning to 0, since this works only in gcc 6.0
+            dim_reduce = 0 #len(reductions) > 0
             arrays = get_arrays_for_user_nodes(pipe, polyrep, user_nodes)
 
             # number of loops in the perfectly nested loop
