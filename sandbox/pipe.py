@@ -1009,10 +1009,9 @@ class Pipeline:
 
         main_poly_part = []
         for group in self._groups:
-            # Align and scale and generate inital Schedule.
+            # Generate inital Schedule.
             # Required for generating dependencies
-            align_and_scale(self, group)
-            base_schedule(group)
+            base_schedule_for_matrix_ops(group)
 
             for comp in group.comps:
                 poly_parts = group.polyRep.poly_parts[comp]

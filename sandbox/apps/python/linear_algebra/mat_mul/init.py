@@ -28,12 +28,14 @@ def init_images(app_data):
 
     # final output image
     OUT = np.zeros((rows1, cols1), np.float64).ravel()
+    OUT1 = np.zeros((rows1, cols1), np.float64).ravel()
 
     img_data = {}
     img_data['IN'] = IN
     img_data['IN1'] = IN1
     img_data['IN2'] = IN2
     img_data['OUT'] = OUT
+    img_data['OUT1'] = OUT1
 
     app_data['img_data'] = img_data
     app_data['rows1'] = rows1

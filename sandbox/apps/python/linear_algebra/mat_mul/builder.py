@@ -55,7 +55,12 @@ def build_matmul(app_data):
     #R2 = pipe_data['R2']
     #C2 = pipe_data['C2']
 
-    live_outs = [out_matmul]
+    # This implies that only one value was returned
+    if not isinstance(out_matmul, list):
+        live_outs = [out_matmul]
+    else:
+        live_outs = out_matmul
+
     pipe_name = app_data['app']
 
     rows1 = app_data['rows1']
