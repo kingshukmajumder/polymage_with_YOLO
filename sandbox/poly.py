@@ -803,6 +803,7 @@ class PolyRep(object):
                 # Dealing with != and ||. != can be replaced with < || >.
                 # and || splits the domain into two.
                 split_conjuncts = case.condition.split_to_conjuncts()
+                prev_sched_cases = []
                 for conjunct in split_conjuncts:
                     # If the condition is non-affine it is stored as a
                     # predicate for the expression. An affine condition
@@ -823,6 +824,11 @@ class PolyRep(object):
                         for part in parts:
                             self.poly_parts[comp].append(part)
                     else:
+                        if len(prev_sched_cases) > 0 \
+                           and prev_sched_cases[-1][0] == sched_m \
+                           and prev_sched_cases[-1][1] == case:
+                            continue
+                        prev_sched_cases.append((sched_m, case))
                         parts = self.make_poly_parts(sched_m, case.expression,
                                                      case.condition, comp,
                                                      align, scale, level_no)
