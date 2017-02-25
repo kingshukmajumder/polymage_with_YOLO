@@ -227,10 +227,15 @@ class TypeMap(object):
                   UShort:c_ushort, Short:c_short,
                   UChar:c_uchar, Char:c_char,
                   Float:c_float, Double:c_double, Complex:c_complex }
+    _type_map_reverse = {v:k for k,v in _type_map.items()}
     @classmethod
     def convert(cls, typ):
         assert typ in cls._type_map
         return cls._type_map[typ]
+    @classmethod
+    def convert_reverse(cls, typ):
+        assert typ in cls._type_map_reverse
+        return cls._type_map_reverse[typ]
 
 class CPointer(AbstractCgenObject):
     def __init__(self, _ctype, _dim):

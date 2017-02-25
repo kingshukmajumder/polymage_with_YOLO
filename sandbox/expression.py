@@ -25,6 +25,7 @@ from __future__ import absolute_import, division, print_function
 
 from expr_ast import *
 import constructs
+import targetc
 
 def get_affine_var_and_param_coeff(expr):
     expr = Value.numericToValue(expr)
@@ -376,6 +377,8 @@ def getType(expr):
         return true_type
     elif (isinstance(expr, InbuiltFunction)):
         return expr.getType()
+    elif (isinstance(expr, targetc.CArrayAccess)):
+        return targetc.TypeMap.convert_reverse(expr.array.typ)
     raise TypeError(type(expr))
 
 def cast_ints_to_floats(expr):
