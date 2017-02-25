@@ -143,6 +143,10 @@ class CConj(Conj):
     def __init__(self, _expr):
         Conj.__init__(self, _expr)
 
+class CReal(Real):
+    def __init__(self, _expr):
+        Real.__init__(self, _expr)
+
 class CAbs(Abs):
     def __init__(self, _expr):
         Abs.__init__(self, _expr)

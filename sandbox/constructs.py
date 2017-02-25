@@ -224,6 +224,19 @@ class Conj(InbuiltFunction):
     def __str__(self):
         return "std::conj(" + self._args[0].__str__() + ")"
 
+class Real(InbuiltFunction):
+    def __init__(self, _expr):
+        InbuiltFunction.__init__(self, _expr)
+
+    def getType(self):
+        return Double
+
+    def clone(self):
+        return Real(self._args[0].clone())
+
+    def __str__(self):
+        return "(" + self._args[0].__str__() + ").real()"
+
 class Abs(InbuiltFunction):
     def __init__(self, _expr):
         InbuiltFunction.__init__(self, _expr)

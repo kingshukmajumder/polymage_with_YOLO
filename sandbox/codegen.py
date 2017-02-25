@@ -829,6 +829,12 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
                                 cparam_map, cvar_map,
                                 scratch_map, prologue_stmts)
         return genc.CConj(cexpr)
+    if isinstance(exp, Real):
+        cexpr = generate_c_expr(pipe, exp.arguments[0],
+                                cparam_map, cvar_map,
+                                scratch_map, prologue_stmts)
+        assert getType(cexpr) is Complex
+        return genc.CReal(cexpr)
     if isinstance(exp, Sin):
         cexpr = generate_c_expr(pipe, exp.arguments[0],
                                 cparam_map, cvar_map,
