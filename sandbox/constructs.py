@@ -211,6 +211,19 @@ class Sqrtf(InbuiltFunction):
     def __str__(self):
         return "std::sqrtf(" +  self._args[0].__str__() +  ")"
 
+class Conj(InbuiltFunction):
+    def __init__(self, _expr):
+        InbuiltFunction.__init__(self, _expr)
+
+    def getType(self):
+        return Complex
+
+    def clone(self):
+        return Conj(self._args[0].clone())
+
+    def __str__(self):
+        return "std::conj(" + self._args[0].__str__() + ")"
+
 class Abs(InbuiltFunction):
     def __init__(self, _expr):
         InbuiltFunction.__init__(self, _expr)

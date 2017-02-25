@@ -824,6 +824,11 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
                                 cparam_map, cvar_map,
                                 scratch_map, prologue_stmts)
         return genc.CSqrtf(cexpr)
+    if isinstance(exp, Conj):
+        cexpr = generate_c_expr(pipe, exp.arguments[0],
+                                cparam_map, cvar_map,
+                                scratch_map, prologue_stmts)
+        return genc.CConj(cexpr)
     if isinstance(exp, Sin):
         cexpr = generate_c_expr(pipe, exp.arguments[0],
                                 cparam_map, cvar_map,
