@@ -20,7 +20,7 @@ def init_signals(app_data):
     IN = IN.astype(np.float64).ravel()
 
     # final output correlation value
-    OUT = np.zeros(length).astype(np.complex).ravel()
+    OUT = np.zeros(length).astype(np.float64).ravel()
 
     sig_data = {}
     sig_data['IN'] = IN

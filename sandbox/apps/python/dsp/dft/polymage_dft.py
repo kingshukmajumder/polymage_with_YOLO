@@ -21,9 +21,22 @@ def dft(pipe_data):
 
     sig = Wave(Double, "sig", N, x)
 
-    row = Interval(UInt, 0, N - 1)
-    out_sig = Reduction(([y], [row]), ([y, x], [row, row]), Complex, "out_sig")
-    out_sig.defn = [ Reduce(out_sig(y), \
+    row = Interval(UInt, 0, N // 2)
+    row_full = Interval(UInt, 0, N-1)
+    sig_fft = Reduction(([y], [row]), ([y, x], [row, row_full]), Complex, "sig_fft")
+    sig_fft.defn = [ Reduce(sig_fft(y), \
                             sig(x) * Exp(Cast(Complex, -2 * Pi() * 1.0j * y * x / N)), \
                             Op.Sum) ]
-    return out_sig
+
+    cond1 = Condition(2*x, '<=', N)
+    cond2 = Condition(2*x, '>', N)
+
+    sig_fft_ifft = Reduction(([y], [row_full]), ([y, x], [row_full, row_full]), Double, "sig_fft_ifft")
+    sig_fft_ifft.defn = [ Case(cond1, Reduce(sig_fft_ifft(y), \
+                                 Real((Conj(sig_fft(x)) * Exp(Cast(Complex, -2 * Pi() * 1.0j * y * x / N)))), \
+                                 Op.Sum)), \
+                          Case(cond2, Reduce(sig_fft_ifft(y), \
+                                 Real(((sig_fft(N - x)) * Exp(Cast(Complex, -2 * Pi() * 1.0j * y * x / N)))), \
+                                 Op.Sum)) ]
+
+    return sig_fft_ifft
