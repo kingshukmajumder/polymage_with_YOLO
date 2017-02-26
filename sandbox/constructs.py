@@ -890,6 +890,7 @@ class Idiom_type(object):
     mat_mat_mul = 0
     mat_vec_mul = 1
     sig_fft = 2
+    sig_ifft = 3
 
 class Reduce(object):
     def __init__(self, _red_ref, _expr, _op_typ):
@@ -1565,10 +1566,18 @@ class Wave(Function):
 
         out_type = Complex
         out_len = self._len // 2 + 1
-        out_vars = self._variables
 
-        out_wave = Wave(out_type, out_name, out_len, out_vars[0], True)
-        out_wave.defn = [ self(*out_vars) ]
+        out_vars = [Variable(UInt, "_" + out_name + str(0))]
+        in_vars = self._variables
+
+        out_intervals = [Interval(UInt, 0, out_len - 1)]
+        in_intervals = [Interval(UInt, 0, self._len - 1)]
+
+        out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *in_intervals]), out_type, out_name)
+        out_wave.defn = [ Reduce(out_wave(*out_vars), \
+                                 self(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / self._len)), \
+                                 Op.Sum) ]
+        out_wave.reductionDimensions = [self._len]
 
         return out_wave
 

@@ -351,10 +351,14 @@ def generate_c_naive_from_accumlate_node(pipe, polyrep, node, body,
     if poly_part.is_idiom:
         out_array_name = get_array_name_from_ref(array_ref)
         mat1 = get_array_name_from_ref(expr.left)
-        mat2 = get_array_name_from_ref(expr.right)
         reduction_dimension = poly_part.comp.func.reductionDimensions
-        lib_expr = get_mat_mul_lib_expr(mat1, mat2, out_array_name, reduction_dimension)
-        assign = genc.CStatement(lib_expr)
+        if not isinstance(expr.right, Reference):
+            lib_exprs = get_sig_fft_lib_exprs(mat1, out_array_name, reduction_dimension[0])
+            assign = [genc.CStatement(lib_expr) for lib_expr in lib_exprs]
+        else:
+            mat2 = get_array_name_from_ref(expr.right)
+            lib_expr = get_mat_mul_lib_expr(mat1, mat2, out_array_name, reduction_dimension)
+            assign = [genc.CStatement(lib_expr)]
     else:
         op_type = poly_part.expr.op_type
         rhs = {
@@ -363,7 +367,7 @@ def generate_c_naive_from_accumlate_node(pipe, polyrep, node, body,
             Op.Mul: array_ref * expr,
             Op.Sum: array_ref + expr
         }[op_type]
-        assign = genc.CAssign(array_ref, rhs)
+        assign = [genc.CAssign(array_ref, rhs)]
 
     if prologue is not None:
         for s in prologue:
@@ -373,10 +377,12 @@ def generate_c_naive_from_accumlate_node(pipe, polyrep, node, body,
         ccond = generate_c_cond(pipe, poly_part.pred, cparam_map, cvar_map)
         cif = genc.CIfThen(ccond)
         with cif.if_block as ifblock:
-            ifblock.add(assign)
+            for a in assign:
+                ifblock.add(a)
         body.add(cif)
     else:
-        body.add(assign)
+        for a in assign:
+            body.add(a)
 
 def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
                                           cparam_map):

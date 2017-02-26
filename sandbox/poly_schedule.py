@@ -450,18 +450,24 @@ def match_idiom_matrix_mul(parts):
     return False
 
 def match_idiom_sig_fft(parts):
+    zero_found = False
     fft_found = False
     for part in parts:
-        if isinstance(part.func, Wave):
-            if isinstance(part.expr, Reference):
-                if isinstance(part.expr.objectRef, Wave):
-                    lhs = part.func
-                    rhs = part.expr.objectRef
-                    if (lhs.type == Complex and rhs.type == Double and \
-                        lhs.length.__str__() == (rhs.length // 2 + 1).__str__() \
-                        and lhs.variables[0] == rhs.variables[0]):
-                            fft_found = True
-    return fft_found
+        if isinstance(part.func, Reduction):
+            if part.expr == 0:
+                zero_found = True
+            if isinstance(part.expr, Reduce):
+                expr = part.expr
+                reduce_op = expr.op_type
+                reduce_expr = expr.expression
+                if isinstance(reduce_expr, AbstractBinaryOpNode) and reduce_op == Op.Sum:
+                    if isinstance(reduce_expr.left, Reference) \
+                            and isinstance(reduce_expr.right, Exp):
+                        if isinstance(reduce_expr.left.objectRef, Wave) \
+                                and isinstance(reduce_expr.right._args[0], Cast):
+                            if reduce_expr.right._args[0].typ is Complex and reduce_expr.op == '*':
+                                fft_found = True
+    return zero_found and fft_found
 
 def match_idiom_sig_ifft(parts):
     ifft_found = False

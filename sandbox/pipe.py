@@ -1514,8 +1514,11 @@ def idiom_recognition(pipeline, group):
                 isPlutoSchedule = False
             replace_sched_expr_with_matched_idiom(g_all_comp_parts, isPlutoSchedule, Idiom_type.mat_mat_mul)
             LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
-        elif sig_fft_found or sig_ifft_found:
+        elif sig_fft_found:
             replace_sched_expr_with_matched_idiom(g_all_comp_parts, False, Idiom_type.sig_fft)
+            LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
+        elif sig_ifft_found:
+            replace_sched_expr_with_matched_idiom(g_all_comp_parts, False, Idiom_type.sig_ifft)
             LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
         else:
             LOG(log_level,"No match found for comp: " + comp.func.name)
@@ -1563,6 +1566,28 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom):
         poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
         poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)
     elif idiom == Idiom_type.sig_fft:
+        if g_all_parts[0].expr == 0:
+            poly_part = g_all_parts[1]
+        else:
+            poly_part = g_all_parts[0]
+
+        poly_part.is_idiom = True
+        tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
+        eqs = []
+        ineqs = []
+
+        n_dims = poly_part.sched.dim(isl._isl.dim_type.out)
+        start_dim = n_dims - 2
+
+        for i in range(start_dim, n_dims):
+            name = poly_part.sched.get_dim_name(isl._isl.dim_type.out, i)
+            coeff = {}
+            coeff[('out', name)] = 1
+            eqs.append(coeff)
+
+        poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
+        poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)
+    elif idiom == Idiom_type.sig_ifft:
         poly_part = g_all_parts[0]
 
         poly_part.is_idiom = True
