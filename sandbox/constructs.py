@@ -1586,9 +1586,22 @@ class Wave(Function):
 
         out_type = Double
         out_len = 2 * (self._len - 1) if _out_len is None else _out_len
-        out_vars = self._variables
 
-        out_wave = Wave(out_type, out_name, out_len, out_vars[0], True)
-        out_wave.defn = [ Abs(self((out_vars[0] + 1) / 2)) ]
+        out_vars = [Variable(UInt, "_" + out_name + str(0))]
+        in_vars = self._variables
+
+        out_intervals = [Interval(UInt, 0, out_len - 1)]
+
+        cond1 = Condition(2*in_vars[0], '<=', out_len)
+        cond2 = Condition(2*in_vars[0], '>', out_len)
+
+        out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *out_intervals]), out_type, out_name)
+        out_wave.defn = [ Case(cond1, Reduce(out_wave(*out_vars), \
+                                 Real((Conj(self(*in_vars)) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / out_len)))), \
+                                 Op.Sum)), \
+                          Case(cond2, Reduce(out_wave(*out_vars), \
+                                 Real(((self(out_len - in_vars[0])) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / out_len)))), \
+                                 Op.Sum)) ]
+        out_wave.reductionDimensions = [out_len]
 
         return out_wave

@@ -470,19 +470,32 @@ def match_idiom_sig_fft(parts):
     return zero_found and fft_found
 
 def match_idiom_sig_ifft(parts):
-    ifft_found = False
+    zero_found = False
+    ifft_found1 = False
+    ifft_found2 = False
     for part in parts:
-        if isinstance(part.func, Wave):
-            if isinstance(part.expr, Abs):
-                if len(part.expr.arguments) == 1 and isinstance(part.expr.arguments[0], Reference):
-                    if isinstance(part.expr.arguments[0].objectRef, Wave):
-                        lhs = part.func
-                        rhs = part.expr.arguments[0].objectRef
-                        if (rhs.type == Complex and lhs.type == Double and \
-                            rhs.length.__str__() == (lhs.length // 2 + 1).__str__() \
-                            and lhs.variables[0] == rhs.variables[0]):
-                                ifft_found = True
-    return ifft_found
+        if isinstance(part.func, Reduction):
+            if part.expr == 0:
+                zero_found = True
+            if isinstance(part.expr, Reduce):
+                expr = part.expr
+                reduce_op = expr.op_type
+                reduce_expr = expr.expression
+                if isinstance(reduce_expr, Real) and isinstance(reduce_expr._args[0], AbstractBinaryOpNode) and reduce_op == Op.Sum:
+                    if isinstance(reduce_expr._args[0].left, Conj) \
+                            and isinstance(reduce_expr._args[0].left._args[0], Reference) \
+                            and isinstance(reduce_expr._args[0].right, Exp):
+                        if isinstance(reduce_expr._args[0].left._args[0].objectRef, Wave) \
+                                and isinstance(reduce_expr._args[0].right._args[0], Cast):
+                            if reduce_expr._args[0].right._args[0].typ is Complex and reduce_expr._args[0].op == '*':
+                                ifft_found1 = True
+                    elif isinstance(reduce_expr._args[0].left, Reference) \
+                            and isinstance(reduce_expr._args[0].right, Exp):
+                        if isinstance(reduce_expr._args[0].left.objectRef, Wave) \
+                                and isinstance(reduce_expr._args[0].right._args[0], Cast):
+                            if reduce_expr._args[0].right._args[0].typ is Complex and reduce_expr._args[0].op == '*':
+                                ifft_found2 = True
+    return zero_found and ifft_found1 and ifft_found2
 
 def is_object_matrix(obj):
     if isinstance(obj, Matrix) or (isinstance(obj, Function) and obj.is_mat_func):

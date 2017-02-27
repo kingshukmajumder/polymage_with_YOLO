@@ -1588,22 +1588,26 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom):
         poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
         poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)
     elif idiom == Idiom_type.sig_ifft:
-        poly_part = g_all_parts[0]
+        for poly_part in g_all_parts:
+            if poly_part.expr == 0:
+                continue
 
-        poly_part.is_idiom = True
-        tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
-        eqs = []
-        ineqs = []
+            poly_part.is_idiom = True
+            tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
+            eqs = []
+            ineqs = []
 
-        n_dims = poly_part.sched.dim(isl._isl.dim_type.out)
-        i = n_dims - 1
-        name = poly_part.sched.get_dim_name(isl._isl.dim_type.out, i)
-        coeff = {}
-        coeff[('out', name)] = 1
-        eqs.append(coeff)
+            n_dims = poly_part.sched.dim(isl._isl.dim_type.out)
+            start_dim = n_dims - 2
 
-        poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
-        poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)
+            for i in range(start_dim, n_dims):
+                name = poly_part.sched.get_dim_name(isl._isl.dim_type.out, i)
+                coeff = {}
+                coeff[('out', name)] = 1
+                eqs.append(coeff)
+
+            poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
+            poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)
     return
 
 # def replace_with_lib_call(group,g_all_parts):
