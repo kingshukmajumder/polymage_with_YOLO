@@ -1507,7 +1507,7 @@ class Matrix(Function):
         return matmul_as_reduction
 
 class Wave(Function):
-    def __init__(self, _typ, _name, _len, _var=None, _is_fft=False):
+    def __init__(self, _typ, _name, _len, _var=None):
         _len = Value.numericToValue(_len)
         assert(isinstance(_len, AbstractExpression))
         self._len = _len
@@ -1517,7 +1517,6 @@ class Wave(Function):
 
         self._name = _name
         self._var = _var if _var is not None else Variable(UInt, "_" + _name + str(0))
-        self._is_fft = _is_fft
 
         variables = [self._var]
         self._variables = variables
@@ -1544,10 +1543,6 @@ class Wave(Function):
             return True
         return False
 
-    @property
-    def isFFT(self):
-        return self._is_fft
-
     def __str__(self):
         return self._name.__str__() + "(" + self._len.__str__() + ", " \
                + "type = " + str(self._typ) + ")"
@@ -1555,7 +1550,7 @@ class Wave(Function):
     def clone(self):
         var = [v.clone() for v in self._variables]
         length = self.length
-        newFunc = Wave(self._typ, self._name, length, var[0], self._is_fft)
+        newFunc = Wave(self._typ, self._name, length, var[0])
         if not self.isInput:
             newBody = [c.clone() for c in self._body]
             newFunc.defn = newBody

@@ -146,7 +146,6 @@ def auto_group(pipeline):
             is_small_grp = True
             is_reduction_grp = False
             is_const_grp = False
-            is_fft_grp = False
             for comp in group.comps:
                 if not comp in small_comps:
                     is_small_grp = False
@@ -154,27 +153,21 @@ def auto_group(pipeline):
                     is_reduction_grp = True
                 if comp.func.is_const_func:
                     is_const_grp = True
-                if isinstance(comp.func, Wave) and comp.func.isFFT:
-                    is_fft_grp = True
             for g_child in group.children:
                 for comp in g_child.comps:
                     if isinstance(comp.func, Reduction):
                         is_reduction_grp = True
                     if comp.func.is_const_func:
                         is_const_grp = True
-                    if isinstance(comp.func, Wave) and comp.func.isFFT:
-                        is_fft_grp = True
 
             # merge if
             # 1. big enough
             # 2. does not contain reduction
             # 3. does not contain const function
-            # 4. does not contain (I)FFT
-            # 5. number of comps in group < grp_size
+            # 4. number of comps in group < grp_size
             if not is_small_grp and \
                not is_reduction_grp and \
                not is_const_grp and \
-               not is_fft_grp and \
                len(group.comps) < grp_size:
                 merge = True
 
