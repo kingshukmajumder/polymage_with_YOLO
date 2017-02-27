@@ -1123,20 +1123,32 @@ class Pipeline:
             if isinstance(poly_part.comp.func, Reduction) and not (poly_part.is_default_part):
                 for i, var in enumerate(poly_part.func.reductionVariables):
                     new_sched = new_sched.set_dim_name(isl.dim_type.in_, i, var.name)
-                num_vars = len(poly_part.func.reductionVariables)
             else:
                 for i, var in enumerate(poly_part.func.variables):
                     new_sched = new_sched.set_dim_name(isl.dim_type.in_, i, var.name)
-                num_vars = len(poly_part.func.variables)
             poly_part.sched = new_sched
 
-            #TODO: Retrieve the correct elements from inverse matrix
-            # time_index = num_vars
-            # stmt_num = poly_part.stmt_no
-            # inv_map = remapping.inv_matrices[stmt_num][time_index][time_index:time_index + num_vars + 1]
-            # divs = remapping.divs[stmt_num][time_index]
+            num_out_dims = poly_part.sched.dim(isl.dim_type.out)
+            num_in_dims = poly_part.sched.dim(isl.dim_type.in_)
 
-            # time_indexing_coeff = (inv_map, divs)
+            # TODO: Check if statement numbers are retrieved correctly (ordered by polypart or by statment num)
+            stmt_num = poly_part.stmt_no
+
+            inv_map = np.array(remapping.inv_matrices[stmt_num], dtype=object)
+
+            inv_map = inv_map[0:num_in_dims, 0:num_out_dims]
+            inv_map = inv_map.transpose()
+            for dim in range(num_out_dims):
+                poly_part.scalar[dim] = np.sum(inv_map[dim])
+            divs = remapping.divs[stmt_num][0:num_in_dims]
+
+            poly_part.set_pluto_inv_and_div_matrix(inv_map,divs)
+
+            # Tiled check
+            if num_out_dims >= (2 * num_in_dims):
+                poly_part.tiled = True
+            else:
+                poly_part.tiled = False
             # Mark parallel and vector loops
             # TODO: Needs seperate implemetation for Pluto Schedule
             #TODO: Add mar_par_for_tiled_loops
@@ -1532,14 +1544,14 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom):
         eqs = []
         ineqs = []
 
-        if isPlutoSchedule:
+        if isPlutoSchedule and poly_part.tiled:
             #TODO: Assuming the code is tiled. Need to add a condition to check that
             n_dims = poly_part.sched.dim(isl._isl.dim_type.out)
             if not n_dims >= 4:
                 log_level = logging.ERROR
                 LOG(log_level, "Wrong number of dimensions found for Idiom Match")
                 raise RuntimeError("Number of dimensions did not match with the Idiom")
-            n_dims = n_dims - 3
+            n_dims = n_dims - 3 #(Removing the input dimensions)
             start_dim = n_dims - 3
             log_level = logging.INFO
             LOG(log_level, "Idiom Matching for Pluto Schedule")

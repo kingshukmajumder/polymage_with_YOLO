@@ -222,6 +222,10 @@ class PolyPart(object):
         # This is later to the correct statement no. in modifed in pipe.py
         self._stmt_no = _level_no
 
+        self._tiled = False
+
+        self._scalar = {}
+
     @property
     def align(self):
         return list(self._align)
@@ -256,6 +260,14 @@ class PolyPart(object):
     def idiom(self):
         return self._idiom
 
+    @property
+    def inv_matrix(self):
+        return self._inv_matrix
+
+    @property
+    def div_vector(self):
+        return self._div_vector
+
     @idiom.setter
     def idiom(self, _idiom):
         self._idiom = _idiom
@@ -271,6 +283,22 @@ class PolyPart(object):
     @is_default_part.setter
     def is_default_part(self, default_part):
         self._is_default_part = default_part
+
+    @property
+    def tiled(self):
+        return self._tiled
+
+    @tiled.setter
+    def tiled(self, isTiled):
+        self._tiled = isTiled
+
+    @property
+    def scalar(self):
+        return self._scalar
+
+    @scalar.setter
+    def scalar(self, scalar):
+        self._scalar = scalar
 
     def set_align(self, align):
         self._align = [i for i in align]
@@ -326,6 +354,10 @@ class PolyPart(object):
 
     def set_liveness(self, _is_liveout):
         self._is_liveout = _is_liveout
+
+    def set_pluto_inv_and_div_matrix(self, inv_matrix, div_vector):
+        self._inv_matrix = inv_matrix
+        self._div_vector = div_vector
 
     def compute_dependence_vector(self, parent_part,
                                   ref, scale_map = None):
