@@ -460,12 +460,23 @@ def match_idiom_sig_fft(parts):
                 expr = part.expr
                 reduce_op = expr.op_type
                 reduce_expr = expr.expression
-                if isinstance(reduce_expr, AbstractBinaryOpNode) and reduce_op == Op.Sum:
-                    if isinstance(reduce_expr.left, Reference) \
+                reduce_acc = expr.accumulate_ref
+                if isinstance(reduce_acc, Reference) \
+                        and isinstance(reduce_expr, AbstractBinaryOpNode) \
+                        and reduce_op == Op.Sum:
+                    lhs = reduce_acc.objectRef
+                    if isinstance(lhs, Reduction) \
+                            and lhs.typ is Complex \
+                            and isinstance(reduce_expr.left, Reference) \
                             and isinstance(reduce_expr.right, Exp):
                         if isinstance(reduce_expr.left.objectRef, Wave) \
                                 and isinstance(reduce_expr.right._args[0], Cast):
-                            if reduce_expr.right._args[0].typ is Complex and reduce_expr.op == '*':
+                            rhs = reduce_expr.left.objectRef
+                            if rhs.type is Double \
+                                    and len(lhs.reductionDimensions) == 1 \
+                                    and lhs.reductionDimensions[0].__str__() == rhs.length.__str__() \
+                                    and reduce_expr.right._args[0].typ is Complex \
+                                    and reduce_expr.op == '*':
                                 fft_found = True
     return zero_found and fft_found
 
