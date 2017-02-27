@@ -464,18 +464,7 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
         #body.add(incr)
     else:
         if poly_part.is_idiom:
-            out_array_name = get_array_name_from_ref(array(*arglist))
-            if isinstance(poly_part.expr, Reference):
-                sig_in = get_array_name_from_ref(expr)
-                sig_length = poly_part.expr.objectRef.length
-                lib_exprs = get_sig_fft_lib_exprs(sig_in, out_array_name, sig_length)
-            elif isinstance(poly_part.expr, Abs):
-                sig_in = get_array_name_from_ref(expr)
-                sig_in = sig_in[sig_in.find('(') + 1:]
-                sig_length = array.get_total_size()
-                lib_exprs = get_sig_ifft_lib_exprs(sig_in, out_array_name, sig_length)
-            for lib_expr in lib_exprs:
-                body.add(genc.CStatement(lib_expr))
+            body.add(genc.CStatement(expr))
         else:
             if not poly_part.func.no_return_value:
                 body.add(assign)
