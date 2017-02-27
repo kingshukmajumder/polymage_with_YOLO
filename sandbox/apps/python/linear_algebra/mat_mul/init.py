@@ -63,6 +63,12 @@ def get_input(app_data):
     app_data['pool_alloc'] = bool(app_args.pool_alloc)
     app_data['blas'] = bool(app_args.blas)
     app_data['matrix'] = bool(app_args.matrix)
+    if(app_data['matrix']):
+        # By default we add the tile size and 32
+        if(app_args.tiles):
+            app_data['tiles'] = app_args.tiles
+        else:
+            app_data['tiles'] = "32,32,32"
     return
 
 def init_all(app_data):

@@ -45,6 +45,14 @@ def generate_graph(pipe, file_name, app_data):
 
     return
 
+def create_tile_sizes_file(t_sizes):
+    file_name = "tile.sizes"
+    tile_file = open(file_name, 'w')
+    for tile_size in t_sizes:
+        tile_file.write(str(tile_size) + "\n")
+    tile_file.close()
+    return
+
 def build_matmul(app_data):
     pipe_data = app_data['pipe_data']
 
@@ -74,7 +82,12 @@ def build_matmul(app_data):
                       #Condition(R2, "==", rows2), \
                       #Condition(C2, "==", cols2), \
                     ]
-    t_size = [16, 16]
+
+    # Pluto schedule requires tile.sizes file
+    if(app_data['matrix']):
+        t_size = app_data['tiles'].split(',')
+        create_tile_sizes_file(t_size)
+
     g_size = 1
     opts = []
     if app_data['early_free']:
@@ -91,7 +104,6 @@ def build_matmul(app_data):
     pipe = buildPipeline(live_outs,
                          param_estimates=p_estimates,
                          param_constraints=p_constraints,
-                         #tile_sizes = t_size,
                          #group_size = g_size,
                          options = opts,
                          pipe_name = pipe_name)

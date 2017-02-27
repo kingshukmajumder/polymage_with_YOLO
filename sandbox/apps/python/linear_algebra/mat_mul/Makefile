@@ -11,8 +11,8 @@ RUNS=1
 #BLAS=true
 
 #APP_ARGS= --blas
-#APP_ARGS=--matrix --blas
-APP_ARGS=--matrix
+#APP_ARGS=--matrix --blas --tiles=16,16,16
+APP_ARGS=--matrix --tiles=16,16,16
 #APP_ARGS=
 #OPT_ARGS=--pool_alloc --optimize_storage --early_free
 OPT_ARGS=--pool_alloc --early_free

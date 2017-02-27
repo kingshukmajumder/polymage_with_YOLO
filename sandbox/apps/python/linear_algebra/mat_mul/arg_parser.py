@@ -83,6 +83,12 @@ def parse_args():
                       help='True : If it is Matrix execution, \
                             False: Normal image processing application')
 
+    parser.add_option('--tiles', '--tiles',
+                      action='store',
+                      dest='tiles',
+                      default= 0,
+                      help='Tile Sizes for Pluto')
+
     (options, args) = parser.parse_args()
 
     return options
