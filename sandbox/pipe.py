@@ -1515,10 +1515,12 @@ def idiom_recognition(pipeline, group):
             replace_sched_expr_with_matched_idiom(g_all_comp_parts, isPlutoSchedule, Idiom_type.mat_mat_mul)
             LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
         elif sig_fft_found:
-            replace_sched_expr_with_matched_idiom(g_all_comp_parts, False, Idiom_type.sig_fft)
+            zero_part = replace_sched_expr_with_matched_idiom(g_all_comp_parts, False, Idiom_type.sig_fft)
+            group.polyRep.poly_parts[comp].remove(zero_part)
             LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
         elif sig_ifft_found:
-            replace_sched_expr_with_matched_idiom(g_all_comp_parts, False, Idiom_type.sig_ifft)
+            zero_part = replace_sched_expr_with_matched_idiom(g_all_comp_parts, False, Idiom_type.sig_ifft)
+            group.polyRep.poly_parts[comp].remove(zero_part)
             LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
         else:
             LOG(log_level,"No match found for comp: " + comp.func.name)
@@ -1568,8 +1570,10 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom):
     elif idiom == Idiom_type.sig_fft:
         if g_all_parts[0].expr == 0:
             poly_part = g_all_parts[1]
+            zero_part = g_all_parts[0]
         else:
             poly_part = g_all_parts[0]
+            zero_part = g_all_parts[1]
 
         poly_part.is_idiom = True
         tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
@@ -1587,9 +1591,12 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom):
 
         poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
         poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)
+
+        return zero_part
     elif idiom == Idiom_type.sig_ifft:
         for poly_part in g_all_parts:
             if poly_part.expr == 0:
+                zero_part = poly_part
                 continue
 
             poly_part.is_idiom = True
@@ -1608,6 +1615,8 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom):
 
             poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
             poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)
+
+        return zero_part
     return
 
 # def replace_with_lib_call(group,g_all_parts):
