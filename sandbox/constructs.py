@@ -1589,6 +1589,8 @@ class Wave(Function):
 
         cond1 = Condition(2*in_vars[0], '<=', out_len)
         cond2 = Condition(2*in_vars[0], '>', out_len)
+        if _out_len is None:
+            cond2 = cond2 & Condition(in_vars[0], '<', out_len - 1)
 
         out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *out_intervals]), out_type, out_name)
         out_wave.defn = [ Case(cond1, Reduce(out_wave(*out_vars), \
