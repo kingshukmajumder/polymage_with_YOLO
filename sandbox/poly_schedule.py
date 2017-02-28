@@ -513,11 +513,10 @@ def match_idiom_sig_ifft(parts):
                             rhs_params = get_affine_var_and_param_coeff(rhs.length)
                             rhs_constant = get_constant_from_expr(rhs.length)
                             if rhs.type is Complex \
-                                    and len(rhs_params) == 1 \
-                                    and len(lhs_params) == 1 \
-                                    and list(rhs_params.keys())[0] == list(lhs_params.keys())[0] \
-                                    and lhs_params[list(lhs_params.keys())[0]] / rhs_params[list(rhs_params.keys())[0]] == 2 \
-                                    and rhs_constant - lhs_constant == 1 \
+                                    and len(rhs_params) == len(rhs_params) \
+                                    and list(rhs_params.keys()) == list(lhs_params.keys()) \
+                                    and all([lhs_params[x] / rhs_params[x] == 2 for x in lhs_params]) \
+                                    and int(rhs_constant - lhs_constant) == 1 \
                                     and reduce_expr._args[0].right._args[0].typ is Complex \
                                     and reduce_expr._args[0].op == '*':
                                 ifft_found1 = True
@@ -529,11 +528,10 @@ def match_idiom_sig_ifft(parts):
                             rhs_params = get_affine_var_and_param_coeff(rhs.length)
                             rhs_constant = get_constant_from_expr(rhs.length)
                             if rhs.type is Complex \
-                                    and len(rhs_params) == 1 \
-                                    and len(lhs_params) == 1 \
-                                    and list(rhs_params.keys())[0] == list(lhs_params.keys())[0] \
-                                    and lhs_params[list(lhs_params.keys())[0]] / rhs_params[list(rhs_params.keys())[0]] == 2 \
-                                    and rhs_constant - lhs_constant == 1 \
+                                    and len(rhs_params) == len(rhs_params) \
+                                    and list(rhs_params.keys()) == list(lhs_params.keys()) \
+                                    and all([lhs_params[x] / rhs_params[x] == 2 for x in lhs_params]) \
+                                    and int(rhs_constant - lhs_constant) == 1 \
                                     and reduce_expr._args[0].right._args[0].typ is Complex \
                                     and reduce_expr._args[0].op == '*':
                                 ifft_found2 = True
