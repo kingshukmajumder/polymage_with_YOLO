@@ -150,7 +150,7 @@ def isl_expr_to_cgen(expr, prologue_stmts = None):
     if expr.get_type() == isl._isl.ast_expr_type.id:
         return genc.CVariable(genc.c_int, expr.get_id().get_name())
 
-def isl_cond_to_cgen(cond, prologue_stmts = None):
+def isl_cond_to_cgen(cond, prologue_stmts = None, roundRhsToEven = False):
     comp_dict = { isl._isl.ast_op_type.eq: '==',
                   isl._isl.ast_op_type.ge: '>=',
                   isl._isl.ast_op_type.gt: '>',
@@ -174,6 +174,8 @@ def isl_cond_to_cgen(cond, prologue_stmts = None):
         left = isl_expr_to_cgen(cond.get_op_arg(0), prologue_stmts)
         right = isl_expr_to_cgen(cond.get_op_arg(1), prologue_stmts)
 
+    if roundRhsToEven:
+        right = 2 * (right // 2)
     return genc.CCond(left, comp_op, right)
 
 def is_inner_most_parallel(node):
@@ -522,9 +524,49 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                                           perfect_loopnest, indent+1)
     else:
         if node.get_type() == isl._isl.ast_node_type.for_:
+            reductions = get_reductions(polyrep, get_user_nodes_in_body_one_loop(node.for_get_body()))
+            roundRhsToEven = False
+
+            if len(reductions) == 1:
+                red = reductions[0]
+                pid = red.user_get_expr().get_op_arg(0).get_id()
+                pp = isl_get_id_user(pid)
+
+                expr = pp.expr
+                reduce_op = expr.op_type
+                reduce_expr = expr.expression
+                reduce_acc = expr.accumulate_ref
+                if isinstance(reduce_acc, Reference) \
+                        and isinstance(reduce_expr, Real) \
+                        and isinstance(reduce_expr._args[0], AbstractBinaryOpNode) \
+                        and reduce_op == Op.Sum:
+                    lhs = reduce_acc.objectRef
+                    if isinstance(lhs, Reduction) \
+                            and len(lhs.reductionDimensions) == 2 \
+                            and lhs.typ is Double:
+                        lhs_params = get_affine_var_and_param_coeff(lhs.reductionDimensions[0])
+                        lhs_constant = get_constant_from_expr(lhs.reductionDimensions[0])
+                        if isinstance(reduce_expr._args[0].left, Reference) \
+                                and isinstance(reduce_expr._args[0].right, Exp):
+                            if isinstance(reduce_expr._args[0].left.objectRef, Wave) \
+                                    and isinstance(reduce_expr._args[0].right._args[0], Cast):
+                                rhs = reduce_expr._args[0].left.objectRef
+                                rhs_params = get_affine_var_and_param_coeff(rhs.length)
+                                rhs_constant = get_constant_from_expr(rhs.length)
+                                if rhs.type is Complex \
+                                        and len(rhs_params) == 1 \
+                                        and len(lhs_params) == 1 \
+                                        and list(rhs_params.keys())[0] == list(lhs_params.keys())[0] \
+                                        and lhs_params[list(lhs_params.keys())[0]] / rhs_params[list(rhs_params.keys())[0]] == 2 \
+                                        and rhs_constant - lhs_constant == 1 \
+                                        and reduce_expr._args[0].right._args[0].typ is Complex \
+                                        and reduce_expr._args[0].op == '*':
+                                    # IFFT found; Round RHS to even if no output length specified
+                                    roundRhsToEven = lhs.reductionDimensions[1] is None
+
             # Convert lb and ub expressions to C expressions
             prologue = []
-            cond = isl_cond_to_cgen(node.for_get_cond(), prologue)
+            cond = isl_cond_to_cgen(node.for_get_cond(), prologue, roundRhsToEven)
             var = isl_expr_to_cgen(node.for_get_iterator())
             # ***
             log_loop_start(var, indent)
@@ -548,7 +590,6 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
 
             dim_parallel = is_sched_dim_parallel(polyrep, user_nodes, var.name)
             dim_vector = is_sched_dim_vector(polyrep, user_nodes, var.name)
-            reductions = get_reductions(polyrep, get_user_nodes_in_body_one_loop(node.for_get_body()))
             dim_reduce = len(reductions) > 0
             arrays = get_arrays_for_user_nodes(pipe, polyrep, user_nodes)
 

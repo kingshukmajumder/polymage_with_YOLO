@@ -499,7 +499,7 @@ def match_idiom_sig_ifft(parts):
                         and reduce_op == Op.Sum:
                     lhs = reduce_acc.objectRef
                     if not (isinstance(lhs, Reduction) \
-                            and len(lhs.reductionDimensions) == 1 \
+                            and len(lhs.reductionDimensions) == 2 \
                             and lhs.typ is Double):
                         continue
                     lhs_params = get_affine_var_and_param_coeff(lhs.reductionDimensions[0])
