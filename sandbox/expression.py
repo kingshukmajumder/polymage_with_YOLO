@@ -238,6 +238,30 @@ def substitute_refs(expr, ref_to_expr_map):
         return expr
     raise TypeError(type(expr))
 
+def hasReference(expr, ref):
+    expr = Value.numericToValue(expr)
+    assert(isinstance(expr, AbstractExpression))
+    if isinstance(expr, Value):
+        return False
+    elif isinstance(expr, constructs.Variable):
+        return False
+    elif isinstance(expr, constructs.Reference):
+        return expr.objectRef.name == ref.objectRef.name
+    elif isinstance(expr, AbstractBinaryOpNode):
+        return hasReference(expr.left, ref) \
+            or hasReference(expr.right, ref)
+    elif isinstance(expr, AbstractUnaryOpNode):
+        return hasReference(expr.child, ref)
+    elif isinstance(expr, InbuiltFunction):
+        return any([hasReference(arg, ref) for arg in expr.arguments])
+    elif isinstance(expr, constructs.Select):
+        return hasReference(expr.condition, ref) \
+            or hasReference(expr.trueExpression, ref) \
+            or hasReference(expr.falseExpression, ref)
+    elif isinstance(expr, construct.Cast):
+        return hasReference(expr.expression, ref)
+    raise TypeError(type(expr))
+
 def substitute_vars(expr, var_to_expr_map):
     expr = Value.numericToValue(expr)
     assert(isinstance(expr, AbstractExpression))

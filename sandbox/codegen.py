@@ -273,7 +273,8 @@ def get_reductions(polyrep, user_nodes):
         part_id = node.user_get_expr().get_op_arg(0).get_id()
         part = isl_get_id_user(part_id)
         if isinstance(part.expr, Reduce) \
-           and getType(part.expr.accumulate_ref) is not Complex:
+           and getType(part.expr.accumulate_ref) is not Complex \
+           and not hasReference(part.expr.expression, part.expr.accumulate_ref):
             reductions.append(node)
     return reductions
 
