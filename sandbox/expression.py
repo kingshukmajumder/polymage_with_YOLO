@@ -70,12 +70,19 @@ def get_affine_var_and_param_coeff(expr, include_params=False):
         elif (expr.op == '/'):
             right_is_constant = is_constant_expr(expr.right, affine=True)
             #sanity check should be true if the expression is affine
-            assert(right_is_constant)
+            #~ assert(right_is_constant)
 
-            coeff = dict((n, Fraction(1, get_constant_from_expr(expr.right, \
-                                                             affine=True)) \
-                                         * left_coeff.get(n, 0)) \
-                                         for n in set(left_coeff))
+            if right_is_constant:
+                coeff = dict((n, Fraction(1, get_constant_from_expr(expr.right, \
+                                                                affine=True)) \
+                                            * left_coeff.get(n, 0)) \
+                                            for n in set(left_coeff))
+            elif include_params:
+                coeff = dict((n, left_coeff.get(n, 0) \
+                                    / get_constant_from_expr(expr.right, \
+                                                             affine=True, \
+                                                             include_params=True)) \
+                                            for n in set(left_coeff))
         return coeff
     elif (isinstance(expr, AbstractUnaryOpNode)):
         child_coeff = get_affine_var_and_param_coeff(expr.child, include_params)
@@ -117,7 +124,7 @@ def evaluateUnaryOp(val, op):
         return val
     raise TypeError(type(val))
 
-def get_constant_from_expr(expr, affine=False, include_params = False):
+def get_constant_from_expr(expr, affine=False, include_params = False, with_div = False):
     expr = Value.numericToValue(expr)
     assert(isinstance(expr, AbstractExpression))
     if (isinstance(expr, Value)):
@@ -134,11 +141,15 @@ def get_constant_from_expr(expr, affine=False, include_params = False):
     elif (isinstance(expr, constructs.Reference)):
         return 0    
     elif (isinstance(expr, AbstractBinaryOpNode)):
-        leftConst = get_constant_from_expr(expr.left, affine, include_params)
-        rightConst = get_constant_from_expr(expr.right, affine, include_params)
+        if expr.op == '/' and with_div:
+            leftConst = get_constant_from_expr(expr.left, affine, False, with_div)
+            rightConst = get_constant_from_expr(expr.right, affine, True, with_div)
+        else:
+            leftConst = get_constant_from_expr(expr.left, affine, include_params, with_div)
+            rightConst = get_constant_from_expr(expr.right, affine, include_params, with_div)
         return evaluateBinaryOp(leftConst, rightConst, expr.op, affine)
     elif (isinstance(expr, AbstractUnaryOpNode)):
-        childConst = get_constant_from_expr(expr.child, affine, include_params)
+        childConst = get_constant_from_expr(expr.child, affine, include_params, with_div)
         return evaluateUnaryOp(childConst, expr.op)
     elif (isinstance(expr,
                      (constructs.Select, constructs.Cast, InbuiltFunction))):
@@ -365,6 +376,8 @@ def isAffine(expr, include_div = True, include_modulo = False, include_params = 
                 else:
                     return False
             elif(include_div and expr.op in ['/']):
+                if include_params:
+                    return not expr.right.has(constructs.Variable)
                 if (not (expr.right.has(constructs.Variable)) and \
                     not (expr.right.has(constructs.Parameter))):
                     return True

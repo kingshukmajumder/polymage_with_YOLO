@@ -14,6 +14,7 @@ def call_pipe(app_data):
     fir_len = app_data['fir_len']
     sig_len = app_data['sig_len']
     up = app_data['up']
+    down = app_data['down']
 
     sig_data = app_data['sig_data']
     IN = sig_data['IN']
@@ -26,6 +27,7 @@ def call_pipe(app_data):
 
     # lib function args
     pipe_args = []
+    pipe_args += [ctypes.c_int(down)]
     pipe_args += [ctypes.c_int(fir_len)]
     pipe_args += [ctypes.c_int(sig_len)]
     pipe_args += [ctypes.c_int(up)]
