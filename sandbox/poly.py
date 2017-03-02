@@ -633,7 +633,7 @@ class PolyRep(object):
                 self.extract_polyrep_from_reduction(comp, dim, schedule_names,
                                                     param_names, context_conds,
                                                     comp_map[comp]+1,
-                                                    param_constraints)
+                                                    param_constraints, self.group.initialization_complete)
             else:
                 assert False
 
@@ -778,7 +778,7 @@ class PolyRep(object):
     def extract_polyrep_from_reduction(self, comp, max_dim,
                                        schedule_names, param_names,
                                        context_conds, level_no,
-                                       param_constraints):
+                                       param_constraints, initialization_complete):
         self.poly_doms[comp] = \
             self.extract_poly_dom_from_comp(comp, param_constraints)
         sched_map = self.create_sched_space(comp.func.reductionVariables,
@@ -794,11 +794,11 @@ class PolyRep(object):
                                           schedule_names, param_names,
                                           context_conds)
 
-        # Initializing the reduction earlier than any other function
-        # TODO: Needs to be added only when matrix optimizations is specified
-        # Initializing matrix outside Polymage function.
-        # self.create_poly_parts_from_default(comp, max_dim, dom_map, level_no,
-        #                                     schedule_names)
+        # If Initializing matrix outside Polymage function, Dont create default part
+        if not initialization_complete:
+            # Initializing the reduction earlier than any other function
+            self.create_poly_parts_from_default(comp, max_dim, dom_map, level_no,
+                                            schedule_names)
 
         self.update_read_and_write_access(comp)
 

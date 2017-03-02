@@ -369,8 +369,8 @@ class Group:
         computation objects when possible.
     """
     # Construct a group from a set of language functions / reductions
-    def __init__(self, _ctx, _comp_objs, \
-                 _param_constraints):
+    # Adding _initialization_complete param, Decides if initialization for reduction matrix is required or not.
+    def __init__(self, _ctx, _comp_objs, _param_constraints, _initialization_complete):
 
         self._id = IdGen.get_grp_id()
 
@@ -380,10 +380,10 @@ class Group:
         # Function class. Input images cannot be part of a group.
         self._is_image_typ = False
         for comp in _comp_objs:
-            assert(isinstance(comp, ComputeObject))
+            assert (isinstance(comp, ComputeObject))
             if comp.is_image_typ:
                 self._is_image_typ = True
-        self._comps  = _comp_objs
+        self._comps = _comp_objs
         self._parents = []
         self._children = []
 
@@ -398,6 +398,8 @@ class Group:
         self._children_map = None
         self._polyrep = None
 
+        self._initialization_complete = _initialization_complete
+
         # Create a polyhedral representation if possible.
         # Currently doing extraction only when all the compute_objs
         # domains are affine. This can be revisited later.
@@ -408,6 +410,9 @@ class Group:
         self._liveness_map = None
         self._can_be_mapped_to_lib = False
 
+    @property
+    def initialization_complete(self):
+        return self._initialization_complete
     @property
     def id_(self):
         return self._id
@@ -706,7 +711,7 @@ class Pipeline:
             # If Matrix optimization. Group all compute objects into one group
             # Pluto schedule will take care of fusion
             comps = self.comps
-            group = Group(self._ctx, comps, self._param_constraints)
+            group = Group(self._ctx, comps, self._param_constraints, self._pluto_sched_required)
             self._groups = [group]
         else:
             self._groups = self.build_initial_groups()
@@ -1224,7 +1229,7 @@ class Pipeline:
         comps = self.comps
         groups = []
         for comp in comps:
-            group = Group(self._ctx, [comp], self._param_constraints)
+            group = Group(self._ctx, [comp], self._param_constraints, self._pluto_sched_required)
             groups.append(group)
 
         for group in groups:
@@ -1361,7 +1366,7 @@ class Pipeline:
 
         # Create a new group
         merged = Group(self._ctx, comps,
-                       self._param_constraints)
+                       self._param_constraints, self._pluto_sched_required)
 
         self.add_group(merged)
 

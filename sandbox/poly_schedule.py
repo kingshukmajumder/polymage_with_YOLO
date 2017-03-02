@@ -484,7 +484,7 @@ def match_idiom_matrix_mul(parts):
                                 and is_object_matrix(reduce_expr.right.objectRef):
                             if reduce_expr.op == '*':
                                 reduction_found = True
-    if zero_found and reduction_found:
+    if reduction_found:
         return True
     return False
 
