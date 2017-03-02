@@ -14,11 +14,12 @@ def upfirdn(pipe_data):
 
     M = Parameter(Int, "M")
     N = Parameter(Int, "N")
-    U = 2
+    U = Parameter(Int, "U")
     D = 3
 
     pipe_data['M'] = M
     pipe_data['N'] = N
+    pipe_data['U'] = U
 
     h = Wave(Double, "h", M)
     sig_in = Wave(Double, "sig_in", N)

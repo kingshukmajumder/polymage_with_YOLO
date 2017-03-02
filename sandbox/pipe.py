@@ -524,9 +524,10 @@ class Group:
         liveouts = []
         for comp in self.comps:
             comp.compute_liveness()
-            parts = self.polyRep.poly_parts[comp]
-            for part in parts:
-                part.compute_liveness()
+            if self.polyRep is not None:
+                parts = self.polyRep.poly_parts[comp]
+                for part in parts:
+                    part.compute_liveness()
             if comp.is_liveout:
                 liveouts.append(comp)
 
@@ -799,6 +800,8 @@ class Pipeline:
 
         if not self.pluto_sched_required:
             for g in self.groups:
+                if g.polyRep is None:
+                    continue
                 # alignment and scaling
                 align_and_scale(self, g)
                 # base schedule
@@ -1459,7 +1462,7 @@ class Pipeline:
             comp = self.func_map[func]
             typ = comp.func.typ
             ndims = comp.func.ndims
-            part_map = comp.group.polyRep.poly_parts
+            part_map = {} if comp.group.polyRep is None else comp.group.polyRep.poly_parts
             dim_sizes = []
             # 1. Input Images
             # 2. Group Live-Outs

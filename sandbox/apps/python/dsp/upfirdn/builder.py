@@ -53,14 +53,16 @@ def build_upfirdn(app_data):
 
     M = pipe_data['M']
     N = pipe_data['N']
+    U = pipe_data['U']
 
     live_outs = [out_upfirdn]
     pipe_name = app_data['app']
 
     fir_len = app_data['fir_len']
     sig_len = app_data['sig_len']
+    up = app_data['up']
 
-    p_estimates = [(M, fir_len), (N, sig_len)]
+    p_estimates = [(M, fir_len), (N, sig_len), (U, up)]
     p_constraints = []
     #~ t_size = [16, 16]
     #~ g_size = 1

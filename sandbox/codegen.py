@@ -1067,9 +1067,9 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
                             out_arrays, cparam_map, outputs):
 
 
-
-    g.polyRep.generate_code()
-    group_part_map = g.polyRep.poly_parts
+    if g.polyRep is not None:
+        g.polyRep.generate_code()
+        group_part_map = g.polyRep.poly_parts
 
     sorted_comps = g.get_sorted_comps()
 
@@ -1115,7 +1115,7 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
                     # add another line print comment
                     # body.add(genc.CStatement(printf))
 
-        if comp in g.polyRep.poly_parts:
+        if g.polyRep is not None and comp in g.polyRep.poly_parts:
             continue
 
         # 1.4. generate scan loops
@@ -1130,7 +1130,7 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
 
     # 2. generate code for built isl ast
     polyrep = g.polyRep
-    if polyrep.polyast != []:
+    if polyrep is not None and polyrep.polyast != []:
         for ast in polyrep.polyast:
             if multipar:
                 perfect_loopnest = collect_perfect_loopnest(ast)

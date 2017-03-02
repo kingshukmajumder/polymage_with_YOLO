@@ -79,6 +79,8 @@ def auto_group(pipeline):
         # arithmetic intensity in the expressions.
         comp_size_map = {}
         for comp in comps:
+            if comp.group.polyRep is None:
+                continue
             parts = comp.group.polyRep.poly_parts[comp]
             p_sizes = []
             for p in parts:
@@ -90,6 +92,8 @@ def auto_group(pipeline):
             comp_size_map[comp] = sum(p_sizes)
 
         for comp in comps:
+            if comp.group.polyRep is None:
+                continue
             is_small_comp = False
             if comp_size_map[comp] != '*':
                 is_small_comp = (comp_size_map[comp] <= size_thresh)

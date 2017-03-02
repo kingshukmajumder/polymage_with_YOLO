@@ -72,6 +72,9 @@ def check_refs(child_group, parent_group):
     child_func = child_comp.func
     deps = []
 
+    if child_group.polyRep is None:
+        return
+
     # Only verifying if both child and  parent group have a polyhedral
     # representation
     if child_group.polyRep.poly_parts and parent_group.polyRep.poly_doms:

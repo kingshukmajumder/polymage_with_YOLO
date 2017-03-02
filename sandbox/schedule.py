@@ -96,6 +96,8 @@ def schedule_parts(group, sorted_comps):
     step separates all computations in a time step by adding an additional
     dimension.
     '''
+    if group.polyRep is None:
+        return
     part_comp_map = group.polyRep.poly_parts
     pi = 0
     for comp in sorted_comps:

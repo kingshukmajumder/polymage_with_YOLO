@@ -13,6 +13,7 @@ from utils import *
 def call_pipe(app_data):
     fir_len = app_data['fir_len']
     sig_len = app_data['sig_len']
+    up = app_data['up']
 
     sig_data = app_data['sig_data']
     IN = sig_data['IN']
@@ -27,6 +28,7 @@ def call_pipe(app_data):
     pipe_args = []
     pipe_args += [ctypes.c_int(fir_len)]
     pipe_args += [ctypes.c_int(sig_len)]
+    pipe_args += [ctypes.c_int(up)]
     pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]

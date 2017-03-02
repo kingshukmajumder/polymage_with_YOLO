@@ -27,10 +27,10 @@ from expr_ast import *
 import constructs
 import targetc
 
-def get_affine_var_and_param_coeff(expr):
+def get_affine_var_and_param_coeff(expr, include_params=False):
     expr = Value.numericToValue(expr)
 
-    if (not isAffine(expr) or \
+    if (not isAffine(expr, True, False, include_params) or \
             isinstance(expr, Value) or \
             is_constant_expr(expr)):
         return {}
@@ -38,8 +38,8 @@ def get_affine_var_and_param_coeff(expr):
         return {expr: 1}
     elif (isinstance(expr, AbstractBinaryOpNode)):
         coeff = {}
-        left_coeff = get_affine_var_and_param_coeff(expr.left)
-        right_coeff = get_affine_var_and_param_coeff(expr.right)
+        left_coeff = get_affine_var_and_param_coeff(expr.left, include_params)
+        right_coeff = get_affine_var_and_param_coeff(expr.right, include_params)
         if (expr.op == '+'):
             coeff = dict((n, left_coeff.get(n, 0) + right_coeff.get(n, 0)) \
                              for n in set(left_coeff) | set(right_coeff))
@@ -62,6 +62,11 @@ def get_affine_var_and_param_coeff(expr):
                                                         affine=True) \
                                  * left_coeff.get(n, 0))
                                  for n in set(left_coeff))
+            elif include_params:
+                coeff = dict((n, get_constant_from_expr(expr.right, \
+                                                        affine=True, include_params=True) \
+                                 * left_coeff.get(n, 0))
+                                 for n in set(left_coeff) | set(right_coeff))
         elif (expr.op == '/'):
             right_is_constant = is_constant_expr(expr.right, affine=True)
             #sanity check should be true if the expression is affine
@@ -73,7 +78,7 @@ def get_affine_var_and_param_coeff(expr):
                                          for n in set(left_coeff))
         return coeff
     elif (isinstance(expr, AbstractUnaryOpNode)):
-        child_coeff = get_affine_var_and_param_coeff(expr.child)
+        child_coeff = get_affine_var_and_param_coeff(expr.child, include_params)
         if (expr.op == '-'):
             child_coeff = dict((n, -child_coeff.get(n)) for n in child_coeff)
         return child_coeff
@@ -112,7 +117,7 @@ def evaluateUnaryOp(val, op):
         return val
     raise TypeError(type(val))
 
-def get_constant_from_expr(expr, affine=False):
+def get_constant_from_expr(expr, affine=False, include_params = False):
     expr = Value.numericToValue(expr)
     assert(isinstance(expr, AbstractExpression))
     if (isinstance(expr, Value)):
@@ -120,15 +125,20 @@ def get_constant_from_expr(expr, affine=False):
             assert (expr.typ is Int) or (expr.typ is Rational)
         return expr.value
     elif (isinstance(expr, constructs.Variable)):
+        if include_params:
+            if isinstance(expr, constructs.Parameter):
+                if affine:
+                    assert (expr.typ is Int) or (expr.typ is Rational)
+                return expr.clone()
         return 0
     elif (isinstance(expr, constructs.Reference)):
         return 0    
     elif (isinstance(expr, AbstractBinaryOpNode)):
-        leftConst = get_constant_from_expr(expr.left, affine)
-        rightConst = get_constant_from_expr(expr.right, affine)
+        leftConst = get_constant_from_expr(expr.left, affine, include_params)
+        rightConst = get_constant_from_expr(expr.right, affine, include_params)
         return evaluateBinaryOp(leftConst, rightConst, expr.op, affine)
     elif (isinstance(expr, AbstractUnaryOpNode)):
-        childConst = get_constant_from_expr(expr.child, affine)
+        childConst = get_constant_from_expr(expr.child, affine, include_params)
         return evaluateUnaryOp(childConst, expr.op)
     elif (isinstance(expr,
                      (constructs.Select, constructs.Cast, InbuiltFunction))):
@@ -305,7 +315,7 @@ def substitute_vars(expr, var_to_expr_map):
         return expr
     raise TypeError(type(expr))
 
-def isAffine(expr, include_div = True, include_modulo = False):
+def isAffine(expr, include_div = True, include_modulo = False, include_params = False):
     """
     Function to determine if an expression is affine or not. The input is a
     binary expression tree. It recursively checks if the left and right sub
@@ -338,12 +348,15 @@ def isAffine(expr, include_div = True, include_modulo = False):
     elif (isinstance(expr, constructs.Reference)):
         return False
     elif (isinstance(expr, AbstractBinaryOpNode)):
-        left_check = isAffine(expr.left, include_div, include_modulo)
-        right_check = isAffine(expr.right, include_div, include_modulo)
+        left_check = isAffine(expr.left, include_div, include_modulo, include_params)
+        right_check = isAffine(expr.right, include_div, include_modulo, include_params)
         if (left_check and right_check):
             if (expr.op in ['+','-']):
                 return True
             elif(expr.op in ['*']):
+                if include_params:
+                    return not expr.left.has(constructs.Variable) \
+                        or not expr.right.has(constructs.Variable)
                 if(not (expr.left.has(constructs.Variable) or \
                         expr.left.has(constructs.Parameter)) or \
                    not (expr.right.has(constructs.Variable) or \
@@ -360,7 +373,7 @@ def isAffine(expr, include_div = True, include_modulo = False):
             elif(include_modulo and expr.op in ['%']):
                 if (not (expr.right.has(constructs.Variable)) and \
                     not (expr.right.has(constructs.Parameter))):
-                    return isAffine(expr.left, include_div, False)
+                    return isAffine(expr.left, include_div, False, include_params)
                 else:
                     return False
             else:
@@ -368,10 +381,10 @@ def isAffine(expr, include_div = True, include_modulo = False):
         else:
             return False
     elif (isinstance(expr, AbstractUnaryOpNode)):
-        return isAffine(expr.child, include_div, include_modulo)
+        return isAffine(expr.child, include_div, include_modulo, include_params)
     elif (isinstance(expr, constructs.Condition)):
-        return isAffine(expr.lhs, include_div, include_modulo) and \
-               isAffine(expr.rhs, include_div, include_modulo)
+        return isAffine(expr.lhs, include_div, include_modulo, include_params) and \
+               isAffine(expr.rhs, include_div, include_modulo, include_params)
     elif (isinstance(expr,
                      (constructs.Select, constructs.Cast, InbuiltFunction))):
         return False

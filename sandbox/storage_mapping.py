@@ -76,7 +76,7 @@ class Dimension:
 
         self._size_expr = size_map[1]
 
-        coeff_map = get_affine_var_and_param_coeff(self._size_expr)
+        coeff_map = get_affine_var_and_param_coeff(self._size_expr, True)
         self._const = get_constant_from_expr(self._size_expr)
         self._coeff = []
         if not self.is_constant:
