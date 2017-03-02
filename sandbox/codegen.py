@@ -984,6 +984,28 @@ def generate_reduction_scan_loops(pipe, group, comp, pipe_body, cparam_map):
     generates code for Reduction class
     """
     func = comp.func
+    # Initialize to 0
+    cvar_map = create_loop_variables(group, func.variables)
+
+    lbody = \
+        create_perfect_nested_loop(pipe, group, pipe_body,
+                                   func.variables,
+                                   func.variableDomain[1],
+                                   cparam_map, cvar_map)
+
+    for case in func.defn:
+        if(isinstance(case, Reduce)):
+            ref_args = case.accumulate_ref.arguments
+            accum_ref = generate_c_expr(pipe, func(*ref_args),
+                                        cparam_map, cvar_map)
+        elif(isinstance(case, Case)):
+            assert isinstance(case.expression, Reduce)
+            ref_args = case.expression.accumulate_ref.arguments
+            accum_ref = generate_c_expr(pipe, func(*ref_args),
+                                        cparam_map, cvar_map)
+    assign = genc.CAssign(accum_ref, 0)
+    lbody.add(assign, False)
+
     # Compute Reduction points in lexicographic order of reduction domain
     cvar_map = create_loop_variables(group, func.reductionVariables)
 
@@ -1014,20 +1036,20 @@ def generate_reduction_scan_loops(pipe, group, comp, pipe_body, cparam_map):
         elif(isinstance(case, Case)):
             c_cond = generate_c_cond(pipe, case.condition,
                                      cparam_map, cvar_map)
-            cond_expr = generate_c_expr(pipe, case.expression,
-                                        cparam_map, cvar_map)
             cif = genc.CIfThen(c_cond)
 
             if(isinstance(case.expression, Reduce)):
-                ref_args = case.accumulate_ref.arguments
+                ref_args = case.expression.accumulate_ref.arguments
                 accum_ref = generate_c_expr(pipe, func(*ref_args),
                                             cparam_map, cvar_map)
+                cond_expr = generate_c_expr(pipe, case.expression.expression,
+                                        cparam_map, cvar_map)
                 op_type = case.expression.op_type
                 rhs = {
-                    Op.Max: genc.CMax(array_ref, expr),
-                    Op.Min: genc.CMin(array_ref, expr),
-                    Op.Mul: array_ref * expr,
-                    Op.Sum: array_ref + expr
+                    Op.Max: genc.CMax(accum_ref, cond_expr),
+                    Op.Min: genc.CMin(accum_ref, cond_expr),
+                    Op.Mul: accum_ref * cond_expr,
+                    Op.Sum: accum_ref + cond_expr
                 }[op_type]
                 assign = genc.CAssign(accum_ref, rhs)
                 with cif.if_block as ifblock:
@@ -1097,7 +1119,7 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
             continue
 
         # 1.4. generate scan loops
-        if type(func) == Function:
+        if type(func) == Function or type(func) == Wave:
             generate_function_scan_loops(pipeline, g, comp, body, cparam_map)
         elif type(func) == Reduction:
             generate_reduction_scan_loops(pipeline, g, comp, body, cparam_map)
