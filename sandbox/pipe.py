@@ -1074,10 +1074,7 @@ class Pipeline:
         else:
             # If no dependencies found, then send empty UnionMap to Pluto
             LOG(log_level, "No dependencies found")
-            # str1 = '[R, C] -> { S_0[x, y, prod_var_mat1_mat2] -> S_4[x, y] : R = 128 and C = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat2 <= 127; S_2[x, y, prod_var_mat1_mat3] -> S_2[x, y, prod_var_mat1_mat3_1] : C = 128 and R = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat3 <= 127 and prod_var_mat1_mat3 < prod_var_mat1_mat3_1 <= 127; S_0[x, y, prod_var_mat1_mat2] -> S_0[x, y, prod_var_mat1_mat2_1] : C = 128 and R = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat2 <= 127 and prod_var_mat1_mat2 < prod_var_mat1_mat2_1 <= 127; S_2[x, y, prod_var_mat1_mat3] -> S_4[x, y] : R = 128 and C = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat3 <= 127; }'
-            # deps_union_map = isl.UnionMap.read_from_str(self._ctx, str1)
-            # LOG(log_level, deps_union_map.to_str())
-            # deps_union_map = isl.UnionMap.read_from_str(self._ctx, '{}')
+            deps_union_map = isl.UnionMap.read_from_str(self._ctx, '{}')
 
         # Pluto call
         pluto = LibPluto()

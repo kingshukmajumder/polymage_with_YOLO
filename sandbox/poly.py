@@ -580,6 +580,8 @@ class PolyRep(object):
         self.read_union_map = {}
         self.write_union_map = {}
 
+
+
         # TODO: move the following outside __init__()
         # For now, let this be. Compilation optimizations can come later.
 
@@ -793,9 +795,11 @@ class PolyRep(object):
                                           context_conds)
 
         # Initializing the reduction earlier than any other function
-        self.create_poly_parts_from_default(comp, max_dim, dom_map, level_no,
-                                            schedule_names)
         # TODO: Needs to be added only when matrix optimizations is specified
+        # Initializing matrix outside Polymage function.
+        # self.create_poly_parts_from_default(comp, max_dim, dom_map, level_no,
+        #                                     schedule_names)
+
         self.update_read_and_write_access(comp)
 
     def create_sched_space(self, variables, domains,
