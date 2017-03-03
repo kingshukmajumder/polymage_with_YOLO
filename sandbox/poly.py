@@ -813,11 +813,17 @@ class PolyRep(object):
                         affine = affine and \
                                  isAffine(cond.lhs) and isAffine(cond.rhs)
                     if(affine):
+                        if len(prev_sched_cases) > 0 \
+                           and prev_sched_cases[-1][0] == sched_m \
+                           and prev_sched_cases[-1][1] == case:
+                            sched_m = prev_sched_cases[-1][2]
                         [conjunct_ineqs, conjunct_eqs, new_condition] = \
                             format_conjunct_constraints(conjunct, True)
+                        old_sched_m = sched_m.copy()
                         sched_m = add_constraints(sched_m,
                                                   conjunct_ineqs,
                                                   conjunct_eqs)
+                        prev_sched_cases.append((sched_m, case, old_sched_m))
                         parts = self.make_poly_parts(sched_m, case.expression,
                                                      new_condition, comp,
                                                      align, scale, level_no)
@@ -828,7 +834,7 @@ class PolyRep(object):
                            and prev_sched_cases[-1][0] == sched_m \
                            and prev_sched_cases[-1][1] == case:
                             continue
-                        prev_sched_cases.append((sched_m, case))
+                        prev_sched_cases.append((sched_m, case, sched_m))
                         parts = self.make_poly_parts(sched_m, case.expression,
                                                      case.condition, comp,
                                                      align, scale, level_no)
