@@ -45,4 +45,4 @@ def gemver(pipe_data):
     fn4 = Reduction(([i0], [row]), ([i0, i1], [row, row]), Double, "fn4")
     fn4.defn = [ Reduce(fn4(i0), alpha * fn1(i1, i0) * fn3(i1), Op.Sum) ]
 
-    return [fn2, fn4]
+    return [fn3, fn4]

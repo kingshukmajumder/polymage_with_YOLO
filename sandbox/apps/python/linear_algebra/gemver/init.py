@@ -13,7 +13,6 @@ def init_images(app_data):
 
     # input matrix: 
     rows = 128
-    #rows2, cols2 = 128,128
     A = np.ndarray((rows,rows))
     u1 = np.ndarray((rows))
     v1 = np.ndarray((rows))
@@ -45,13 +44,12 @@ def init_images(app_data):
     IN_V2 = (np.array(v2)).astype(np.float64).ravel()
     IN_Y = (np.array(y)).astype(np.float64).ravel()
     IN_Z = (np.array(z)).astype(np.float64).ravel()
-    OUT_X = (np.array(x)).astype(np.float64).ravel()
-    OUT_W = (np.array(w)).astype(np.float64).ravel()
     IN_A = (np.array(A)).astype(np.float64).ravel()
 
     # final output image
-    #OUT = np.zeros((rows1, cols1), np.float64).ravel()
-    #OUT1 = np.zeros((rows1, cols1), np.float64).ravel()
+    OUT_X = (np.array(x)).astype(np.float64).ravel()
+    OUT_W = (np.array(w)).astype(np.float64).ravel()
+
 
     img_data = {}
     img_data['IN_U1'] = IN_U1
@@ -66,9 +64,6 @@ def init_images(app_data):
 
     app_data['img_data'] = img_data
     app_data['rows'] = rows
-    #app_data['cols1'] = cols1
-    # app_data['rows2'] = rows2
-    #app_data['cols2'] = cols2
 
     return
 

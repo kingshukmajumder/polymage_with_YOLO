@@ -59,9 +59,6 @@ def build_gemver(app_data):
     out_gemver = gemver(pipe_data)
     
     R = pipe_data['R']
-    #C = pipe_data['C']
-    #R2 = pipe_data['R2']
-    #C2 = pipe_data['C2']
 
     # This implies that only one value was returned
     if not isinstance(out_gemver, list):
@@ -71,17 +68,10 @@ def build_gemver(app_data):
 
     pipe_name = app_data['app']
 
-    rows1 = app_data['rows1']
-    cols1 = app_data['cols1']
-    #rows2 = app_data['rows2']
-    #cols2 = app_data['cols2']
+    rows = app_data['rows']
 
-    p_estimates = [(R, rows)]#, (C, cols1)] #, (R2, rows2), (C2, cols2)]
-    p_constraints = [ Condition(R, "==", rows) \
-                     # Condition(C, "==", cols1) \
-                      #Condition(R2, "==", rows2), \
-                      #Condition(C2, "==", cols2), \
-                    ]
+    p_estimates = [(R, rows)]
+    p_constraints = [ Condition(R, "==", rows) ]
 
     # Pluto schedule requires tile.sizes file
     if(app_data['matrix']):
@@ -123,8 +113,8 @@ def create_lib(build_func, pipe_name, app_data):
             pipe = build_func(app_data)
 
             # draw the pipeline graph to a png file
-            #if graph_gen:
-            #    generate_graph(pipe, pipe_name, app_data)
+            if graph_gen:
+                generate_graph(pipe, pipe_name, app_data)
 
             # generate pipeline cpp source
             codegen(pipe, pipe_src, app_data)

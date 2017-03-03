@@ -8,7 +8,6 @@ from init import init_all
 from printer import print_header, print_config, print_line
 from builder import create_lib,build_gemver
 from exec_pipe import gemver
-#from app_tuner import auto_tune
 
 app = "gemver"
 
