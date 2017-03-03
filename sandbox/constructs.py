@@ -1446,7 +1446,7 @@ class Matrix(Function):
             reduction_interval.append(mat2.domain[0])
 
         red_dom = (reduction_variable, reduction_interval)
-        name = 'redn_prod_' + mat1.name + '_' + mat2.name
+        name = mat1.name + '_' + mat2.name + '_mul_' + random_num(2)
 
         # NOTE: This is the constraint given to isl, as a promise, that
         # the parameters of the dimension in which matrices are reduced
