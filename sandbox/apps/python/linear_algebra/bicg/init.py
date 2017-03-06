@@ -31,14 +31,13 @@ def init_images(app_data):
             A[i][j] = (i * (j + 1) % rows) / rows
 
     # convert to float image
-    IN_P = (np.array(p)).astype(np.float64).ravel()
-    IN_R = (np.array(r)).astype(np.float64).ravel()
+    IN_P = p
+    IN_R = r
     IN_A = (np.array(A)).astype(np.float64).ravel()
 
     # final output image
-    OUT_S = (np.array(s)).astype(np.float64).ravel()
-    OUT_Q = (np.array(q)).astype(np.float64).ravel()
-
+    OUT_S = s
+    OUT_Q = q
 
     img_data = {}
     img_data['IN_P'] = IN_P

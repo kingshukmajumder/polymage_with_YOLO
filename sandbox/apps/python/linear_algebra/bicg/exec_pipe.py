@@ -12,6 +12,7 @@ from utils import *
 
 def call_pipe(app_data):
     rows = app_data['rows']
+    cols = app_data['cols']
 
     img_data = app_data['img_data']
 
@@ -27,6 +28,7 @@ def call_pipe(app_data):
 
     # lib function args
     pipe_args = []
+    pipe_args += [ctypes.c_int(cols)]
     pipe_args += [ctypes.c_int(rows)]
     pipe_args += [ctypes.c_void_p(IN_A.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN_P.ctypes.data)]
