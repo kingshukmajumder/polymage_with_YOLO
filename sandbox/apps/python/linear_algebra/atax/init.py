@@ -29,11 +29,11 @@ def init_images(app_data):
             A[i][j] = ((i + j) % cols) / (5 * rows)
 
     # convert to float image
-    IN_X = x #(np.array(y)).astype(np.float64).ravel()
+    IN_X = x
     IN_A = (np.array(A)).astype(np.float64).ravel()
 
     # final output image
-    OUT_Y = y #(np.array(x)).astype(np.float64).ravel()
+    OUT_Y = y
 
 
     img_data = {}
