@@ -31,6 +31,7 @@ from constructs import *
 from expression import *
 from schedule import *
 from poly import *
+from poly_schedule import match_sig_ifft2
 import islpy as isl
 import expr_ast as expr
 import targetc as genc
@@ -549,22 +550,9 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                             and lhs.typ is Double:
                         lhs_params = get_affine_var_and_param_coeff(lhs.reductionDimensions[0])
                         lhs_constant = get_constant_from_expr(lhs.reductionDimensions[0])
-                        if isinstance(reduce_expr._args[0].left, Reference) \
-                                and isinstance(reduce_expr._args[0].right, Exp):
-                            if isinstance(reduce_expr._args[0].left.objectRef, Wave) \
-                                    and isinstance(reduce_expr._args[0].right._args[0], Cast):
-                                rhs = reduce_expr._args[0].left.objectRef
-                                rhs_params = get_affine_var_and_param_coeff(rhs.length)
-                                rhs_constant = get_constant_from_expr(rhs.length)
-                                if rhs.type is Complex \
-                                        and len(rhs_params) == len(rhs_params) \
-                                        and list(rhs_params.keys()) == list(lhs_params.keys()) \
-                                        and all([lhs_params[x] / rhs_params[x] == 2 for x in lhs_params]) \
-                                        and int(rhs_constant - lhs_constant) == 1 \
-                                        and reduce_expr._args[0].right._args[0].typ is Complex \
-                                        and reduce_expr._args[0].op == '*':
-                                    # IFFT found; Round RHS to even if no output length specified
-                                    roundRhsToEven = lhs.reductionDimensions[1] is None
+                        if match_sig_ifft2(reduce_expr, lhs_params, lhs_constant):
+                            # IFFT found; Round RHS to even if no output length specified
+                            roundRhsToEven = lhs.reductionDimensions[1] is None
 
             # Convert lb and ub expressions to C expressions
             prologue = []
