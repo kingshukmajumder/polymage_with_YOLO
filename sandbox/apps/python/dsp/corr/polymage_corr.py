@@ -12,32 +12,22 @@ from constructs import *
 
 def corr(pipe_data):
 
-    N = Parameter(UInt, "N")
+    M = Parameter(Int, "M")
+    N = Parameter(Int, "N")
 
+    pipe_data['M'] = M
     pipe_data['N'] = N
 
-    x = Variable(UInt, 'x')
-    y = Variable(UInt, 'y')
+    x = Variable(Int, 'x')
+    z = Variable(Int, 'z')
 
-    sig1 = Wave(Double, "sig1", N, x)
-    sig2 = Wave(Double, "sig2", N, x)
+    sig1 = Wave(Double, "sig1", M)
+    sig2 = Wave(Double, "sig2", N)
 
-    row, col = Interval(UInt, 0, N-1), Interval(UInt, 0, 0)
-    mean1 = Reduction(([y], [col]), ([x, y], [row, col]), Double, "mean1")
-    mean1.defn = [Reduce(mean1(y), sig1(x) / N, Op.Sum)]
+    row1 = Interval(Int, 0, M-1)
+    row2 = Interval(Int, 0, M+N-2)
 
-    mean2 = Reduction(([y], [col]), ([x, y], [row, col]), Double, "mean2")
-    mean2.defn = [Reduce(mean2(y), sig2(x) / N, Op.Sum)]
-
-    cov11 = Reduction(([y], [col]), ([x, y], [row, col]), Double, "cov11")
-    cov11.defn = [Reduce(cov11(y), (sig1(x) - mean1(y)) * (sig1(x) - mean1(y)) / (N - 1), Op.Sum)]
-
-    cov12 = Reduction(([y], [col]), ([x, y], [row, col]), Double, "cov12")
-    cov12.defn = [Reduce(cov12(y), (sig1(x) - mean1(y)) * (sig2(x) - mean2(y)) / (N - 1), Op.Sum)]
-
-    cov22 = Reduction(([y], [col]), ([x, y], [row, col]), Double, "cov22")
-    cov22.defn = [Reduce(cov22(y), (sig2(x) - mean2(y)) * (sig2(x) - mean2(y)) / (N - 1), Op.Sum)]
-
-    corr = Function(([y], [col]), Double, "corr")
-    corr.defn = [cov12(y) / Sqrt(cov11(y) * cov22(y))]
+    corr = Reduction(([z], [row2]), ([z, x], [row2, row1]), Double, "corr")
+    c = Condition(z - x, '<', N) & Condition(z - x, '>=', 0)
+    corr.defn = [ Case(c, Reduce(corr(z), sig1(x) * sig2(x + N - 1 - z), Op.Sum)) ]
     return corr

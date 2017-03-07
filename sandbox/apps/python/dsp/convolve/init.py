@@ -23,7 +23,7 @@ def init_signals(app_data):
     IN = IN.astype(np.float64).ravel()
     IN1 = IN1.astype(np.float64).ravel()
 
-    # final output correlation value
+    # final output convolution
     OUT = np.zeros(length1 + length2 - 1).astype(np.float64).ravel()
 
     sig_data = {}

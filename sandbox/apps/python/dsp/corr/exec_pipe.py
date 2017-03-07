@@ -11,7 +11,8 @@ from constructs import *
 from utils import *
 
 def call_pipe(app_data):
-    length = app_data['length']
+    length1 = app_data['length1']
+    length2 = app_data['length2']
 
     sig_data = app_data['sig_data']
     IN = sig_data['IN']
@@ -24,7 +25,8 @@ def call_pipe(app_data):
 
     # lib function args
     pipe_args = []
-    pipe_args += [ctypes.c_uint(length)]
+    pipe_args += [ctypes.c_int(length1)]
+    pipe_args += [ctypes.c_int(length2)]
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]

@@ -17,12 +17,14 @@ def print_usage():
 
 def print_config(app_data):
     app_args = app_data['app_args']
-    length = app_data['length']
+    length1 = app_data['length1']
+    length2 = app_data['length2']
     print_line()
     print("# Problem Settings #")
     print("")
     print("[main]: mode        =", app_args.mode)
     #print("[main]: image       =", app_args.img_file)
-    print("[main]: signal length  =", length)
+    print("[main]: first signal length  =", length1)
+    print("[main]: second signal length  =", length2)
     print("[main]: nruns       =", app_args.runs)
     print_line()

@@ -51,14 +51,16 @@ def build_corr(app_data):
 
     out_corr = corr(pipe_data)
     
+    M = pipe_data['M']
     N = pipe_data['N']
 
     live_outs = [out_corr]
     pipe_name = app_data['app']
 
-    length = app_data['length']
+    length1 = app_data['length1']
+    length2 = app_data['length2']
 
-    p_estimates = [(N, length)]
+    p_estimates = [(M, length1), (N, length2)]
     p_constraints = []
     #~ t_size = [16, 16]
     #~ g_size = 1

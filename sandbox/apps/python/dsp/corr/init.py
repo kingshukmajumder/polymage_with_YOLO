@@ -12,9 +12,10 @@ def init_signals(app_data):
     app_args = app_data['app_args']
 
     # input signals 
-    length = 256
-    sig1 = np.repeat([0, 1, 1, 0, 1, 0, 0, 1], 32)
-    sig2 = np.repeat([1, 0, 0, 1, 0, 1, 1, 0], 32)
+    length1 = 4
+    length2 = 5
+    sig1 = np.array([1, 2, 3, 4])
+    sig2 = np.array([0, 1, 0.5, 0.25, 0.75])
 
     # convert to float arrays
     IN = np.array(sig1)
@@ -22,8 +23,8 @@ def init_signals(app_data):
     IN = IN.astype(np.float64).ravel()
     IN1 = IN1.astype(np.float64).ravel()
 
-    # final output correlation value
-    OUT = np.zeros(1).astype(np.float64).ravel()
+    # final output correlation
+    OUT = np.zeros(length1 + length2 - 1).astype(np.float64).ravel()
 
     sig_data = {}
     sig_data['IN'] = IN
@@ -31,7 +32,8 @@ def init_signals(app_data):
     sig_data['OUT'] = OUT
 
     app_data['sig_data'] = sig_data
-    app_data['length'] = length
+    app_data['length1'] = length1
+    app_data['length2'] = length2
 
     return
 
