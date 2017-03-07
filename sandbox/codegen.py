@@ -318,6 +318,7 @@ def get_mat_mul_lib_expr(mat1,mat2,mat3,dimensions):
 def get_sig_fft_lib_exprs(sig_in, arr_out, length):
     length = length.__str__()
     lib_exprs = []
+    lib_exprs.append("fftw_plan_with_nthreads(omp_get_max_threads())")
     lib_exprs.append("fftw_plan_var = fftw_plan_dft_r2c_1d(" + length + ", " \
                + sig_in + ", reinterpret_cast<fftw_complex*>(" + arr_out \
                + "), FFTW_ESTIMATE)")
@@ -328,6 +329,7 @@ def get_sig_fft_lib_exprs(sig_in, arr_out, length):
 def get_sig_ifft_lib_exprs(sig_in, arr_out, length):
     length = length.__str__()
     lib_exprs = []
+    lib_exprs.append("fftw_plan_with_nthreads(omp_get_max_threads())")
     lib_exprs.append("fftw_plan_var = fftw_plan_dft_c2r_1d(" + length
                + ", reinterpret_cast<fftw_complex*>(" + sig_in + "), " \
                + arr_out + ", FFTW_ESTIMATE)")
@@ -1164,6 +1166,7 @@ def generate_code_for_pipeline(pipeline,
         if 'blas' in pipeline.options:
             inc_block.add(genc.CInclude('cblas.h'))
         if 'fft' in pipeline.options:
+            inc_block.add(genc.CInclude('omp.h'))
             inc_block.add(genc.CInclude('fftw3.h'))
         inc_block.add(genc.CMacroDecl(genc.c_macro_min))
         inc_block.add(genc.CMacroDecl(genc.c_macro_max))
@@ -1270,6 +1273,8 @@ def generate_code_for_pipeline(pipeline,
 
             fft = 'fft' in pipeline.options
             if fft:
+                init_threads = genc.CStatement("fftw_init_threads()")
+                pbody.add(init_threads)
                 var_type = genc.TypeMap.convert(Void)
                 var_ptr = genc.CPointer(var_type, 1)
                 var = genc.CVariable(var_type, "fftw_plan_var")
