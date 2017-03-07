@@ -279,7 +279,7 @@ def hasReference(expr, ref):
         return hasReference(expr.condition, ref) \
             or hasReference(expr.trueExpression, ref) \
             or hasReference(expr.falseExpression, ref)
-    elif isinstance(expr, construct.Cast):
+    elif isinstance(expr, constructs.Cast):
         return hasReference(expr.expression, ref)
     raise TypeError(type(expr))
 
