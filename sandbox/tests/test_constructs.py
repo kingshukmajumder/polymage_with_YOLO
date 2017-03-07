@@ -51,6 +51,13 @@ def test_image():
     assert Img.dimensions[1] == N
     assert Img.dimensions[2] == 3
 
+def test_wave():
+    N = Parameter(UInt, "N")
+    Wav = Wave(Double, "Input", N)
+    assert Wav.typ == Double
+    assert Wav.name == "Input"
+    assert Wav.__len__ == N
+
 def test_expr():
     N = Parameter(UInt, "N")
     x = Variable(UInt, "x")
