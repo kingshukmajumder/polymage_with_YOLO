@@ -1539,9 +1539,7 @@ class Wave(Function):
 
     @property
     def isInput(self):
-        if self.defn == []:
-            return True
-        return False
+        return self.defn == []
 
     def __str__(self):
         return self._name.__str__() + "(" + self._len.__str__() + ", " \
