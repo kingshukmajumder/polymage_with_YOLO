@@ -34,9 +34,9 @@ def test_math():
     cos = Function(([x, y], [row, col]), Float, "_cos")
     cos.defn = [ Case(cond, Cos(img2(x, y))) ]
 
-    # cos(image2) + sin(image1) * j
-    cis = Function(([x, y], [row, col]), Complex, "_cis")
-    cis.defn = [ Case(cond, cos(x, y) + 1.0j * sin(x, y)) ]
+    # Real(Conj(cos(image2) + sin(image1) * j)) == cos(image2)
+    cis = Function(([x, y], [row, col]), Double, "_cis")
+    cis.defn = [ Case(cond, Real(Conj(cos(x, y) + 1.0j * sin(x, y)))) ]
 
     # max(sin, cos)
     imax = Function(([x, y], [row, col]), Float, "_max")
