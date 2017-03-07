@@ -208,7 +208,7 @@ def is_inner_most_parallel(node):
                    False)
     return no_inner_parallel
 
-def get_user_nodes_in_body(body):
+def get_user_nodes_in_body(body, one_loop=False):
     user_nodes = []
     if body.get_type() == isl._isl.ast_node_type.block:
         num_nodes = (body.block_get_children().n_ast_node())
@@ -217,28 +217,8 @@ def get_user_nodes_in_body(body):
             user_nodes += get_user_nodes_in_body(child)
     else:
         if body.get_type() == isl._isl.ast_node_type.for_:
-            user_nodes += get_user_nodes_in_body(body.for_get_body())
-        elif body.get_type() == isl._isl.ast_node_type.if_:
-            user_nodes += get_user_nodes_in_body(body.if_get_then())
-            if body.if_has_else():
-              user_nodes += get_user_nodes_in_body(body.if_get_else())
-        elif body.get_type() == isl._isl.ast_node_type.user:
-            user_nodes += [body]
-        else:
-            assert("Unexpected isl node type:"+str(node.get_type()) and \
-                   False)
-    return user_nodes
-
-def get_user_nodes_in_body_one_loop(body):
-    user_nodes = []
-    if body.get_type() == isl._isl.ast_node_type.block:
-        num_nodes = (body.block_get_children().n_ast_node())
-        for i in range(0, num_nodes):
-            child = body.block_get_children().get_ast_node(i)
-            user_nodes += get_user_nodes_in_body(child)
-    else:
-        if body.get_type() == isl._isl.ast_node_type.for_:
-            pass
+            if not one_loop:
+                user_nodes += get_user_nodes_in_body(body.for_get_body())
         elif body.get_type() == isl._isl.ast_node_type.if_:
             user_nodes += get_user_nodes_in_body(body.if_get_then())
             if body.if_has_else():
@@ -528,7 +508,7 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                                           perfect_loopnest, indent+1)
     else:
         if node.get_type() == isl._isl.ast_node_type.for_:
-            reductions = get_reductions(polyrep, get_user_nodes_in_body_one_loop(node.for_get_body()))
+            reductions = get_reductions(polyrep, get_user_nodes_in_body(node.for_get_body(), one_loop=True))
             roundRhsToEven = False
 
             if len(reductions) == 1:
