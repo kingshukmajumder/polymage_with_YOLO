@@ -639,7 +639,7 @@ class PolyRep(object):
         dom_map = add_constraints(dom_map, ineqs, eqs)
 
         param_conds = self.format_param_constraints(param_constraints, params)
-        [param_ineqs, param_eqs, _] = format_conjunct_constraints(param_conds, False)
+        [param_ineqs, param_eqs, _] = format_conjunct_constraints(param_conds)
         dom_map = add_constraints(dom_map, param_ineqs, param_eqs)
 
         poly_dom = PolyDomain(dom_map.domain(), comp)
@@ -780,7 +780,7 @@ class PolyRep(object):
         sched_map = add_constraints(sched_map, ineqs, eqs)
 
         # Adding the parameter constraints
-        [param_ineqs, param_eqs, _] = format_conjunct_constraints(context_conds, False)
+        [param_ineqs, param_eqs, _] = format_conjunct_constraints(context_conds)
         sched_map = add_constraints(sched_map, param_ineqs, param_eqs)
 
         return sched_map
@@ -818,7 +818,8 @@ class PolyRep(object):
                            and prev_sched_cases[-1][1] == case:
                             sched_m = prev_sched_cases[-1][2]
                         [conjunct_ineqs, conjunct_eqs, new_condition] = \
-                            format_conjunct_constraints(conjunct, True)
+                            format_conjunct_constraints(conjunct, \
+                                                    from_definition=True)
                         old_sched_m = sched_m.copy()
                         sched_m = add_constraints(sched_m,
                                                   conjunct_ineqs,
@@ -1172,7 +1173,7 @@ def format_domain_constraints(domain, var_names):
 
     return [ineq_coeff, eq_coeff]
 
-def format_conjunct_constraints(conjunct, from_definition):
+def format_conjunct_constraints(conjunct, from_definition=False):
     # TODO check if the condition is a conjunction
     # print([ cond.__str__() for cond in conjunct ])
     ineq_coeff = []
