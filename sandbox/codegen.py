@@ -296,24 +296,34 @@ def get_mat_mul_lib_expr(mat1,mat2,mat3,dimensions):
                            + mat2_dim2 + ", " + mat2 +", " + mat1_dim2 + ", 0.0, " + mat3 + ", " + mat1_dim2 + ")"
     return lib_expr
 
-def get_sig_fft_lib_exprs(sig_in, arr_out, length):
+def get_sig_fft_lib_exprs(sig_in, arr_out, length, real_input=True):
     length = length.__str__()
     lib_exprs = []
     lib_exprs.append("fftw_plan_with_nthreads(omp_get_max_threads())")
-    lib_exprs.append("fftw_plan_var = fftw_plan_dft_r2c_1d(" + length + ", " \
-               + sig_in + ", reinterpret_cast<fftw_complex*>(" + arr_out \
-               + "), FFTW_ESTIMATE)")
+    if real_input:
+        lib_exprs.append("fftw_plan_var = fftw_plan_dft_r2c_1d(" + length + ", " \
+                + sig_in + ", reinterpret_cast<fftw_complex*>(" + arr_out \
+                + "), FFTW_ESTIMATE)")
+    else:
+        lib_exprs.append("fftw_plan_var = fftw_plan_dft_1d(" + length + ", reinterpret_cast<fftw_complex*>(" \
+                + sig_in + "), reinterpret_cast<fftw_complex*>(" + arr_out \
+                + "), FFTW_FORWARD, FFTW_ESTIMATE)")
     lib_exprs.append("fftw_execute((fftw_plan) fftw_plan_var)")
     lib_exprs.append("fftw_destroy_plan((fftw_plan) fftw_plan_var)")
     return lib_exprs
 
-def get_sig_ifft_lib_exprs(sig_in, arr_out, length):
+def get_sig_ifft_lib_exprs(sig_in, arr_out, length, real_input=True):
     length = length.__str__()
     lib_exprs = []
     lib_exprs.append("fftw_plan_with_nthreads(omp_get_max_threads())")
-    lib_exprs.append("fftw_plan_var = fftw_plan_dft_c2r_1d(" + length
-               + ", reinterpret_cast<fftw_complex*>(" + sig_in + "), " \
-               + arr_out + ", FFTW_ESTIMATE)")
+    if real_input:
+        lib_exprs.append("fftw_plan_var = fftw_plan_dft_c2r_1d(" + length
+                + ", reinterpret_cast<fftw_complex*>(" + sig_in + "), " \
+                + arr_out + ", FFTW_ESTIMATE)")
+    else:
+        lib_exprs.append("fftw_plan_var = fftw_plan_dft_1d(" + length
+                + ", reinterpret_cast<fftw_complex*>(" + sig_in + "), reinterpret_cast<fftw_complex*>(" \
+                + arr_out + "), FFTW_BACKWARD, FFTW_ESTIMATE)")
     lib_exprs.append("fftw_execute((fftw_plan) fftw_plan_var)")
     lib_exprs.append("fftw_destroy_plan((fftw_plan) fftw_plan_var)")
     return lib_exprs
@@ -336,17 +346,19 @@ def generate_c_naive_from_accumlate_node(pipe, polyrep, node, body,
                                 prologue_stmts = prologue)
     if poly_part.is_idiom:
         out_array_name = get_array_name_from_ref(array_ref)
-        if isinstance(expr, Real):
+        if isinstance(expr, Real) or isinstance(expr, Conj):
+            ri = isinstance(expr, Real)
             expr = expr._args[0]
             sig_in = get_array_name_from_ref(expr.left._args[0])
             reduction_dimension = poly_part.comp.func.reductionDimensions
-            lib_exprs = get_sig_ifft_lib_exprs(sig_in, out_array_name, reduction_dimension[0])
+            lib_exprs = get_sig_ifft_lib_exprs(sig_in, out_array_name, reduction_dimension[0], real_input=ri)
             assign = [genc.CStatement(lib_expr) for lib_expr in lib_exprs]
         elif isinstance(expr.left, genc.CArrayAccess):
             mat1 = get_array_name_from_ref(expr.left)
             reduction_dimension = poly_part.comp.func.reductionDimensions
             if not isinstance(expr.right, Reference):
-                lib_exprs = get_sig_fft_lib_exprs(mat1, out_array_name, reduction_dimension[0])
+                ri = getType(expr.left) is not Complex
+                lib_exprs = get_sig_fft_lib_exprs(mat1, out_array_name, reduction_dimension[0], real_input=ri)
                 assign = [genc.CStatement(lib_expr) for lib_expr in lib_exprs]
             else:
                 mat2 = get_array_name_from_ref(expr.right)

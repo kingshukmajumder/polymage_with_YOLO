@@ -472,8 +472,7 @@ def match_idiom_sig_fft(parts):
                         if isinstance(reduce_expr.left.objectRef, Wave) \
                                 and isinstance(reduce_expr.right._args[0], Cast):
                             rhs = reduce_expr.left.objectRef
-                            if rhs.type is Double \
-                                    and len(lhs.reductionDimensions) == 1 \
+                            if len(lhs.reductionDimensions) == 1 \
                                     and lhs.reductionDimensions[0].__str__() == rhs.length.__str__() \
                                     and reduce_expr.right._args[0].typ is Complex \
                                     and reduce_expr.op == '*':
@@ -484,6 +483,7 @@ def match_idiom_sig_ifft(parts):
     zero_found = False
     ifft_found1 = False
     ifft_found2 = False
+    cifft_found = False
     for part in parts:
         if isinstance(part.func, Reduction):
             if part.expr == 0:
@@ -494,6 +494,24 @@ def match_idiom_sig_ifft(parts):
                 reduce_expr = expr.expression
                 reduce_acc = expr.accumulate_ref
                 if isinstance(reduce_acc, Reference) \
+                        and isinstance(reduce_expr, Conj) \
+                        and isinstance(reduce_expr._args[0], AbstractBinaryOpNode) \
+                        and reduce_op == Op.Sum:
+                    lhs = reduce_acc.objectRef
+                    if isinstance(lhs, Reduction) \
+                            and lhs.typ is Complex \
+                            and isinstance(reduce_expr._args[0].left, Conj) \
+                            and isinstance(reduce_expr._args[0].left._args[0], Reference) \
+                            and isinstance(reduce_expr._args[0].right, Exp):
+                        if isinstance(reduce_expr._args[0].left._args[0].objectRef, Wave) \
+                                and isinstance(reduce_expr._args[0].right._args[0], Cast):
+                            rhs = reduce_expr._args[0].left._args[0].objectRef
+                            if len(lhs.reductionDimensions) == 1 \
+                                    and lhs.reductionDimensions[0].__str__() == rhs.length.__str__() \
+                                    and reduce_expr._args[0].right._args[0].typ is Complex \
+                                    and reduce_expr._args[0].op == '*':
+                                cifft_found = True
+                elif isinstance(reduce_acc, Reference) \
                         and isinstance(reduce_expr, Real) \
                         and isinstance(reduce_expr._args[0], AbstractBinaryOpNode) \
                         and reduce_op == Op.Sum:
@@ -508,7 +526,7 @@ def match_idiom_sig_ifft(parts):
                         ifft_found1 = match_sig_ifft1(reduce_expr, lhs_params, lhs_constant)
                     if not ifft_found2:
                         ifft_found2 = match_sig_ifft2(reduce_expr, lhs_params, lhs_constant)
-    return zero_found and ifft_found1 and ifft_found2
+    return zero_found and ((ifft_found1 and ifft_found2) or cifft_found)
 
 def match_sig_ifft1(reduce_expr, lhs_params, lhs_constant):
     if isinstance(reduce_expr._args[0].left, Conj) \
