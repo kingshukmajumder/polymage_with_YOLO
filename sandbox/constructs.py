@@ -1658,6 +1658,49 @@ class Wave(Function):
                                             / Cast(Double, M + N - 1) ]
         return convolution
 
+    def lfilter(self, b, a, out_name):
+        assert isinstance(b, Wave)
+        assert isinstance(a, Wave)
+        assert b._typ is Double and a._typ is Double
+
+        L = self._len
+        M = b._len
+        N = a._len
+
+        in_var = self._variables[0]
+        out_var = Variable(Int, "_" + out_name + str(0))
+        out_typ = self._typ
+
+        b_norm_name = "_" + b._name + "_norm"
+        b_var = b._variables[0]
+        b_norm = Wave(Double, b_norm_name, M, b_var)
+        b_norm.defn = [ Case(Condition(N, '>', 0), b(b_var) / a(0)) ]
+
+        a_norm_name = "_" + a._name + "_norm"
+        a_var = a._variables[0]
+        a_norm = Wave(Double, a_norm_name, N, a_var)
+        a_norm.defn = [ a(a_var) / a(0) ]
+
+        sig_interval = Interval(Int, 0, L-1)
+        coeff_interval = Interval(UInt, 0, M+N-1)
+
+        filtered_sig = Reduction(([out_var], [sig_interval]), \
+                ([out_var, in_var], [sig_interval, coeff_interval]), \
+                out_typ, out_name)
+        cond1 = Condition(out_var - in_var, '>=', 0) \
+                & Condition(in_var, '<', M)
+        cond2 = Condition(in_var, '>', 0) \
+                & Condition(out_var - in_var, '>=', 0) \
+                & Condition(in_var, '<', N)
+        filtered_sig.defn = [ Case(cond1, Reduce(filtered_sig(out_var), \
+                                self(out_var - in_var) * b_norm(in_var), \
+                                Op.Sum)), \
+                              Case(cond2, Reduce(filtered_sig(out_var), \
+                                filtered_sig(out_var - in_var) \
+                                * -a_norm(in_var), \
+                                Op.Sum)) ]
+        return filtered_sig
+
     def fft(self, out_name):
         if self._typ is Complex:
             return self.__cfft(out_name)

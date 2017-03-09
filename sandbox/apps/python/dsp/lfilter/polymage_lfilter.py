@@ -47,5 +47,6 @@ def lfilter(pipe_data):
                     Case(cond2, Reduce(sig_out(z), \
                                        sig_out(z - y) * -a_norm(y), \
                                        Op.Sum)) ]
+    sig_out2 = sig_in.lfilter(b, a, "sig_out2")
 
-    return sig_out
+    return sig_out, sig_out2

@@ -49,13 +49,13 @@ def generate_graph(pipe, file_name, app_data):
 def build_lfilter(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_lfilter = lfilter(pipe_data)
+    out_lfilter, ol2 = lfilter(pipe_data)
 
     L = pipe_data['L']
     M = pipe_data['M']
     N = pipe_data['N']
 
-    live_outs = [out_lfilter]
+    live_outs = [out_lfilter, ol2]
     pipe_name = app_data['app']
 
     sig_len = app_data['sig_len']

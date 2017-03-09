@@ -29,12 +29,14 @@ def init_signals(app_data):
 
     # final output correlation value
     OUT = np.zeros(sig_len).astype(np.float64).ravel()
+    OUT1 = np.zeros(sig_len).astype(np.float64).ravel()
 
     sig_data = {}
     sig_data['IN'] = IN
     sig_data['IN1'] = IN1
     sig_data['IN2'] = IN2
     sig_data['OUT'] = OUT
+    sig_data['OUT1'] = OUT1
 
     app_data['sig_data'] = sig_data
     app_data['sig_len'] = sig_len
