@@ -1701,6 +1701,41 @@ class Wave(Function):
                                 Op.Sum)) ]
         return filtered_sig
 
+    def hilbert(self, out_name):
+        assert self._typ is Double
+
+        N = self._len
+
+        in_var = self._variables[0]
+
+        sc_name = "_" + self._name + "_complex"
+        sig_complex = Wave(Complex, sc_name, N, in_var)
+        sig_complex.defn = [ Cast(Complex, self(in_var)) ]
+
+        sc_fft_name = sc_name + "_fft"
+        sig_complex_fft = sig_complex.fft(sc_fft_name)
+
+        h_name = "_" + out_name + "_h"
+        h = Wave(Double, h_name, N, in_var)
+        cond1 = Condition(in_var, '==', 0)
+        cond2 = Condition(in_var, '>', 0) & Condition(2*in_var, '<=', N)
+        cond3 = Condition(2*in_var, '>', N) & Condition(in_var, '<', N)
+        h.defn = [ Case(cond1, 1), \
+                    Case(cond2, Min(2, Cast(Int, 1 + N - 2*in_var))), \
+                    Case(cond3, 0) ]
+
+        sc_fft_h_mult_name = sc_fft_name + h_name + "_mult"
+        sc_fft_h_mult = Wave(Complex, sc_fft_h_mult_name, N, in_var)
+        sc_fft_h_mult.defn = [ sig_complex_fft(in_var) * h(in_var) ]
+
+        scaled_sig_a_name = "_" + out_name + "_scaled"
+        scaled_sig_a = sc_fft_h_mult.ifft(scaled_sig_a_name, \
+                                                    real_input=False)
+
+        sig_a = Wave(Complex, out_name, N, in_var)
+        sig_a.defn = [ scaled_sig_a(in_var) / Cast(Double, N) ]
+        return sig_a
+
     def fft(self, out_name):
         if self._typ is Complex:
             return self.__cfft(out_name)

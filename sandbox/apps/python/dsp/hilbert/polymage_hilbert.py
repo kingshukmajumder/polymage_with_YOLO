@@ -39,4 +39,6 @@ def hilbert(pipe_data):
     sig_a = Wave(Complex, "sig_a", N, x)
     sig_a.defn = [ scaled_sig_a(x) / Cast(Double, N) ]
 
-    return sig_a
+    sig_a2 = sig.hilbert("sig_a2")
+
+    return sig_a, sig_a2

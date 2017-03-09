@@ -49,11 +49,11 @@ def generate_graph(pipe, file_name, app_data):
 def build_hilbert(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_hilbert = hilbert(pipe_data)
+    out_hilbert, oh2 = hilbert(pipe_data)
     
     N = pipe_data['N']
 
-    live_outs = [out_hilbert]
+    live_outs = [out_hilbert, oh2]
     pipe_name = app_data['app']
 
     length = app_data['length']
