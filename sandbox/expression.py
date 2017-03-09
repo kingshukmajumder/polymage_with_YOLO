@@ -415,7 +415,7 @@ def getType(expr):
     elif (isinstance(expr, AbstractBinaryOpNode)):
         left_type = getType(expr.left)
         right_type = getType(expr.right)
-        return result_type(left_type, right_type)
+        return result_type(left_type, right_type, expr.op == '-')
     elif (isinstance(expr, AbstractUnaryOpNode)):
         return getType(expr.child)
     elif (isinstance(expr, constructs.Cast)):

@@ -85,7 +85,7 @@ class Complex(object):
 class Rational(object):
     pass
 
-def result_type(a, b):
+def result_type(a, b, isSub=False):
     if a is Complex or b is Complex:
         return Complex
     elif a is Double or b is Double:
@@ -93,19 +93,19 @@ def result_type(a, b):
     elif a is Float or b is Float:
         return Float
     elif a is ULong or b is ULong:
-        return ULong
+        return Long if isSub else ULong
     elif a is Long or b is Long:
         return Long
     elif a is UInt or b is UInt:
-        return UInt
+        return Int if isSub else UInt
     elif a is Int or b is Int:
         return Int
     elif a is UShort or b is UShort:
-        return UShort
+        return Short if isSub else UShort
     elif a is Short or b is Short:
         return Short
     elif a is UChar or b is UChar:
-        return UChar
+        return Char if isSub else UChar
     elif a is Char and b is Char:
         return Char
     raise TypeError((a, b))
