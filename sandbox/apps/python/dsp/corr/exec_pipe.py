@@ -17,7 +17,11 @@ def call_pipe(app_data):
     sig_data = app_data['sig_data']
     IN = sig_data['IN']
     IN1 = sig_data['IN1']
+    IN2 = sig_data['IN2']
+    IN3 = sig_data['IN3']
     OUT = sig_data['OUT']
+    OUT1 = sig_data['OUT1']
+    OUT2 = sig_data['OUT2']
 
     # lib function name
     func_name = 'pipeline_'+app_data['app']
@@ -29,7 +33,11 @@ def call_pipe(app_data):
     pipe_args += [ctypes.c_int(length2)]
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(IN2.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(IN3.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(OUT1.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(OUT2.ctypes.data)]
 
     # call lib function
     pipe_func(*pipe_args)
@@ -51,11 +59,23 @@ def corr(app_data):
     print('OUTPUT')
     print(app_data['sig_data']['OUT'])
 
+    print('OUTPUT using instance method')
+    print(app_data['sig_data']['OUT1'])
+
+    print('OUTPUT using instance method for complex inputs')
+    print(app_data['sig_data']['OUT2'])
+
     print('IN')
     print(app_data['sig_data']['IN'])
 
     print('IN1')
     print(app_data['sig_data']['IN1'])
+
+    print('IN2')
+    print(app_data['sig_data']['IN2'])
+
+    print('IN3')
+    print(app_data['sig_data']['IN3'])
 
     if timer == True:
         t2 = time.time()

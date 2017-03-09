@@ -1578,6 +1578,37 @@ class Wave(Function):
                                 Op.Sum)) ]
         return convolution
 
+    def correlate(self, other, out_name):
+        assert isinstance(other, Wave)
+        assert self._typ == other._typ
+
+        M = self._len
+        N = other._len
+
+        in_var = self._variables[0]
+        out_var = Variable(Int, "_" + out_name + str(0))
+        out_typ = self._typ
+
+        interval1 = Interval(UInt, 0, M-1)
+        interval2 = Interval(Int, 0, M+N-2)
+
+        correlation = Reduction(([out_var], [interval2]), \
+                        ([out_var, in_var], [interval2, interval1]), \
+                        out_typ, out_name)
+        c = Condition(out_var - in_var, '<', N) \
+                                & Condition(out_var - in_var, '>=', 0)
+        if out_typ is Complex:
+            correlation.defn = [ Case(c, Reduce(correlation(out_var), \
+                                self(in_var) \
+                                * Conj(other(in_var + N - 1 - out_var)), \
+                                Op.Sum)) ]
+        else:
+            correlation.defn = [ Case(c, Reduce(correlation(out_var), \
+                                self(in_var) \
+                                * other(in_var + N - 1 - out_var), \
+                                Op.Sum)) ]
+        return correlation
+
     def fft(self, out_name):
         if self._typ is Complex:
             return self.__cfft(out_name)

@@ -49,12 +49,12 @@ def generate_graph(pipe, file_name, app_data):
 def build_corr(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_corr = corr(pipe_data)
+    out_corr, oc2, oc3 = corr(pipe_data)
     
     M = pipe_data['M']
     N = pipe_data['N']
 
-    live_outs = [out_corr]
+    live_outs = [out_corr, oc2, oc3]
     pipe_name = app_data['app']
 
     length1 = app_data['length1']
