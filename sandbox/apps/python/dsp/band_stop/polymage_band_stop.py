@@ -41,4 +41,6 @@ def band_stop(pipe_data):
     out_sig = Wave(Double, "out_sig", N, x)
     out_sig.defn = [ scaled_sig(x) / N ]
 
-    return out_sig
+    out_sig2 = sig.band_stop(LC, HC, "out_sig2", F)
+
+    return out_sig, out_sig2

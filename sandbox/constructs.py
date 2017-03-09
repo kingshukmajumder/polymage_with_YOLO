@@ -1841,6 +1841,43 @@ class Wave(Function):
         hp.defn = [ scaled_hp(in_var) / Cast(Double, N) ]
         return hp
 
+    def band_stop(self, low_cutoff, high_cutoff, out_name, factor=0):
+        lct = getType(low_cutoff)
+        hct = getType(high_cutoff)
+        assert (lct is Double or lct is Float) \
+                                    and (hct is Double or hct is Float)
+
+        N = self._len
+
+        in_var = self._variables[0]
+        out_typ = self._typ
+
+        hs_name = "_" + self._name + "_fft"
+        hs = self.fft(hs_name)
+
+        fs_name = hs_name + "freq"
+        ri = out_typ is not Complex
+        fs = Wave.fftfreq(N, fs_name, real_input=ri)
+
+        hs_bs_name = hs_name + "_band_stop"
+        hs_bs_interval = hs.domain[0]
+        hs_bs_len = hs_bs_interval.upperBound \
+                                        - hs_bs_interval.lowerBound + 1
+        hs_bs = Wave(Complex, hs_bs_name, hs_bs_len, in_var)
+        cond1 = Condition(Abs(fs(in_var)), '>', low_cutoff) \
+                        & Condition(Abs(fs(in_var)), '<', high_cutoff)
+        cond2 = Condition(Abs(fs(in_var)), '<=', low_cutoff) \
+                        | Condition(Abs(fs(in_var)), '>=', high_cutoff)
+        hs_bs.defn = [ Case(cond1, hs(in_var) * factor), \
+                                            Case(cond2, hs(in_var)) ]
+
+        scaled_bs_name = "_" + out_name + "_scaled"
+        scaled_bs = hs_bs.ifft(scaled_bs_name, N, real_input=ri)
+
+        bs = Wave(out_typ, out_name, N, in_var)
+        bs.defn = [ scaled_bs(in_var) / Cast(Double, N) ]
+        return bs
+
     @classmethod
     def fftfreq(cls, n, out_name, real_input=True):
         nt = getType(n)
