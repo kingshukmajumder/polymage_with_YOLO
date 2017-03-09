@@ -1775,6 +1775,39 @@ class Wave(Function):
         suf_down.defn = [ sig_up_fir(in_var * down) ]
         return suf_down
 
+    def low_pass(self, cutoff, out_name, factor=0):
+        ct = getType(cutoff)
+        assert ct is Double or ct is Float
+
+        N = self._len
+
+        in_var = self._variables[0]
+        out_typ = self._typ
+
+        hs_name = "_" + self._name + "_fft"
+        hs = self.fft(hs_name)
+
+        fs_name = hs_name + "freq"
+        ri = out_typ is not Complex
+        fs = Wave.fftfreq(N, fs_name, real_input=ri)
+
+        hs_lp_name = hs_name + "_low_pass"
+        hs_lp_interval = hs.domain[0]
+        hs_lp_len = hs_lp_interval.upperBound \
+                                        - hs_lp_interval.lowerBound + 1
+        hs_lp = Wave(Complex, hs_lp_name, hs_lp_len, in_var)
+        cond1 = Condition(fs(in_var), '>', cutoff)
+        cond2 = Condition(fs(in_var), '<=', cutoff)
+        hs_lp.defn = [ Case(cond1, hs(in_var) * factor), \
+                                            Case(cond2, hs(in_var)) ]
+
+        scaled_lp_name = "_" + out_name + "_scaled"
+        scaled_lp = hs_lp.ifft(scaled_lp_name, N, real_input=ri)
+
+        lp = Wave(out_typ, out_name, N, in_var)
+        lp.defn = [ scaled_lp(in_var) / Cast(Double, N) ]
+        return lp
+
     @classmethod
     def fftfreq(cls, n, out_name, real_input=True):
         nt = getType(n)

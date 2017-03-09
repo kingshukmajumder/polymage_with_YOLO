@@ -37,6 +37,7 @@ def low_pass(pipe_data):
     out_sig = Wave(Double, "out_sig", N, x)
     out_sig.defn = [ scaled_sig(x) / N ]
 
+    out_sig1 = sig.low_pass(C, "out_sig1", F)
     out_sig2 = Wave.fftfreq(N, "out_sig2", real_input=False)
 
-    return out_sig, out_sig2
+    return out_sig, out_sig1, out_sig2
