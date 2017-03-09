@@ -25,9 +25,7 @@ def low_pass(pipe_data):
     sig = Wave(Double, "sig", N, x)
     hs = sig.fft("hs")
 
-    fsran = Interval(UInt, 0, N / 2)
-    fs = Function(([x], [fsran]), Double, "fs")
-    fs.defn = [ Cast(Double, x) / N ]
+    fs = Wave.fftfreq(N, "fs")
 
     hs_lp = Wave(Complex, "hs_lp", N / 2 + 1, x)
     cond1 = Condition(fs(x), '>', C)
@@ -39,4 +37,6 @@ def low_pass(pipe_data):
     out_sig = Wave(Double, "out_sig", N, x)
     out_sig.defn = [ scaled_sig(x) / N ]
 
-    return out_sig
+    out_sig2 = Wave.fftfreq(N, "out_sig2", real_input=False)
+
+    return out_sig, out_sig2

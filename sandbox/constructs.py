@@ -1775,6 +1775,33 @@ class Wave(Function):
         suf_down.defn = [ sig_up_fir(in_var * down) ]
         return suf_down
 
+    @classmethod
+    def fftfreq(cls, n, out_name, real_input=True):
+        nt = getType(n)
+        assert nt is Int or nt is UInt
+
+        if not real_input:
+            return cls.__cfftfreq(n, out_name)
+
+        out_typ = Double
+        out_len = n // 2 + 1
+        out_var = Variable(UInt, "_" + out_name + str(0))
+
+        fs = Wave(out_typ, out_name, out_len, out_var)
+        fs.defn = [ Cast(Double, out_var) / n ]
+        return fs
+
+    @classmethod
+    def __cfftfreq(cls, n, out_name):
+        out_typ = Double
+        out_len = n
+        out_var = Variable(UInt,  "_" + out_name + str(0))
+
+        fs = Wave(out_typ, out_name, out_len, out_var)
+        fs.defn = [ Select(Condition(n - out_var, '<=', n // 2), \
+                    out_var - n, Cast(Int, out_var)) / Cast(Double, n) ]
+        return fs
+
     def fft(self, out_name):
         if self._typ is Complex:
             return self.__cfft(out_name)
