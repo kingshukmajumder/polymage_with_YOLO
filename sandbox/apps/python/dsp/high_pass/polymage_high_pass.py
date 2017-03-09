@@ -39,4 +39,8 @@ def high_pass(pipe_data):
     out_sig = Wave(Double, "out_sig", N, x)
     out_sig.defn = [ scaled_sig(x) / N ]
 
-    return out_sig
+    sig_complex = Wave(Complex, "sig_complex", N, x)
+    sig_complex.defn = [ Cast(Complex, sig(x)) ]
+    out_sig2 = sig_complex.high_pass(C, "out_sig2", F)
+
+    return out_sig, out_sig2

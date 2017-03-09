@@ -49,13 +49,13 @@ def generate_graph(pipe, file_name, app_data):
 def build_high_pass(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_high_pass = high_pass(pipe_data)
+    out_high_pass, ohp2 = high_pass(pipe_data)
     
     N = pipe_data['N']
     C = pipe_data['C']
     F = pipe_data['F']
 
-    live_outs = [out_high_pass]
+    live_outs = [out_high_pass, ohp2]
     pipe_name = app_data['app']
 
     length = app_data['length']

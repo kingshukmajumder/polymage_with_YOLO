@@ -1796,8 +1796,8 @@ class Wave(Function):
         hs_lp_len = hs_lp_interval.upperBound \
                                         - hs_lp_interval.lowerBound + 1
         hs_lp = Wave(Complex, hs_lp_name, hs_lp_len, in_var)
-        cond1 = Condition(fs(in_var), '>', cutoff)
-        cond2 = Condition(fs(in_var), '<=', cutoff)
+        cond1 = Condition(Abs(fs(in_var)), '>', cutoff)
+        cond2 = Condition(Abs(fs(in_var)), '<=', cutoff)
         hs_lp.defn = [ Case(cond1, hs(in_var) * factor), \
                                             Case(cond2, hs(in_var)) ]
 
@@ -1807,6 +1807,39 @@ class Wave(Function):
         lp = Wave(out_typ, out_name, N, in_var)
         lp.defn = [ scaled_lp(in_var) / Cast(Double, N) ]
         return lp
+
+    def high_pass(self, cutoff, out_name, factor=0):
+        ct = getType(cutoff)
+        assert ct is Double or ct is Float
+
+        N = self._len
+
+        in_var = self._variables[0]
+        out_typ = self._typ
+
+        hs_name = "_" + self._name + "_fft"
+        hs = self.fft(hs_name)
+
+        fs_name = hs_name + "freq"
+        ri = out_typ is not Complex
+        fs = Wave.fftfreq(N, fs_name, real_input=ri)
+
+        hs_hp_name = hs_name + "_high_pass"
+        hs_hp_interval = hs.domain[0]
+        hs_hp_len = hs_hp_interval.upperBound \
+                                        - hs_hp_interval.lowerBound + 1
+        hs_hp = Wave(Complex, hs_hp_name, hs_hp_len, in_var)
+        cond1 = Condition(Abs(fs(in_var)), '<', cutoff)
+        cond2 = Condition(Abs(fs(in_var)), '>=', cutoff)
+        hs_hp.defn = [ Case(cond1, hs(in_var) * factor), \
+                                            Case(cond2, hs(in_var)) ]
+
+        scaled_hp_name = "_" + out_name + "_scaled"
+        scaled_hp = hs_hp.ifft(scaled_hp_name, N, real_input=ri)
+
+        hp = Wave(out_typ, out_name, N, in_var)
+        hp.defn = [ scaled_hp(in_var) / Cast(Double, N) ]
+        return hp
 
     @classmethod
     def fftfreq(cls, n, out_name, real_input=True):
