@@ -30,4 +30,5 @@ def convolve(pipe_data):
     convolution = Reduction(([z], [row2]), ([z, x], [row2, row1]), Double, "convolution")
     c = Condition(z - x, '<', N) & Condition(z - x, '>=', 0)
     convolution.defn = [ Case(c, Reduce(convolution(z), sig1(x) * sig2(z - x), Op.Sum)) ]
-    return convolution
+    convolution2 = sig1.convolve(sig2, "convolution2")
+    return convolution, convolution2

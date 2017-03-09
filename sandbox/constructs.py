@@ -1554,6 +1554,30 @@ class Wave(Function):
             newFunc.defn = newBody
         return newFunc
 
+    def convolve(self, other, out_name):
+        assert isinstance(other, Wave)
+        assert self._typ == other._typ
+
+        M = self._len
+        N = other._len
+
+        in_var = self._variables[0]
+        out_var = Variable(Int, "_" + out_name + str(0))
+        out_typ = self._typ
+
+        interval1 = Interval(UInt, 0, M-1)
+        interval2 = Interval(Int, 0, M+N-2)
+
+        convolution = Reduction(([out_var], [interval2]), \
+                        ([out_var, in_var], [interval2, interval1]), \
+                        out_typ, out_name)
+        c = Condition(out_var - in_var, '<', N) \
+                                & Condition(out_var - in_var, '>=', 0)
+        convolution.defn = [ Case(c, Reduce(convolution(out_var), \
+                                self(in_var) * other(out_var - in_var), \
+                                Op.Sum)) ]
+        return convolution
+
     def fft(self, out_name):
         if self._typ is Complex:
             return self.__cfft(out_name)

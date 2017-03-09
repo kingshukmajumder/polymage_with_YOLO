@@ -49,12 +49,12 @@ def generate_graph(pipe, file_name, app_data):
 def build_convolve(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_convolve = convolve(pipe_data)
+    out_convolve, oc2 = convolve(pipe_data)
     
     M = pipe_data['M']
     N = pipe_data['N']
 
-    live_outs = [out_convolve]
+    live_outs = [out_convolve, oc2]
     pipe_name = app_data['app']
 
     length1 = app_data['length1']
