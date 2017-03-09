@@ -22,6 +22,8 @@ def fftconvolve(pipe_data):
 
     sig1 = Wave(Double, "sig1", M)
     sig2 = Wave(Double, "sig2", N)
+    sig3 = Wave(Complex, "sig3", M)
+    sig4 = Wave(Complex, "sig4", N)
 
     sig1_zero_pad = Wave(Double, "sig1_zero_pad", M+N-1, x)
     cond1 = Condition(x, '<', M)
@@ -45,4 +47,7 @@ def fftconvolve(pipe_data):
     convolution = Wave(Double, "convolution", M + N - 1, x)
     convolution.defn = [ scaled_convolution(x) / (M + N - 1) ]
 
-    return convolution
+    convolution2 = sig1.fftconvolve(sig2, "convolution2")
+    convolution3 = sig3.fftconvolve(sig4, "convolution3")
+
+    return convolution, convolution2, convolution3

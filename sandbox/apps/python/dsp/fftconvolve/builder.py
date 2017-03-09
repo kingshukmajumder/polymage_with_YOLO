@@ -49,12 +49,12 @@ def generate_graph(pipe, file_name, app_data):
 def build_fftconvolve(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_fftconvolve = fftconvolve(pipe_data)
+    out_fftconvolve, ofc2, ofc3 = fftconvolve(pipe_data)
     
     M = pipe_data['M']
     N = pipe_data['N']
 
-    live_outs = [out_fftconvolve]
+    live_outs = [out_fftconvolve, ofc2, ofc3]
     pipe_name = app_data['app']
 
     length1 = app_data['length1']

@@ -20,16 +20,28 @@ def init_signals(app_data):
     # convert to float arrays
     IN = np.array(sig1)
     IN1 = np.array(sig2)
+    sig1 = [i * (1 + 1j) for i in sig1]
+    sig2 = [i * -1j for i in sig2]
+    IN2 = np.array(sig1)
+    IN3 = np.array(sig2)
     IN = IN.astype(np.float64).ravel()
     IN1 = IN1.astype(np.float64).ravel()
+    IN2 = IN2.astype(np.complex).ravel()
+    IN3 = IN3.astype(np.complex).ravel()
 
     # final output correlation value
     OUT = np.zeros(length1 + length2 - 1).astype(np.float64).ravel()
+    OUT1 = np.zeros(length1 + length2 - 1).astype(np.float64).ravel()
+    OUT2 = np.zeros(length1 + length2 - 1).astype(np.complex).ravel()
 
     sig_data = {}
     sig_data['IN'] = IN
     sig_data['IN1'] = IN1
+    sig_data['IN2'] = IN2
+    sig_data['IN3'] = IN3
     sig_data['OUT'] = OUT
+    sig_data['OUT1'] = OUT1
+    sig_data['OUT2'] = OUT2
 
     app_data['sig_data'] = sig_data
     app_data['length1'] = length1

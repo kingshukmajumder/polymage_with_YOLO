@@ -1609,6 +1609,55 @@ class Wave(Function):
                                 Op.Sum)) ]
         return correlation
 
+    def fftconvolve(self, other, out_name):
+        assert isinstance(other, Wave)
+        assert self._typ == other._typ
+
+        M = self._len
+        N = other._len
+
+        in_var = self._variables[0]
+        in_var_oth = other._variables[0]
+        out_var = Variable(UInt, "_" + out_name + str(0))
+        out_typ = self._typ
+
+        zp_name = "_" + self._name + "_zero_pad"
+        self_zero_pad = Wave(out_typ, zp_name, M+N-1, in_var)
+        cond1 = Condition(in_var, '<', M)
+        cond2 = Condition(in_var, '>=', M)
+        self_zero_pad.defn = [ Case(cond1, self(in_var)), \
+                                                        Case(cond2, 0) ]
+
+        zp_name_other = "_" + other._name + "_zero_pad"
+        other_zero_pad = Wave(out_typ, zp_name_other, M+N-1, in_var_oth)
+        cond3 = Condition(in_var_oth, '<', N)
+        cond4 = Condition(in_var_oth, '>=', N)
+        other_zero_pad.defn = [ Case(cond3, other(in_var_oth)), \
+                                                        Case(cond4, 0) ]
+
+        fft_name = zp_name + "_fft"
+        self_zp_fft = self_zero_pad.fft(fft_name)
+
+        fft_name_other = zp_name_other + "_fft"
+        other_zp_fft = other_zero_pad.fft(fft_name_other)
+
+        mult_name = fft_name + fft_name_other + "_mult"
+        mult_interval = self_zp_fft.domain[0]
+        mult_len = mult_interval.upperBound - mult_interval.lowerBound \
+                                                                    + 1
+        szf_ozf_mult = Wave(Complex, mult_name, mult_len, in_var)
+        szf_ozf_mult.defn = [ self_zp_fft(in_var) * other_zp_fft(in_var) ]
+
+        sc_name = "_" + out_name + "_scaled"
+        ri = out_typ is not Complex
+        scaled_convolution = szf_ozf_mult.ifft(sc_name, M+N-1, \
+                                                        real_input = ri)
+
+        convolution = Wave(out_typ, out_name, M+N-1, out_var)
+        convolution.defn = [ scaled_convolution(out_var) \
+                                            / Cast(Double, M + N - 1) ]
+        return convolution
+
     def fft(self, out_name):
         if self._typ is Complex:
             return self.__cfft(out_name)
