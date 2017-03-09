@@ -49,22 +49,18 @@ def generate_graph(pipe, file_name, app_data):
 def build_upfirdn(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_upfirdn = upfirdn(pipe_data)
+    out_upfirdn, ou2 = upfirdn(pipe_data)
 
     M = pipe_data['M']
     N = pipe_data['N']
-    U = pipe_data['U']
-    D = pipe_data['D']
 
-    live_outs = [out_upfirdn]
+    live_outs = [out_upfirdn, ou2]
     pipe_name = app_data['app']
 
     fir_len = app_data['fir_len']
     sig_len = app_data['sig_len']
-    up = app_data['up']
-    down = app_data['down']
 
-    p_estimates = [(M, fir_len), (N, sig_len), (U, up), (D, down)]
+    p_estimates = [(M, fir_len), (N, sig_len)]
     p_constraints = []
     #~ t_size = [16, 16]
     #~ g_size = 1

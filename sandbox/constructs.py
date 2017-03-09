@@ -1736,6 +1736,45 @@ class Wave(Function):
         sig_a.defn = [ scaled_sig_a(in_var) / Cast(Double, N) ]
         return sig_a
 
+    def upfirdn(self, h, out_name, up=1, down=1):
+        assert isinstance(h, Wave)
+        assert h._typ is Double
+
+        ut = getType(up)
+        dt = getType(down)
+
+        assert (ut is Int or ut is UInt) and (dt is Int or dt is UInt)
+
+        M = h._len
+        N = self._len
+
+        in_var = self._variables[0]
+        out_var = Variable(Int, "_" + out_name + str(0))
+        out_typ = self._typ
+
+        sig_up_name = "_" + self._name + "_up"
+        sig_up = Wave(out_typ, sig_up_name, N * up, in_var)
+        cond1 = Condition(in_var % up, '==', 0)
+        cond2 = Condition(in_var % up, '!=', 0)
+        sig_up.defn = [ Case(cond1, self(in_var / up)), Case(cond2, 0) ]
+
+        suf_interval = Interval(Int, 0, N*up+M-2)
+        coeff_interval = Interval(UInt, 0, M-1)
+
+        su_fir_name = sig_up_name + "_fir"
+        sig_up_fir = Reduction(([out_var], [suf_interval]), \
+                    ([out_var, in_var], [suf_interval, coeff_interval]), \
+                    out_typ, su_fir_name)
+        cond3 = Condition(out_var - in_var, '>=', 0) \
+                & Condition(out_var - in_var, '<', N*up)
+        sig_up_fir.defn = [ Case(cond3, Reduce(sig_up_fir(out_var), \
+                                sig_up(out_var - in_var) * h(in_var), \
+                                Op.Sum)) ]
+
+        suf_down = Wave(out_typ, out_name, (N*up+M+down-2)/down, in_var)
+        suf_down.defn = [ sig_up_fir(in_var * down) ]
+        return suf_down
+
     def fft(self, out_name):
         if self._typ is Complex:
             return self.__cfft(out_name)

@@ -13,13 +13,12 @@ from utils import *
 def call_pipe(app_data):
     fir_len = app_data['fir_len']
     sig_len = app_data['sig_len']
-    up = app_data['up']
-    down = app_data['down']
 
     sig_data = app_data['sig_data']
     IN = sig_data['IN']
     IN1 = sig_data['IN1']
     OUT = sig_data['OUT']
+    OUT1 = sig_data['OUT1']
 
     # lib function name
     func_name = 'pipeline_'+app_data['app']
@@ -27,13 +26,12 @@ def call_pipe(app_data):
 
     # lib function args
     pipe_args = []
-    pipe_args += [ctypes.c_int(down)]
     pipe_args += [ctypes.c_int(fir_len)]
     pipe_args += [ctypes.c_int(sig_len)]
-    pipe_args += [ctypes.c_int(up)]
     pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(OUT1.ctypes.data)]
 
     # call lib function
     pipe_func(*pipe_args)
@@ -54,6 +52,9 @@ def upfirdn(app_data):
 
     print('OUTPUT')
     print(app_data['sig_data']['OUT'])
+
+    print('OUTPUT using instance method')
+    print(app_data['sig_data']['OUT1'])
 
     print('IN')
     print(app_data['sig_data']['IN'])
