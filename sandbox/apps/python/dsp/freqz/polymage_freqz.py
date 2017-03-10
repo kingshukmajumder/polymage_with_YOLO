@@ -34,4 +34,5 @@ def freqz(pipe_data):
                       b(y) * Exp(Cast(Complex, -1.0j * w(z) * y)), \
                       Op.Sum) ]
 
-    return w, h
+    w2, h2 = b.freqz(("w2", "h2"))
+    return w, h, w2, h2

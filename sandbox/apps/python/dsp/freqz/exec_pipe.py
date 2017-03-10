@@ -19,6 +19,8 @@ def call_pipe(app_data):
     IN = sig_data['IN']
     OUT1 = sig_data['OUT1']
     OUT2 = sig_data['OUT2']
+    OUT3 = sig_data['OUT3']
+    OUT4 = sig_data['OUT4']
 
     # lib function name
     func_name = 'pipeline_'+app_data['app']
@@ -30,6 +32,8 @@ def call_pipe(app_data):
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT1.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT2.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(OUT3.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(OUT4.ctypes.data)]
 
     # call lib function
     pipe_func(*pipe_args)
@@ -49,10 +53,16 @@ def freqz(app_data):
         it += 1
 
     print('OUTPUT: w')
-    print(app_data['sig_data']['OUT2'])
+    print(app_data['sig_data']['OUT3'])
+
+    print('OUTPUT: w using instance method')
+    print(app_data['sig_data']['OUT4'])
 
     print('OUTPUT: h')
     print(app_data['sig_data']['OUT1'])
+
+    print('OUTPUT: h using instance method')
+    print(app_data['sig_data']['OUT2'])
 
     print('IN')
     print(app_data['sig_data']['IN'])
@@ -69,10 +79,10 @@ def freqz(app_data):
     print("Blue: low pass with cutoff frequency = 0.5 Hz")
     print("Red: band stop with low cutoff frequency = 0.3 Hz; high cutoff frequency = 0.8 Hz")
 
-    w1, h1 = app_data['sig_data']['OUT2'].copy(), app_data['sig_data']['OUT1'].copy()
+    w1, h1 = app_data['sig_data']['OUT3'].copy(), app_data['sig_data']['OUT1'].copy()
     app_data['sig_data']['IN'] = signal.firwin(41, [0.3, 0.8])
     call_pipe(app_data)
-    w2, h2 = app_data['sig_data']['OUT2'], app_data['sig_data']['OUT1']
+    w2, h2 = app_data['sig_data']['OUT3'], app_data['sig_data']['OUT1']
 
     assert len(w1) == len(w2) and all([i == j for i, j in zip(w1, w2)])
 

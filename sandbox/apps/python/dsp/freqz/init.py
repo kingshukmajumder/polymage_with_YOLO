@@ -21,13 +21,17 @@ def init_signals(app_data):
     IN = IN.astype(np.float64).ravel()
 
     # final output correlation value
-    OUT2 = np.zeros(512).astype(np.float64).ravel()
+    OUT4 = np.zeros(512).astype(np.float64).ravel()
+    OUT3 = np.zeros(512).astype(np.float64).ravel()
     OUT1 = np.zeros(512).astype(np.complex).ravel()
+    OUT2 = np.zeros(512).astype(np.complex).ravel()
 
     sig_data = {}
     sig_data['IN'] = IN
     sig_data['OUT1'] = OUT1
     sig_data['OUT2'] = OUT2
+    sig_data['OUT3'] = OUT3
+    sig_data['OUT4'] = OUT4
 
     app_data['sig_data'] = sig_data
     app_data['length'] = length

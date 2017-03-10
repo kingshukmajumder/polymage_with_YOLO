@@ -1878,6 +1878,38 @@ class Wave(Function):
         bs.defn = [ scaled_bs(in_var) / Cast(Double, N) ]
         return bs
 
+    def freqz(self, out_names):
+        assert self._typ is Double
+        assert isinstance(out_names, tuple)
+        assert len(out_names) == 2
+
+        N = self._len
+        in_var = self._variables[0]
+
+        w_name = out_names[0]
+        h_name = out_names[1]
+        w_typ = Double
+        h_typ = Complex
+
+        out_var = Variable(UInt, "_" + w_name + "_" + h_name + str(0))
+        out_len = 512
+
+        w = Wave(w_typ, w_name, out_len, out_var)
+        w.defn = [ Pi() / out_len * out_var ]
+
+        freq_int = Interval(UInt, 0, out_len-1)
+        coeff_int = Interval(UInt, 0, N-1)
+
+        h = Reduction(([out_var], [freq_int]), \
+                        ([out_var, in_var], [freq_int, coeff_int]), \
+                        h_typ, h_name)
+        h.defn = [ Reduce(h(out_var), \
+                      self(in_var) \
+                      * Exp(Cast(Complex, -1.0j * w(out_var) * in_var)), \
+                      Op.Sum) ]
+
+        return w, h
+
     @classmethod
     def get_window(cls, window, N, out_name):
         assert isinstance(window, str)

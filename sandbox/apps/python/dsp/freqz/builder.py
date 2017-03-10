@@ -49,11 +49,11 @@ def generate_graph(pipe, file_name, app_data):
 def build_freqz(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_freqz_w, out_freqz_h = freqz(pipe_data)
+    out_freqz_w, out_freqz_h, ow2, oh2 = freqz(pipe_data)
     
     N = pipe_data['N']
 
-    live_outs = [out_freqz_w, out_freqz_h]
+    live_outs = [out_freqz_w, out_freqz_h, ow2, oh2]
     pipe_name = app_data['app']
 
     length = app_data['length']
