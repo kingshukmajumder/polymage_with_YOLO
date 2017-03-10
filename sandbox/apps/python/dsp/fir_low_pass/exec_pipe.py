@@ -17,6 +17,7 @@ def call_pipe(app_data):
 
     sig_data = app_data['sig_data']
     OUT = sig_data['OUT']
+    OUT1 = sig_data['OUT1']
 
     # lib function name
     func_name = 'pipeline_'+app_data['app']
@@ -28,6 +29,7 @@ def call_pipe(app_data):
     pipe_args += [ctypes.c_int(length)]
     pipe_args += [ctypes.c_uint(win_type)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(OUT1.ctypes.data)]
 
     # call lib function
     pipe_func(*pipe_args)
@@ -48,6 +50,9 @@ def fir_low_pass(app_data):
 
     print('OUTPUT')
     print(app_data['sig_data']['OUT'])
+
+    print('OUTPUT using class method')
+    print(app_data['sig_data']['OUT1'])
 
     if timer == True:
         t2 = time.time()

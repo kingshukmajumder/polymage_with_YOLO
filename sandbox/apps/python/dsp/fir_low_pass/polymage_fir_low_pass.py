@@ -76,4 +76,5 @@ def fir_low_pass(pipe_data):
     out_coeffs = Wave(Double, "out_coeffs", N, x)
     out_coeffs.defn = [ scaled_coeffs(x) / coeffs_sum(0) ]
 
-    return out_coeffs
+    out_coeffs2 = Wave.firwin(N, F, "out_coeffs2", window='blackman-nuttall')
+    return out_coeffs, out_coeffs2

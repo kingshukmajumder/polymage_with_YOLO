@@ -78,4 +78,5 @@ def fir_band_pass(pipe_data):
     out_coeffs = Wave(Double, "out_coeffs", N, x)
     out_coeffs.defn = [ scaled_coeffs(x) / coeffs_sum(0) ]
 
-    return out_coeffs
+    out_coeffs2 = Wave.firwin(N, (FL, FH), "out_coeffs2", pass_zero=False)
+    return out_coeffs, out_coeffs2

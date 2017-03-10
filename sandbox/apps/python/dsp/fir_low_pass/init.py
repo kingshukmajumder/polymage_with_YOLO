@@ -18,9 +18,11 @@ def init_signals(app_data):
 
     # final FIR filter coefficients vector
     OUT = np.zeros(length).astype(np.float64).ravel()
+    OUT1 = np.zeros(length).astype(np.float64).ravel()
 
     sig_data = {}
     sig_data['OUT'] = OUT
+    sig_data['OUT1'] = OUT1
 
     app_data['sig_data'] = sig_data
     app_data['length'] = length

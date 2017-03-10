@@ -1948,6 +1948,83 @@ class Wave(Function):
         return win
 
     @classmethod
+    def firwin(cls, N, cutoff, out_name, window='hamming', pass_zero=True):
+        out_typ = Double
+        out_var = Variable(UInt, "_" + out_name + str(0))
+
+        win_name = "_" + out_name + "_window"
+        win = cls.get_window(window, N, win_name)
+        win_var = win._variables[0]
+
+        sc_name = "_" + out_name + "_scaled"
+        scaled_coeffs = Wave(Double, sc_name, N, out_var)
+        middle = (N - 1) // 2
+        cond1 = Condition(out_var, '==', middle)
+
+        scalar_int = Interval(UInt, 0, 0)
+        coeffs_int = Interval(UInt, 0, N-1)
+
+        cs_name = sc_name + "_sum"
+        coeffs_sum = Reduction(([win_var], [scalar_int]), \
+                        ([win_var, out_var], [scalar_int, coeffs_int]), \
+                        Double, cs_name)
+
+        if isinstance(cutoff, tuple):
+            assert len(cutoff) == 2
+            FL = cutoff[0]
+            FH = cutoff[1]
+            flt = getType(FL)
+            fht = getType(FH)
+            assert (flt is Double or flt is Float) \
+                                    and (fht is Double or fht is Float)
+
+            if pass_zero:
+                scaled_coeffs.defn = [ Select(cond1, \
+                                (1 - (FH - FL)) * win(out_var), \
+                                (Sin((out_var - middle) * Pi() * FL) \
+                                - Sin((out_var - middle) * Pi() * FH)) \
+                                / ((out_var - middle) * Pi()) \
+                                * win(out_var)) ]
+                coeffs_sum.defn = [ Reduce(coeffs_sum(win_var), \
+                                    scaled_coeffs(out_var), Op.Sum) ]
+            else:
+                scaled_coeffs.defn = [ Select(cond1,
+                                (FH - FL) * win(out_var), \
+                                (Sin((out_var - middle) * Pi() * FH) \
+                                - Sin((out_var - middle) * Pi() * FL)) \
+                                / ((out_var - middle) * Pi()) \
+                                * win(out_var)) ]
+                coeffs_sum.defn = [ Reduce(coeffs_sum(win_var), \
+                        scaled_coeffs(out_var) * Cos((out_var - middle) \
+                        * (Pi() * FH + Pi() * FL) * 0.5), Op.Sum) ]
+        else:
+            F = cutoff
+            ft = getType(F)
+            assert ft is Double or ft is Float
+
+            if pass_zero:
+                scaled_coeffs.defn = [ Select(cond1, \
+                                F * win(out_var), \
+                                Sin((out_var - middle) * Pi() * F) \
+                                / ((out_var - middle) * Pi()) \
+                                * win(out_var)) ]
+                coeffs_sum.defn = [ Reduce(coeffs_sum(win_var), \
+                                    scaled_coeffs(out_var), Op.Sum) ]
+            else:
+                scaled_coeffs.defn = [ Select(cond1,
+                                (1 - F) * win(out_var), \
+                                -Sin((out_var - middle) * Pi() * F) \
+                                / ((out_var - middle) * Pi()) \
+                                * win(out_var)) ]
+                coeffs_sum.defn = [ Reduce(coeffs_sum(win_var), \
+                        scaled_coeffs(out_var) * Cos((out_var - middle) \
+                        * Pi()), Op.Sum) ]
+
+        fir_coeffs = Wave(out_typ, out_name, N, out_var)
+        fir_coeffs.defn = [ scaled_coeffs(out_var) / coeffs_sum(0) ]
+        return fir_coeffs
+
+    @classmethod
     def fftfreq(cls, n, out_name, real_input=True):
         nt = getType(n)
         assert nt is Int or nt is UInt

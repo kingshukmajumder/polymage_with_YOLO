@@ -49,14 +49,14 @@ def generate_graph(pipe, file_name, app_data):
 def build_fir_band_stop(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_fir_band_stop = fir_band_stop(pipe_data)
+    out_fir_band_stop, ofbs2 = fir_band_stop(pipe_data)
     
     N = pipe_data['N']
     FL = pipe_data['FL']
     FH = pipe_data['FH']
     typ = pipe_data['typ']
 
-    live_outs = [out_fir_band_stop]
+    live_outs = [out_fir_band_stop, ofbs2]
     pipe_name = app_data['app']
 
     length = app_data['length']
