@@ -59,4 +59,9 @@ def window(pipe_data):
 
     windowed_signal = Wave(Double, "win_sig", N, x)
     windowed_signal.defn = [ sig(x) * win(x) ]
-    return windowed_signal
+
+    win2 = Wave.get_window('flat top', N, "win2")
+    windowed_signal2 = Wave(Double, "win_sig2", N, x)
+    windowed_signal2.defn = [ sig(x) * win2(x) ]
+
+    return windowed_signal, windowed_signal2

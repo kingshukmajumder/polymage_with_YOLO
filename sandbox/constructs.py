@@ -1879,6 +1879,75 @@ class Wave(Function):
         return bs
 
     @classmethod
+    def get_window(cls, window, N, out_name):
+        assert isinstance(window, str)
+
+        out_var = Variable(UInt, "_" + out_name + str(0))
+
+        order = Cast(Double, N-1)
+        alpha = 0.16
+        win = Wave(Double, out_name, N, out_var)
+
+        if window == 'hamming':
+            win.defn = [ 0.54 - 0.46*Cos((2*Pi()*out_var)/order) ]
+        elif window == 'hann' or window == 'hanning':
+            win.defn = [ 0.5 - 0.5*Cos((2*Pi()*out_var)/order) ]
+        elif window == 'bartlett':
+            win.defn = [ 1.0 - Abs(2*out_var/order - 1) ]
+        elif window == 'blackman':
+            win.defn = [ (1-alpha)/2 - 0.50*Cos((2*Pi()*out_var)/order) \
+                            + (alpha/2)*Cos((4*Pi()*out_var)/order) ]
+        elif window == 'nuttall':
+            win.defn = [ 0.355768 - 0.487396*Cos(2*Pi()*out_var/order) \
+                                + 0.144232*Cos(4*Pi()*out_var/order) \
+                                - 0.012604*Cos(6*Pi()*out_var/order) ]
+        elif window == 'blackman-harris':
+            win.defn = [ 0.35875 - 0.48829*Cos(2*Pi()*out_var/order) \
+                                + 0.14128*Cos(4*Pi()*out_var/order) \
+                                - 0.01168*Cos(6*Pi()*out_var/order) ]
+        elif window == 'blackman-nuttall':
+            win.defn = [ 0.3635819 - 0.4891775*Cos(2*Pi()*out_var/order) \
+                                + 0.1365995*Cos(4*Pi()*out_var/order) \
+                                - 0.0106411*Cos(6*Pi()*out_var/order) ]
+        elif window == 'flat top':
+            win.defn = [ 1 - 1.93*Cos(2*Pi()*out_var/order) \
+                                    + 1.29*Cos(4*Pi()*out_var/order) \
+                                    - 0.388*Cos(6*Pi()*out_var/order) \
+                                    + 0.028*Cos(8*Pi()*out_var/order) ]
+        elif window == 'rectangular' or window == 'dirichlet' \
+                or window == 'boxcar':
+            win.defn = [ 1 ]
+        elif window == 'triang':
+            win.defn = [ 1 - Abs((2*out_var - order) / (N + N % 2)) ]
+        elif window == 'parzen':
+            cond1 = Condition(out_var, '<=', (N)/4) \
+                                    | Condition(out_var, '>=', 3*(N+2)/4-1)
+            cond2 = Condition(4*out_var, '>', (N-3)) \
+                                    & Condition(4*out_var, '<=', 3*(N-1)+1)
+            win.defn = [ Case(cond1, 2 * (1 - Abs(order - 2.0*out_var) / N) \
+                                    * (1 - Abs(order - 2.0*out_var) / N) \
+                                    * (1 - Abs(order- 2.0*out_var) / N)), \
+                         Case(cond2, 1 - 6 \
+                                    * (Abs(order - 2.0*out_var) / N) \
+                                    * (Abs(order - 2.0*out_var) / N) \
+                                    + 6 \
+                                    * (Abs(order - 2.0*out_var) / N) \
+                                    * (Abs(order - 2.0*out_var) / N) \
+                                    * (Abs(order - 2.0*out_var) / N)) ]
+        elif window == 'bohman':
+            win.defn = [ (1 - Abs(2*out_var/order - 1)) \
+                                * Cos(Pi() * Abs(2*out_var/order - 1)) \
+                                + 1 / Pi() \
+                                * Sin(Pi() * Abs(2*out_var/order - 1)) ]
+        elif window == 'barthann':
+            win.defn = [ 0.62 - 0.48 * Abs(out_var / order - 0.5) \
+                                - 0.38 * Cos(2*Pi()*out_var / order) ]
+        else:
+            assert False,"get_window: unrecognized window type %s" % window
+
+        return win
+
+    @classmethod
     def fftfreq(cls, n, out_name, real_input=True):
         nt = getType(n)
         assert nt is Int or nt is UInt

@@ -49,12 +49,12 @@ def generate_graph(pipe, file_name, app_data):
 def build_window(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_window = window(pipe_data)
+    out_window, ow2 = window(pipe_data)
     
     N = pipe_data['N']
     typ = pipe_data['typ']
 
-    live_outs = [out_window]
+    live_outs = [out_window, ow2]
     pipe_name = app_data['app']
 
     length = app_data['length']

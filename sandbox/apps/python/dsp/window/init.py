@@ -13,7 +13,7 @@ def init_signals(app_data):
 
     # input signal
     length = 50000
-    win_type = 8
+    win_type = 7
     sig = np.repeat([0, 1, 1, 0, 1, 0, 0, 1], 6250)
 
     # convert to float arrays
@@ -22,10 +22,12 @@ def init_signals(app_data):
 
     # final output correlation value
     OUT = np.zeros(length).astype(np.float64).ravel()
+    OUT1 = np.zeros(length).astype(np.float64).ravel()
 
     sig_data = {}
     sig_data['IN'] = IN
     sig_data['OUT'] = OUT
+    sig_data['OUT1'] = OUT1
 
     app_data['sig_data'] = sig_data
     app_data['length'] = length
