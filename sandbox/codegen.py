@@ -1069,15 +1069,31 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
         final_index = timestep_param % 2
         to_array = comp.array[1]
         from_array = "_tbuf_"+str(id(comp.func.name)) + "["+str(final_index)+"]"
+
+        # Need to worry about function liveout arrays since these ptrs are
+        # passed by values and not reference. So do a memcpy instead of ptr
+        # aliasing.
         if comp.is_liveout:
             array_size = to_array.get_total_size()
             typ_size = genc.CSizeof(to_array.typ)
             size_expr = typ_size * array_size
-            copy_back_stmt = genc.c_memcpy(to_array, from_array, size_expr)
+            copy_back = genc.c_memcpy(to_array, from_array, size_expr)
         else:
-            copy_back_stmt = to_array.name + " = " + from_array
+            copy_back = to_array.name + " = " + from_array
 
-        body.add(genc.CStatement(copy_back_stmt))
+        copy_back_stmt = genc.CStatement(copy_back)
+
+        # Why do a memcpy every time even when the lhs was pointing to the rhs?
+        # (this depends on parameter T, but can still happen with probability
+        # 0.5)
+        # Avoid memcpy when result is already aliased to the out array
+        condition = Condition(final_index, '==', 0)
+        ccond = generate_c_cond(pipeline, condition, cparam_map, {})
+        cif = genc.CIfThen(ccond)
+        with cif.if_block as ifblock:
+            ifblock.add(copy_back_stmt)
+
+        body.add(cif)
 
     return
 
