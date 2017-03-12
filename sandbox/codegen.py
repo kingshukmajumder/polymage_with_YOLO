@@ -1067,10 +1067,17 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
         comp = g.comps[0]
         timestep_param = comp.func._timesteps
         final_index = timestep_param % 2
-        copy_back = comp.array[1].name + " = "
-        copy_back += "_tbuf_"+str(id(comp.func.name))
-        copy_back += "["+str(final_index)+"]"
-        body.add(genc.CStatement(copy_back))
+        to_array = comp.array[1]
+        from_array = "_tbuf_"+str(id(comp.func.name)) + "["+str(final_index)+"]"
+        if comp.is_liveout:
+            array_size = to_array.get_total_size()
+            typ_size = genc.CSizeof(to_array.typ)
+            size_expr = typ_size * array_size
+            copy_back_stmt = genc.c_memcpy(to_array, from_array, size_expr)
+        else:
+            copy_back_stmt = to_array.name + " = " + from_array
+
+        body.add(genc.CStatement(copy_back_stmt))
 
     return
 
