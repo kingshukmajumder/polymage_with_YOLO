@@ -1060,38 +1060,58 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
             pass
 
     if g.is_tstencil_type:
-        # Point the resultant array from tstencil computation to the correct
-        # one in the tbuf, using the time dimension parameter from the TStencil
-        # definition. Final result after ping-ponging will be stored in
-        # tbuf[T%2], where T is the TStencil timesteps parameter.
+
         comp = g.comps[0]
         timestep_param = comp.func._timesteps
-        final_index = timestep_param % 2
-        to_array = comp.array[1]
-        from_array = "_tbuf_"+str(id(comp.func.name)) + "["+str(final_index)+"]"
 
-        # Need to worry about function liveout arrays since these ptrs are
-        # passed by values and not reference. So do a memcpy instead of ptr
-        # aliasing.
-        if comp.is_liveout:
-            array_size = to_array.get_total_size()
-            typ_size = genc.CSizeof(to_array.typ)
-            size_expr = typ_size * array_size
-            copy_back = genc.c_memcpy(to_array, from_array, size_expr)
-        else:
-            copy_back = to_array.name + " = " + from_array
+        # assumed indices for tstencil result and the array available for reuse
+        result_index = timestep_param % 2
+        avail_index = (timestep_param + 1) % 2
 
-        copy_back_stmt = genc.CStatement(copy_back)
-
+        # This is to generate the runtime condition for parameter T.
         # Why do a memcpy every time even when the lhs was pointing to the rhs?
         # (this depends on parameter T, but can still happen with probability
         # 0.5)
         # Avoid memcpy when result is already aliased to the out array
-        condition = Condition(final_index, '==', 0)
+        condition = Condition(result_index, '==', 0)
         ccond = generate_c_cond(pipeline, condition, cparam_map, {})
         cif = genc.CIfThen(ccond)
-        with cif.if_block as ifblock:
-            ifblock.add(copy_back_stmt)
+
+        # Now we generate memcpy or aliasing depending on whether comp is
+        # liveout or not
+
+        # Point the resultant array from tstencil computation to the correct
+        # one in the tbuf, using the time dimension parameter from the TStencil
+        # definition. Final result after ping-ponging will be stored in
+        # tbuf[T%2], where T is the TStencil timesteps parameter.
+        to_array = comp.array[1]
+        from_array = "_tbuf_"+str(id(comp.func.name))
+        from_array_0 = from_array + "["+str(result_index)+"]"
+        from_array_1 = from_array + "["+str(avail_index)+"]"
+
+        # Update the ptr to the tstencil result
+        if comp.is_liveout:
+            # Need to worry about function liveout arrays since these ptrs are #
+            # passed by values and not reference. So do a memcpy instead of ptr
+            # # aliasing.
+            array_size = to_array.get_total_size()
+            typ_size = genc.CSizeof(to_array.typ)
+            size_expr = typ_size * array_size
+            copy_back_result = genc.c_memcpy(to_array, from_array_0, size_expr)
+            copy_back_result_stmt = genc.CStatement(copy_back_result)
+            with cif.if_block as ifblock:
+                ifblock.add(copy_back_result_stmt)
+        else:
+            # alias the result ptr to the 1st index of ping pong buffer
+            copy_back_result = comp.array[1].name + " = " + from_array_0
+            copy_back_result_stmt = genc.CStatement(copy_back_result)
+            # alias the ptr to the other array (not-the-result) to the 0th
+            # index. so that the correct array is deallocated
+            copy_back_avail = comp.array[0].name + " = " + from_array_1
+            copy_back_avail_stmt = genc.CStatement(copy_back_avail)
+            with cif.if_block as ifblock:
+                ifblock.add(copy_back_avail_stmt)
+                ifblock.add(copy_back_result_stmt)
 
         body.add(cif)
 
