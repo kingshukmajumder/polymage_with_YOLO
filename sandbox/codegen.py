@@ -1063,11 +1063,10 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
         # Point the resultant array from tstencil computation to the correct
         # one in the tbuf, using the time dimension parameter from the TStencil
         # definition. Final result after ping-ponging will be stored in
-        # tbuf[(T+1)%2], where T is the TStencil timesteps parameter.
+        # tbuf[T%2], where T is the TStencil timesteps parameter.
         comp = g.comps[0]
-        #import pudb; pudb.set_trace();
         timestep_param = comp.func._timesteps
-        final_index = (timestep_param + 1) % 2
+        final_index = timestep_param % 2
         copy_back = comp.array[1].name + " = "
         copy_back += "_tbuf_"+str(id(comp.func.name))
         copy_back += "["+str(final_index)+"]"
