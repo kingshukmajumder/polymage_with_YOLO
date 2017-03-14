@@ -2057,6 +2057,36 @@ class Wave(Function):
         return fir_coeffs
 
     @classmethod
+    def kaiserord(cls, ripple, width):
+        rt = getType(ripple)
+        wt = getType(width)
+        assert (rt is Double or rt is Float) \
+                                    and (wt is Double or wt is Float)
+
+        A = Abs(ripple)
+        beta = cls.kaiser_beta(A)
+
+        numtaps = (A - 7.95) / 2.285 / (Pi() * width) + 1
+
+        numtaps_as_int = Cast(UInt, numtaps)
+        return Select(Condition(numtaps, '==', numtaps_as_int), \
+                            numtaps_as_int, Cast(UInt, numtaps + 1)), \
+                            beta
+
+    @classmethod
+    def kaiser_beta(cls, a):
+        at = getType(a)
+        assert (at is Double or at is Float)
+
+        a = Cast(Double, a)
+        cond1 = Condition(a, '>', 50)
+        cond2 = Condition(a, '>', 21)
+        beta = Select(cond1, 0.1102 * (a - 8.7), \
+                            Select(cond2, 0.5842 * Pow((a - 21), 0.4) \
+                            + 0.07886 * (a - 21), Cast(Double, 0.0)))
+        return beta
+
+    @classmethod
     def fftfreq(cls, n, out_name, real_input=True):
         nt = getType(n)
         assert nt is Int or nt is UInt

@@ -22,8 +22,10 @@ def test_reduction():
 
     cond = Condition(z, '<', x)
 
+    N, beta = Wave.kaiserord(2.285 + 7.95 - 0.001, 1/Pi())
+
     s = Reduction(([x], [row]), ([x, z, y], [row, row, col]), Float, "s")
-    s.defn = [ Case(cond, Reduce(s(x), img(z, y) * img(x, y), Op.Sum)) ]
+    s.defn = [ Case(cond, Reduce(s(x), N * beta * img(z, y) * img(x, y), Op.Sum)) ]
 
     pipeline = buildPipeline([s], \
                              pipe_name="s")
