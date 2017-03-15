@@ -151,6 +151,9 @@ class CAbs(Abs):
     def __init__(self, _expr):
         Abs.__init__(self, _expr)
 
+class CChbEvl(ChbEvl):
+    def __init__(self, _expr1, _expr2):
+        ChbEvl.__init__(self, _expr1, _expr2)
 
 class CExpression(AbstractExpression):
     pass

@@ -251,6 +251,20 @@ class Abs(InbuiltFunction):
     def __str__(self):
         return "std::abs(" +  self._args[0].__str__() +  ")"
 
+class ChbEvl(InbuiltFunction):
+    def __init__(self, x, arr_typ):
+        InbuiltFunction.__init__(self, x, arr_typ)
+
+    def getType(self):
+        return Double
+
+    def clone(self):
+        return ChbEvl(self._args[0].clone(), self._args[1].clone())
+
+    def __str__(self):
+        return "chbevl(" + self._args[0].__str__() + ", " \
+                                    + self._args[1].__str__() + ")"
+
 class Cast(AbstractExpression):
     def __init__(self, _typ, _expr):
         _expr = Value.numericToValue(_expr)
@@ -1912,6 +1926,9 @@ class Wave(Function):
 
     @classmethod
     def get_window(cls, window, N, out_name):
+        if isinstance(window, tuple):
+            assert len(window) == 2
+            window, beta = window[0], window[1]
         assert isinstance(window, str)
 
         out_var = Variable(UInt, "_" + out_name + str(0))
@@ -1974,10 +1991,24 @@ class Wave(Function):
         elif window == 'barthann':
             win.defn = [ 0.62 - 0.48 * Abs(out_var / order - 0.5) \
                                 - 0.38 * Cos(2*Pi()*out_var / order) ]
+        elif window == 'kaiser':
+            alpha = order / 2.0
+            win.defn = [ cls.__i0(beta * Sqrt(1 \
+                                        - ((out_var - alpha) / alpha) \
+                                        * ((out_var - alpha) / alpha))) \
+                                        / cls.__i0(beta) ]
         else:
             assert False,"get_window: unrecognized window type %s" % window
 
         return win
+
+    @classmethod
+    def __i0(cls, x):
+        x = Abs(Cast(Double, x))
+        y = x / 2.0 - 2.0
+        return Select(Condition(x, '<=', 8.0), \
+                    Exp(x) * ChbEvl(y, 0), \
+                    Exp(x) * ChbEvl(32.0 / x - 2.0, 1) / Sqrt(x))
 
     @classmethod
     def firwin(cls, N, cutoff, out_name, window='hamming', pass_zero=True):

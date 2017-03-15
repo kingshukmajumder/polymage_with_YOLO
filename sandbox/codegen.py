@@ -875,6 +875,14 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
                                 cparam_map, cvar_map,
                                 scratch_map, prologue_stmts)
         return genc.CAbs(cexpr)
+    if isinstance(exp, ChbEvl):
+        cexpr1 = generate_c_expr(pipe, exp.arguments[0],
+                                cparam_map, cvar_map,
+                                scratch_map, prologue_stmts)
+        cexpr2 = generate_c_expr(pipe, exp.arguments[1],
+                                cparam_map, cvar_map,
+                                scratch_map, prologue_stmts)
+        return genc.CChbEvl(cexpr1, cexpr2)
     if isinstance(exp, Cast):
         cexpr = generate_c_expr(pipe, exp.expression,
                                 cparam_map, cvar_map,
@@ -1141,6 +1149,7 @@ def generate_code_for_pipeline(pipeline,
         inc_block.add(genc.CInclude('cmath'))
         inc_block.add(genc.CInclude('complex'))
         inc_block.add(genc.CInclude('string.h'))
+        inc_block.add(genc.CInclude('dsp_helpers.h'))
         if 'pool_alloc' in pipeline.options:
             inc_block.add(genc.CInclude('simple_pool_allocator.h'))
         if 'blas' in pipeline.options:
