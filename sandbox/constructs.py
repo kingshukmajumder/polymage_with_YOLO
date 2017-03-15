@@ -1685,12 +1685,12 @@ class Wave(Function):
         out_var = Variable(Int, "_" + out_name + str(0))
         out_typ = self._typ
 
-        b_norm_name = "_" + b._name + "_norm"
+        b_norm_name = "_" + b._name + "_norm_" + out_name
         b_var = b._variables[0]
         b_norm = Wave(Double, b_norm_name, M, b_var)
         b_norm.defn = [ Case(Condition(N, '>', 0), b(b_var) / a(0)) ]
 
-        a_norm_name = "_" + a._name + "_norm"
+        a_norm_name = "_" + a._name + "_norm_" + out_name
         a_var = a._variables[0]
         a_norm = Wave(Double, a_norm_name, N, a_var)
         a_norm.defn = [ a(a_var) / a(0) ]
@@ -1779,10 +1779,14 @@ class Wave(Function):
         sig_up_fir = Reduction(([out_var], [suf_interval]), \
                     ([out_var, in_var], [suf_interval, coeff_interval]), \
                     out_typ, su_fir_name)
+        if M == 1:
+            to_mult = (sig_up_fir(out_var) + 1) // (sig_up_fir(out_var) + 1)
+        else:
+            to_mult = 1
         cond3 = Condition(out_var - in_var, '>=', 0) \
                 & Condition(out_var - in_var, '<', N*up)
         sig_up_fir.defn = [ Case(cond3, Reduce(sig_up_fir(out_var), \
-                                sig_up(out_var - in_var) * h(in_var), \
+                                to_mult * sig_up(out_var - in_var) * h(in_var), \
                                 Op.Sum)) ]
 
         suf_down = Wave(out_typ, out_name, (N*up+M+down-2)/down, in_var)
