@@ -1924,6 +1924,48 @@ class Wave(Function):
 
         return w, h
 
+    def interp_fft(self, r, out_name):
+        rt = getType(r)
+        assert (rt is Int or rt is UInt)
+
+        N = self._len
+
+        in_var = self._variables[0]
+        out_var = Variable(UInt, "_" + out_name + str(0))
+        out_typ = self._typ
+        out_len = N * r
+
+        if self._typ is Complex:
+            sig_complex = self
+        else:
+            sc_name = "_" + self._name + "_complex"
+            sig_complex = Wave(Complex, sc_name, N, in_var)
+            sig_complex.defn = [ Cast(Complex, self(in_var)) ]
+
+        sc_fft_name = sc_name + "_fft"
+        sig_complex_fft = sig_complex.fft(sc_fft_name)
+
+        Y_name = sc_name + "_zero_inserted"
+        Y = Wave(Complex, Y_name, out_len, out_var)
+        cond1 = Condition(2 * out_var, '<', N)
+        cond2 = Condition(out_var, '>=', (N+1)//2) \
+                            & Condition(N - out_len + out_var, '<', (N+2)//2)
+        cond3 = Condition(N - out_len + out_var, '>=', (N+1)//2)
+        Y.defn = [ Case(cond1, sig_complex_fft(out_var)), \
+                   Case(cond2, 0), \
+                   Case(cond3, sig_complex_fft(N - out_len + out_var)) ]
+
+        ys_name = "_" + out_name + "_scaled"
+        y_scaled = Y.ifft(ys_name, out_len, real_input=False)
+
+        y = Wave(out_typ, out_name, out_len, out_var)
+        if out_typ is Complex:
+            y.defn = [ y_scaled(out_var) / Cast(Double, N) ]
+        else:
+            y.defn = [ Real(y_scaled(out_var)) / Cast(Double, N) ]
+
+        return y
+
     @classmethod
     def get_window(cls, window, N, out_name):
         if isinstance(window, tuple):
