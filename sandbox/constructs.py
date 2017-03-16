@@ -1141,6 +1141,14 @@ class Function(object):
         assert(len(mat1.variables) == len(mat2.variables))
         return Matrix.mat_multiplication(mat1, mat2)
 
+    def __add__(self, other):
+        mat1 = self
+        mat2 = other
+        assert(mat1.is_mat_func)
+        if not isinstance(mat2, Matrix):
+            assert(mat2.is_mat_func)
+        return Matrix.mat_addition(mat1,mat2)
+
     def set_variables_and_intervals(self, var, intr):
         self._variables = var
         self._varDomain = intr
@@ -1308,7 +1316,6 @@ class Reduction(Function):
         else:
             return self._name
 
-
 class Matrix(Function):
     def __init__(self, _typ, _name, _dims, _var=None):
         _dims = [ Value.numericToValue(dim) for dim in _dims ]
@@ -1397,10 +1404,33 @@ class Matrix(Function):
 
         return Matrix.mat_multiplication(mat1, mat2)
 
+    def __add__(self, other):
+        mat1 = self
+        mat2 = other
+        return Matrix.mat_addition(mat1,mat2)
+
     @staticmethod
     def det(mat):
         # TODO: Add implementation
         return mat.dimensions[0]
+
+    @staticmethod
+    def mat_addition(mat1, mat2):
+        assert(len(mat1.variables) == len(mat2.variables))
+        assert(len(mat1.domain) == len(mat2.domain))
+        assert (len(mat1.dimensions) == len(mat2.dimensions))
+        for dim in range(len(mat1.dimensions)):
+            assert(mat1.dimensions[dim] == mat2.dimensions[dim])
+
+        assert(mat1.typ == mat2.typ)
+
+        name = mat1.name + '_' + mat2.name + '_add_' + random_num(2)
+        add = Function((mat1.variables, mat1.domain), mat1.typ, name)
+        add.defn = [mat1(*mat1.variables) + mat2(*mat1.variables)]
+        add.is_mat_func = True
+        add.dimensions = mat1.dimensions
+
+        return add
 
     @staticmethod
     def mat_multiplication(mat1,mat2):
@@ -1409,7 +1439,7 @@ class Matrix(Function):
         dimensions = []
         redn_dimensions = []
 
-        if isinstance(mat1, Matrix):
+        if type(mat1) == Matrix:
             total_dimension_mat1 = mat1.dimensions.__len__()
             intervals = intervals.__add__(mat1.intervals[0:total_dimension_mat1 - 1])
         else:
@@ -1420,7 +1450,7 @@ class Matrix(Function):
         dimensions = dimensions.__add__(mat1.dimensions[0:total_dimension_mat1 - 1])
         redn_dimensions = redn_dimensions.__add__(mat1.dimensions)
 
-        if isinstance(mat2, Matrix):
+        if type(mat2) == Matrix:
             total_dimension_mat2 = mat2.dimensions.__len__()
             intervals = intervals.__add__(mat2.intervals[1:total_dimension_mat2])
         else:
@@ -1477,6 +1507,7 @@ class Matrix(Function):
         matmul_as_reduction.reductionDimensions = redn_dimensions
 
         return matmul_as_reduction
+
 
 class Wave(Function):
     def __init__(self, _typ, _name, _len, _var=None):

@@ -39,8 +39,7 @@ def mat_ops(pipe_data):
     # return scalar_mul
 
     # Element-wise addition
-    add = Matrix(Double, "add", [R, C], [x, y])
-    add.defn = [scalar_mul(x,y) + mat2(x,y)]
+    add = scalar_mul + mat2
     #return add
     
     # Element-wise subtraction
