@@ -701,6 +701,19 @@ class PolyRep(object):
                 read_var_names.append(str(var))
         return read_var_names,eqs
 
+    def add_equality_constraints_to_access_maps(self, read_var_names, read_basic_map):
+        for i in range(len(read_var_names)):
+            ineq_coeff = []
+            eq_coeff = []
+            in_pos = read_basic_map.find_dim_by_name(isl._isl.dim_type.in_, read_var_names[i])
+            out_pos = read_basic_map.find_dim_by_name(isl._isl.dim_type.out, read_var_names[i])
+            coeff = {}
+            coeff[('out', out_pos)] = -1
+            coeff[(('in', in_pos))] = 1
+            eq_coeff.append(coeff)
+            read_basic_map = add_constraints(read_basic_map, ineq_coeff, eq_coeff)
+        return read_basic_map
+
     # Function updates the read and write access dictionary for each poly_part
     def update_read_and_write_access(self, comp):
         params = []
@@ -732,6 +745,7 @@ class PolyRep(object):
                 read_basic_map = read_basic_map.set_tuple_name(isl._isl.dim_type.in_,
                                                  part.sched.get_tuple_name(isl._isl.dim_type.in_))
                 read_basic_map = read_basic_map.set_tuple_name(isl._isl.dim_type.out, ref.objectRef.name)
+                read_basic_map = self.add_equality_constraints_to_access_maps(read_var_names,read_basic_map)
                 if len(eqs) > 0:
                     read_basic_map = add_constraints(read_basic_map, [], eqs)
                 if read_union_map is None:
@@ -748,6 +762,7 @@ class PolyRep(object):
             write_basic_map = isl.BasicMap.universe(write_space)
             write_basic_map = write_basic_map.set_tuple_name(isl._isl.dim_type.in_,
                                                            part.sched.get_tuple_name(isl._isl.dim_type.in_))
+            write_basic_map = self.add_equality_constraints_to_access_maps(var_names, write_basic_map)
             write_basic_map = write_basic_map.set_tuple_name(isl._isl.dim_type.out, comp.func.name)
             if write_union_map is None:
                 write_union_map = isl.UnionMap.from_basic_map(write_basic_map)
