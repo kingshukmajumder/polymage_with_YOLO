@@ -76,9 +76,9 @@ def parse_args():
                       help='True : generate .dot & .png file of pipeline graph, \
                             False: don\'t')
 
-    parser.add_option('--matrix', '--matrix',
+    parser.add_option('--pluto', '--pluto',
                       action='store_true',
-                      dest='matrix',
+                      dest='pluto',
                       default=False,
                       help='True : If it is Matrix execution, \
                             False: Normal image processing application')

@@ -11,7 +11,7 @@ def init_images(app_data):
 
     app_args = app_data['app_args']
 
-    # input matrix: 
+    # input pluto: 
     rows1, cols1 = 128,128
     #rows2, cols2 = 128,128
     mat1 = np.full((rows1,cols1),7)
@@ -62,8 +62,8 @@ def get_input(app_data):
     # pool allocate option
     app_data['pool_alloc'] = bool(app_args.pool_alloc)
     app_data['blas'] = bool(app_args.blas)
-    app_data['matrix'] = bool(app_args.matrix)
-    if(app_data['matrix']):
+    app_data['pluto'] = bool(app_args.pluto)
+    if(app_data['pluto']):
         # By default we add the tile size and 32
         if(app_args.tiles):
             app_data['tiles'] = app_args.tiles

@@ -14,8 +14,8 @@ def init_images(app_data):
     # input matrix: 
     rows1 = 128
     mat1 = np.full((rows1,rows1),7)
-    vec1 = np.full((rows1, 1),7)
-    vec2 = np.full((rows1, 1),7)
+    vec1 = np.full((rows1),7)
+    vec2 = np.full((rows1),7)
 
     # convert to float image
     IN = np.array(mat1)
@@ -32,8 +32,8 @@ def init_images(app_data):
            mat1[i][j] = (i * j % rows1) / rows1 
 
     # final output image
-    OUT = np.zeros((rows1, 1), np.float64).ravel()
-    OUT1 = np.zeros((rows1, 1), np.float64).ravel()
+    OUT = np.zeros((rows1), np.float64).ravel()
+    OUT1 = np.zeros((rows1), np.float64).ravel()
 
     img_data = {}
     img_data['IN'] = IN
@@ -64,8 +64,8 @@ def get_input(app_data):
     # pool allocate option
     app_data['pool_alloc'] = bool(app_args.pool_alloc)
     app_data['blas'] = bool(app_args.blas)
-    app_data['matrix'] = bool(app_args.matrix)
-    if(app_data['matrix']):
+    app_data['pluto'] = bool(app_args.pluto)
+    if(app_data['pluto']):
         # By default we add the tile size and 32
         if(app_args.tiles):
             app_data['tiles'] = app_args.tiles

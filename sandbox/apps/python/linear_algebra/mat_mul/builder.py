@@ -84,7 +84,7 @@ def build_matmul(app_data):
                     ]
 
     # Pluto schedule requires tile.sizes file
-    if(app_data['matrix']):
+    if(app_data['pluto']):
         t_size = app_data['tiles'].split(',')
         create_tile_sizes_file(t_size)
 
@@ -98,8 +98,8 @@ def build_matmul(app_data):
         opts += ['pool_alloc']
     if app_data['blas']:
         opts += ['blas']
-    if app_data['matrix']:
-        opts += ['matrix']
+    if app_data['pluto']:
+        opts += ['pluto']
 
     pipe = buildPipeline(live_outs,
                          param_estimates=p_estimates,

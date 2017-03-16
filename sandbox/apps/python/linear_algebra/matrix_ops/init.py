@@ -12,7 +12,7 @@ def init_images(app_data):
     app_args = app_data['app_args']
 
     # input matrix: 
-    rows, cols = 256,256
+    rows, cols = 256, 256
     mat1 = np.full((rows,cols),7)
     mat2 = np.full((rows,cols),7)
 
@@ -55,7 +55,7 @@ def get_input(app_data):
 
     app_data['blas'] = bool(app_args.blas)
 
-    app_data['matrix'] = bool(app_args.matrix)
+    app_data['pluto'] = bool(app_args.pluto)
 
     return
 

@@ -68,8 +68,8 @@ def get_input(app_data):
     # pool allocate option
     app_data['pool_alloc'] = bool(app_args.pool_alloc)
     app_data['blas'] = bool(app_args.blas)
-    app_data['matrix'] = bool(app_args.matrix)
-    if(app_data['matrix']):
+    app_data['pluto'] = bool(app_args.pluto)
+    if(app_data['pluto']):
         # By default we add the tile size and 32
         if(app_args.tiles):
             app_data['tiles'] = app_args.tiles

@@ -75,8 +75,8 @@ def format_schedule_constraints_without_align_scale(dim_in, dim_out,level_no):
     for i in range(1, dim_out):
         if not dim_set[i]:
             coeff = {}
-            coeff[('out', i)] = 1
-            coeff[('constant', 0)] = 0
+            coeff[('out', i)] = -1
+            coeff[(('in', i - 1))] = 1
             eq_coeff.append(coeff)
     return [ineq_coeff, eq_coeff]
 
