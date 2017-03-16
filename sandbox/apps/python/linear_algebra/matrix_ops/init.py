@@ -19,11 +19,11 @@ def init_images(app_data):
     # convert to float image
     IN = np.array(mat1)
     IN1 = np.array(mat2)
-    IN = IN.astype(np.float32).ravel()
-    IN1 = IN.astype(np.float32).ravel()
+    IN = IN.astype(np.float64).ravel()
+    IN1 = IN.astype(np.float64).ravel()
 
     # final output image
-    OUT = np.zeros((rows, cols), np.float32).ravel()
+    OUT = np.zeros((rows, cols), np.float64).ravel()
 
     img_data = {}
     img_data['IN'] = IN
