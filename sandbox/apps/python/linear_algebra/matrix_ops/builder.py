@@ -67,7 +67,7 @@ def build_matops(app_data):
     p_constraints = [ Condition(R, "==", rows), \
                       Condition(C, "==", cols) ]
     t_size = [16, 16]
-    g_size = 1
+    g_size = 10
     opts = []
     if app_data['early_free']:
         opts += ['early_free']

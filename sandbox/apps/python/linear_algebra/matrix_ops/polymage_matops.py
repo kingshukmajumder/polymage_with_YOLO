@@ -31,34 +31,23 @@ def mat_ops(pipe_data):
 
     # Multiplication
     mul = mat1 * mat2
-    # return mul
     
     # Scalar multiplication
-    scalar_mul = Matrix(Double, "scalar_mul", [R, C], [x, y])
-    scalar_mul.defn = [Case(cond, mul(x,y) * 10)]
-    # return scalar_mul
+    scalar_mul = Matrix.scalar_mul(mul, 10)
 
     # Element-wise addition
     add = scalar_mul + mat2
-    #return add
     
     # Element-wise subtraction
-    sub = Matrix(Double, "sub", [R, C], [x, y])
-    sub.defn = [add(x,y) - mat2(x,y)]
-    # return sub
+    sub = add - mat2
 
     # Element-wise multiplication
-    mul = Matrix(Float, "mul", [R, C], [x, y])
-    mul.defn = [mat1(x,y) * sub(x,y)]
-    #return mul
+    elem_mul = Matrix.elementwise_mul(mat1, sub)
 
     # Transpose of a matrix
-    transpose = Matrix(Double, "transpose", [R, C], [x, y])
-    transpose.defn = [sub(y, x)]
-    #return transpose
+    transpose = Matrix.transpose(elem_mul)
 
     # Element-wise division
-    div = Matrix(Double, "div", [R, C], [x, y])
-    div.defn = [transpose(x,y) / mat2(x,y)]
+    div = Matrix.elementwise_div(transpose, mat2)
     return div
     

@@ -378,6 +378,10 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
     array = poly_part.comp.array
     scratch = poly_part.comp.scratch
 
+    if poly_part.comp.func.description:
+        comment = genc.CComment(poly_part.comp.func.description)
+        body.add(comment)
+
     acc_scratch = [ False for i in range(0, dom_len) ]
     for i in range(0, dom_len):
         if i in poly_part.dim_tile_info:
