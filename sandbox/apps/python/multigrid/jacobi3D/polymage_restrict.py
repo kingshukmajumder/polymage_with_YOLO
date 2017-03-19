@@ -19,7 +19,7 @@ def restrict(U_, l, name, pipe_data):
 
     inner_box = interior[l-1]['inner_box']
 
-    W_ = Function(([z, y, x], [extent[l], extent[l], extent[l]]),
+    W_ = Function(([z, y, x], [extent[l-1], extent[l-1], extent[l-1]]),
                   Double, str(name))
 
     W_.defn = [ Case(inner_box,
