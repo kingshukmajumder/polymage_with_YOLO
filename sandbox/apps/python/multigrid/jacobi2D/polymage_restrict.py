@@ -18,7 +18,7 @@ def restrict(U_, l, name, pipe_data):
 
     inner_box = interior[l-1]['inner_box']
 
-    W_ = Function(([y, x], [extent[l], extent[l]]), Double, str(name))
+    W_ = Function(([y, x], [extent[l-1], extent[l-1]]), Double, str(name))
     W_.defn = [ Case(inner_box,
 # corners
                      (U_(2*y-1, 2*x-1)           \
