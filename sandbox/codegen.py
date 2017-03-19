@@ -1086,11 +1086,12 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
         # tbuf[T%2], where T is the TStencil timesteps parameter.
         to_array = comp.array[1]
         from_array = "_tbuf_"+str(id(comp.func.name))
-        from_array_0 = from_array + "["+str(result_index)+"]"
-        from_array_1 = from_array + "["+str(avail_index)+"]"
+        # from_array_0 = from_array + "["+str(result_index)+"]"
+        from_array_0 = from_array + "[0]"
+        from_array_1 = from_array + "[1]"
 
         # Update the ptr to the tstencil result
-        if comp.is_liveout:
+        if comp.is_output:
             # Need to worry about function liveout arrays since these ptrs are #
             # passed by values and not reference. So do a memcpy instead of ptr
             # # aliasing.
