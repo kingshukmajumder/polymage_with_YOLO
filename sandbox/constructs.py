@@ -1118,7 +1118,7 @@ class Function(object):
             _const = "const"
         newFunc = Function(varDom, self._typ, self._name, _const)
         newFunc.defn = newBody
-        newFunc.is_mat_func = self.is_mat_func
+        # newFunc.is_mat_func = self.is_mat_func
         newFunc.dimensions = self.dimensions
         newFunc.description = self.description
         return newFunc
