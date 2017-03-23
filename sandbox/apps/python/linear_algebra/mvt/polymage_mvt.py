@@ -17,8 +17,8 @@ def mvt(pipe_data):
     pipe_data['R'] = R
     
     mat1 = Matrix(Double, "mat1", [R, R])
-    vec1 = Matrix(Double, "vec1", [R, 1])
-    vec2 = Matrix(Double, "vec2", [R, 1])
+    vec1 = Vector(Double, "vec1", R)
+    vec2 = Vector(Double, "vec2", R)
 
     mul = mat1 * vec1
     mul1 = mat1 * vec2
