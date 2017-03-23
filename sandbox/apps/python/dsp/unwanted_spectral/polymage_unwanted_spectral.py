@@ -29,15 +29,13 @@ def unwanted_spectral(pipe_data):
 
     cutoff_hz = 1000
     taps1 = Wave.firwin(ntaps, cutoff_hz / nyq_rate, "taps1", window=('kaiser', beta))
-    a = Wave(Double, "a", 1)
-    a.defn = [ 1.0 ]
     filtered_x = y.lfilter_fir(taps1, "filtered_sig")
 
     ylp = Wave(Double, "ylp", N - ntaps + 1, x)
     ylp.defn = [ filtered_x(x + ntaps - 1) ]
 
     Fd = Fs//10
-    yds = ylp.upfirdn(a, "yds", down=10)
+    yds = ylp.downsample(10, "yds")
 
     nyq_rate = Fd / 2.0
     ripple_db = 60.0

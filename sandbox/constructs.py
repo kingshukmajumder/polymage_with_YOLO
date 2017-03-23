@@ -1521,7 +1521,7 @@ class Matrix(Function):
         return matmul_as_reduction
 
 class Wave(Function):
-    def __init__(self, _typ, _name, _len, _var=None):
+    def __init__(self, _typ, _name, _len, _var=None, _const=""):
         _len = Value.numericToValue(_len)
         assert(isinstance(_len, AbstractExpression))
         self._len = _len
@@ -1535,7 +1535,7 @@ class Wave(Function):
         variables = [self._var]
         self._variables = variables
         intervals = [Interval(UInt, 0, _len - 1)]
-        Function.__init__(self, (variables, intervals), _typ, _name)
+        Function.__init__(self, (variables, intervals), _typ, _name, _const)
 
     @property
     def length(self):
@@ -1562,7 +1562,10 @@ class Wave(Function):
     def clone(self):
         var = [v.clone() for v in self._variables]
         length = self.length
-        newFunc = Wave(self._typ, self._name, length, var[0])
+        _const = ""
+        if self.is_const_func:
+            _const = "const"
+        newFunc = Wave(self._typ, self._name, length, var[0], _const)
         if not self.isInput:
             newBody = [c.clone() for c in self._body]
             newFunc.defn = newBody
@@ -1815,6 +1818,20 @@ class Wave(Function):
         suf_down = Wave(out_typ, out_name, (N*up+M+down-2)/down, in_var)
         suf_down.defn = [ sig_up_fir(in_var * down) ]
         return suf_down
+
+    def downsample(self, down, out_name):
+        dt = getType(down)
+        assert (dt is Int or dt is UInt)
+
+        N = self._len
+
+        in_var = self._variables[0]
+        out_typ = self._typ
+
+        sig_down = Wave(out_typ, out_name, (N + down - 1)/down, in_var, \
+                                                                "const")
+        sig_down.defn = [ self(in_var * down) ]
+        return sig_down
 
     def low_pass(self, cutoff, out_name, factor=0):
         ct = getType(cutoff)
