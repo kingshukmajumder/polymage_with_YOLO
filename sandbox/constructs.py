@@ -1636,6 +1636,10 @@ class Vector(Matrix):
             newFunc.description = self.description
         return newFunc
 
+class Scalar(Matrix):
+    def __init__(self, _typ, _name):
+        Matrix.__init__(self, _typ, _name, [1])
+
 class Wave(Function):
     def __init__(self, _typ, _name, _len, _var=None):
         _len = Value.numericToValue(_len)
