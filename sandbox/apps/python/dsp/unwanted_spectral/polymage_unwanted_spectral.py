@@ -31,7 +31,7 @@ def unwanted_spectral(pipe_data):
     taps1 = Wave.firwin(ntaps, cutoff_hz / nyq_rate, "taps1", window=('kaiser', beta))
     a = Wave(Double, "a", 1)
     a.defn = [ 1.0 ]
-    filtered_x = y.lfilter(taps1, a, "filtered_sig")
+    filtered_x = y.lfilter_fir(taps1, "filtered_sig")
 
     ylp = Wave(Double, "ylp", N - ntaps + 1, x)
     ylp.defn = [ filtered_x(x + ntaps - 1) ]
@@ -47,7 +47,7 @@ def unwanted_spectral(pipe_data):
     cutoff_hz1 = 55
     cutoff_hz2 = 65
     taps2 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps2", window=('kaiser', beta))
-    filtered_x1 = yds.lfilter(taps2, a, "filtered_down_sig")
+    filtered_x1 = yds.lfilter_fir(taps2, "filtered_down_sig")
 
     M = yds.length
     ybs = Wave(Double, "ybs", M - ntaps, x)
