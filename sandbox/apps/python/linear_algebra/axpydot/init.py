@@ -16,7 +16,6 @@ def init_images(app_data):
     u = np.ndarray((rows))
     v = np.ndarray((rows))
     w = np.ndarray((rows))
-    z = np.ndarray((rows))
     
     r = np.ndarray((1))
 
@@ -26,13 +25,11 @@ def init_images(app_data):
         u[i] = (i * i + 2 * i + 1) % 256
         v[i] = (255 * i + 123) % 256
         w[i] = (i * i - 21) % 256
-        z[i] = 0.0
 
     # convert to float image
     IN_U = u
     IN_V = v
     IN_W = w
-    IN_Z = z
 
     # final output image
     OUT_R = r 
@@ -42,7 +39,6 @@ def init_images(app_data):
     img_data['IN_U'] = IN_U
     img_data['IN_V'] = IN_V
     img_data['IN_W'] = IN_W
-    img_data['IN_Z'] = IN_Z
     img_data['OUT_R'] = OUT_R
 
     app_data['img_data'] = img_data

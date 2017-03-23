@@ -18,7 +18,6 @@ def call_pipe(app_data):
     IN_U = img_data['IN_U']  
     IN_V = img_data['IN_V']  
     IN_W = img_data['IN_W']  
-    IN_Z = img_data['IN_Z']  
     OUT_R = img_data['OUT_R']
     
     # lib function name
@@ -31,7 +30,6 @@ def call_pipe(app_data):
     pipe_args += [ctypes.c_void_p(IN_U.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN_V.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN_W.ctypes.data)]
-    pipe_args += [ctypes.c_void_p(IN_Z.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT_R.ctypes.data)]
 
     # call lib function

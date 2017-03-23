@@ -24,21 +24,12 @@ def dgemvt(pipe_data):
     row = Interval(UInt, 0 , R-1)
     
     A = Matrix(Double, "A", [R, R], [i0, i1])
-    w = Matrix(Double, "w", [R], [i0])
-    x = Matrix(Double, "x", [R], [i0])
-    y = Matrix(Double, "y", [R], [i0])
-    z = Matrix(Double, "z", [R], [i0])
+    y = Vector(Double, "y", R)
+    z = Vector(Double, "z", R)
 
-    fn1 = Reduction(([i0], [row]), ([i0, i1], [row, row]), Double, "fn1")
-    fn1.defn = [ Reduce(fn1(i0), A(i1, i0) * y(i1) , Op.Sum) ]
+    A_transpose = Matrix.transpose(A)
 
-    fn2 = Function(([i0], [row]), Double, "fn2")
-    fn2.defn = [ beta * fn1(i0) + z(i0) ]
+    x = Vector.scalar_mul(A_transpose * y, beta) + z
+    w = Vector.scalar_mul(A * x, alpha)
 
-    fn3 = Reduction(([i0], [row]), ([i0, i1], [row, row]), Double, "fn3")
-    fn3.defn = [ Reduce(fn3(i0), A(i0, i1) * fn2(i1) , Op.Sum) ]
-    
-    fn4 = Function(([i0], [row]), Double, "fn4")
-    fn4.defn = [ alpha * fn3(i0) ]
-
-    return [fn2, fn4]
+    return [w, x]

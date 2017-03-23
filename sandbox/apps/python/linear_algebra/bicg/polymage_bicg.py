@@ -25,13 +25,12 @@ def bicg(pipe_data):
     col = Interval(UInt, 0 , C-1)
     
     A = Matrix(Double, "A", [R, C], [i0, i1])
-    p = Matrix(Double, "p", [C], [i0])
-    r = Matrix(Double, "r", [R], [i0])
+    p = Vector(Double, "p", C)
+    r = Vector(Double, "r", R)
 
-    s = Reduction(([i1], [col]), ([i0, i1], [row, col]), Double, "s")
-    s.defn = [ Reduce(s(i1), r(i0) * A(i0, i1) , Op.Sum) ]
+    r_transpose = Vector.transpose(r)
 
-    q = Reduction(([i0], [row]), ([i0, i1], [row, col]), Double, "q")
-    q.defn = [ Reduce(q(i0), A(i0, i1) * p(i1) , Op.Sum) ]
-    
+    s = r_transpose * A
+    q = A * p
+
     return [q, s]

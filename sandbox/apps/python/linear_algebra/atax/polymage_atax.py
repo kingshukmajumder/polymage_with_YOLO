@@ -22,17 +22,17 @@ def atax(pipe_data):
 
     i0 = Variable(UInt, 'i0')
     i1 = Variable(UInt, 'i1')
+    i2 = Variable(UInt, 'i2')
 
     row = Interval(UInt, 0 , R-1)
     col = Interval(UInt, 0 , C-1)
+    scalar = Interval(UInt, 0 , 0)
     
-    A = Matrix(Double, "A", [R, C], [i0, i1])
-    x = Matrix(Double, "x", [C], [i1])
+    A = Matrix(Double, "A", [R, C])
+    x = Vector(Double, "x", C)
 
-    fn1 = Reduction(([i0], [row]), ([i0, i1], [row, col]), Double, "fn1")
-    fn1.defn = [ Reduce(fn1(i0), A(i1, i0) * x(i1) , Op.Sum) ]
+    A_transpose = Vector.transpose(A)
 
-    y = Reduction(([i1], [col]), ([i0, i1], [row, col]), Double, "y")
-    y.defn = [ Reduce(y(i1), A(i0, i1) * fn1(i0) , Op.Sum) ]
+    y = A_transpose * (A * x)
     
     return y

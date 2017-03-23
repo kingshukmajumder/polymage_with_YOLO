@@ -24,25 +24,15 @@ def gemver(pipe_data):
     row = Interval(UInt, 0 , R-1)
     
     A = Matrix(Double, "A", [R, R], [i0, i1])
-    u1 = Matrix(Double, "u1", [R], [i0])
-    v1 = Matrix(Double, "v1", [R], [i0])
-    u2 = Matrix(Double, "u2", [R], [i0])
-    v2 = Matrix(Double, "v2", [R], [i0])
-    w = Matrix(Double, "w", [R], [i0])
-    x = Matrix(Double, "x", [R], [i0])
-    y = Matrix(Double, "y", [R], [i0])
-    z = Matrix(Double, "z", [R], [i0])
+    u1 = Vector(Double, "u1", R)
+    v1 = Vector(Double, "v1", R)
+    u2 = Vector(Double, "u2", R)
+    v2 = Vector(Double, "v2", R)
+    y = Vector(Double, "y", R)
+    z = Vector(Double, "z", R)
 
-    fn1 = Function(([i0, i1], [row, row]), Double, "fn1")
-    fn1.defn = [ A(i0, i1) + u1(i0) * v1(i1) + u2(i0) * v2(i1) ]
+    fn1 = A + u1 * Vector.transpose(v1) + u2 * Vector.transpose(v2)
+    x = (Matrix.scalar_mul(Matrix.transpose(fn1), beta) * y ) + z
+    w = Matrix.scalar_mul(fn1, alpha) * x
 
-    fn2 = Reduction(([i0], [row]), ([i0, i1], [row, row]), Double, "fn2")
-    fn2.defn = [ Reduce(fn2(i0), beta * fn1(i1, i0) * y(i1) , Op.Sum) ]
-    
-    fn3 = Function(([i0], [row]), Double, "fn3")
-    fn3.defn = [ fn2(i0) + z(i0) ]
-
-    fn4 = Reduction(([i0], [row]), ([i0, i1], [row, row]), Double, "fn4")
-    fn4.defn = [ Reduce(fn4(i0), alpha * fn1(i1, i0) * fn3(i1), Op.Sum) ]
-
-    return [fn3, fn4]
+    return [w, x]
