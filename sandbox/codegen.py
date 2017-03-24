@@ -208,7 +208,7 @@ def is_inner_most_parallel(node):
                    False)
     return no_inner_parallel
 
-def get_user_nodes_in_body(body, one_loop=False):
+def get_user_nodes_in_body(body):
     user_nodes = []
     if body.get_type() == isl._isl.ast_node_type.block:
         num_nodes = (body.block_get_children().n_ast_node())
@@ -217,8 +217,7 @@ def get_user_nodes_in_body(body, one_loop=False):
             user_nodes += get_user_nodes_in_body(child)
     else:
         if body.get_type() == isl._isl.ast_node_type.for_:
-            if not one_loop:
-                user_nodes += get_user_nodes_in_body(body.for_get_body())
+            user_nodes += get_user_nodes_in_body(body.for_get_body())
         elif body.get_type() == isl._isl.ast_node_type.if_:
             user_nodes += get_user_nodes_in_body(body.if_get_then())
             if body.if_has_else():
@@ -253,9 +252,7 @@ def get_reductions(polyrep, user_nodes):
     for node in user_nodes:
         part_id = node.user_get_expr().get_op_arg(0).get_id()
         part = isl_get_id_user(part_id)
-        if isinstance(part.expr, Reduce) \
-           and getType(part.expr.accumulate_ref) is not Complex \
-           and not hasReference(part.expr.expression, part.expr.accumulate_ref):
+        if isinstance(part.expr, Reduce):
             reductions.append(node)
     return reductions
 
@@ -509,21 +506,44 @@ def collect_perfect_loopnest(node):
 
     return perfect_loopnest
 
+def collect_reduction_loopnest(node):
+    red_nest = []
+
+    if node.get_type() == isl._isl.ast_node_type.for_:
+        red_nest.append(node)
+        red_nest += collect_reduction_loopnest(node.for_get_body())
+
+    return red_nest
+
 def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
-                                  pooled, perfect_loopnest, indent=0):
+                                  pooled, perfect_loopnest, indent=0,
+                                  red_nest=None):
     if node.get_type() == isl._isl.ast_node_type.block:
         num_nodes = (node.block_get_children().n_ast_node())
         for i in range(0, num_nodes):
             child = node.block_get_children().get_ast_node(i)
             generate_c_naive_from_isl_ast(pipe, polyrep, child, body,
                                           cparam_map, pooled,
-                                          perfect_loopnest, indent+1)
+                                          perfect_loopnest, indent+1,
+                                          red_nest)
     else:
         if node.get_type() == isl._isl.ast_node_type.for_:
-            reductions = get_reductions(polyrep, get_user_nodes_in_body(node.for_get_body(), one_loop=True))
+            if red_nest is None:
+                reductions = get_reductions(polyrep, get_user_nodes_in_body(node.for_get_body()))
+                if len(reductions) == 0:
+                    red_nest = []
+                else:
+                    red_nest = collect_reduction_loopnest(node)
+
+            n_rloops = len(red_nest)
+
             roundRhsToEven = False
 
-            if len(reductions) == 1:
+            if n_rloops > 0 and node == red_nest[n_rloops-1] \
+                    and len(get_reductions(polyrep, \
+                    get_user_nodes_in_body(node.for_get_body()))) == 1:
+                reductions = get_reductions(polyrep, \
+                            get_user_nodes_in_body(node.for_get_body()))
                 red = reductions[0]
                 pid = red.user_get_expr().get_op_arg(0).get_id()
                 pp = isl_get_id_user(pid)
@@ -572,7 +592,7 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
 
             dim_parallel = is_sched_dim_parallel(polyrep, user_nodes, var.name)
             dim_vector = is_sched_dim_vector(polyrep, user_nodes, var.name)
-            dim_reduce = len(reductions) > 0
+            dim_reduce = n_rloops > 1
             arrays = get_arrays_for_user_nodes(pipe, polyrep, user_nodes)
 
             # number of loops in the perfectly nested loop
@@ -592,10 +612,22 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                 body.add(vec_pragma)
 
             if dim_reduce:
+                if node == red_nest[0]:
+                    omp_par_str = "omp parallel for schedule(static)"
+                    omp_pragma = genc.CPragma(omp_par_str)
+                    body.add(omp_pragma)
+                if node == red_nest[n_rloops-2]:
+                    vec_pragma = genc.CPragma("ivdep")
+                    body.add(vec_pragma)
+            elif n_rloops == 1:
                 reduction_strs = []
                 for red in reductions:
                     pid = red.user_get_expr().get_op_arg(0).get_id()
                     pp = isl_get_id_user(pid)
+                    if getType(pp.expr.accumulate_ref) is Complex \
+                                or hasReference(pp.expr.expression, \
+                                pp.expr.accumulate_ref):
+                        continue
 
                     cm = cvariables_from_variables_and_sched(red,
                            pp.comp.func.reductionVariables, pp.sched)
@@ -612,11 +644,12 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                     reduction_strs.append("reduction(" + op_type_str
                                           + ": " + array_ref.__str__()
                                           + ")")
-                omp_par_reduce_str = \
-                    "omp parallel for schedule(static) " \
-                    + ",".join(reduction_strs)
-                omp_pragma = genc.CPragma(omp_par_reduce_str)
-                body.add(omp_pragma)
+                if len(reduction_strs) > 0:
+                    omp_par_reduce_str = \
+                        "omp parallel for schedule(static) " \
+                        + ",".join(reduction_strs)
+                    omp_pragma = genc.CPragma(omp_par_reduce_str)
+                    body.add(omp_pragma)
 
             body.add(loop)
 
@@ -657,7 +690,8 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                 generate_c_naive_from_isl_ast(pipe, polyrep,
                                               node.for_get_body(), lbody,
                                               cparam_map, pooled,
-                                              perfect_loopnest, indent+1)
+                                              perfect_loopnest, indent+1,
+                                              red_nest)
                 # Deallocate storage
                 for array in freelist:
                     array.deallocate(lbody, pooled)
@@ -673,13 +707,15 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                     generate_c_naive_from_isl_ast(pipe, polyrep,
                                                   node.if_get_then(), ifblock,
                                                   cparam_map, pooled,
-                                                  perfect_loopnest, indent+1)
+                                                  perfect_loopnest, indent+1,
+                                                  red_nest)
                 with cif_else.else_block as elseblock:
                     generate_c_naive_from_isl_ast(pipe, polyrep,
                                                   node.if_get_else(),
                                                   elseblock,
                                                   cparam_map, pooled,
-                                                  perfect_loopnest, indent+1)
+                                                  perfect_loopnest, indent+1,
+                                                  red_nest)
                 body.add(cif_else)
             else:
                 cif = genc.CIfThen(if_cond)
@@ -687,7 +723,8 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                     generate_c_naive_from_isl_ast(pipe, polyrep,
                                                   node.if_get_then(), ifblock,
                                                   cparam_map, pooled,
-                                                  perfect_loopnest, indent+1)
+                                                  perfect_loopnest, indent+1,
+                                                  red_nest)
                 body.add(cif)
 
         if node.get_type() == isl._isl.ast_node_type.user:
