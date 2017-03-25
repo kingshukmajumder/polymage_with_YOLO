@@ -1992,9 +1992,9 @@ class Wave(Function):
         Y_name = sc_name + "_zero_inserted"
         Y = Wave(Complex, Y_name, out_len, out_var)
         cond1 = Condition(2 * out_var, '<', N)
-        cond2 = Condition(out_var, '>=', (N+1)//2) \
-                            & Condition(N - out_len + out_var, '<', (N+2)//2)
-        cond3 = Condition(N - out_len + out_var, '>=', (N+1)//2)
+        cond2 = Condition(2 * out_var, '>=', N) \
+                            & Condition(2 * (N - out_len + out_var), '<', N)
+        cond3 = Condition(2 * (N - out_len + out_var), '>=', N)
         Y.defn = [ Case(cond1, sig_complex_fft(out_var)), \
                    Case(cond2, 0), \
                    Case(cond3, sig_complex_fft(N - out_len + out_var)) ]
