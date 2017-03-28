@@ -454,11 +454,21 @@ class LibPluto(object):
             ("unable to get schedule from PLUTO")
 
         schedule_str = self.ffi.string(schedule_strbuf_ptr[0]).decode('utf-8')
+        print("schedule_str = ", schedule_str)
         #import pudb; pudb.set_trace();
-        parallel_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
-        print("Parallel loops:")
-        print(parallel_str)
+
+        print("p_loops_ptr = ", p_loops_ptr)
+        nploops_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
+        print("nploops_str = ", nploops_str)
+        # TODO: very dangerous - relying on string to contain int
+        nploops = int(nploops_str)
+        for i in range(1, nploops+1):
+            parallel_str = self.ffi.string(p_loops_ptr[i]).decode('utf-8')
+            print("Parallel loops:")
+            print(parallel_str)
+
         schedule = isl.UnionMap.read_from_str(ctx, schedule_str)
+        print("schedule = ", schedule)
 
         self.so.pluto_schedules_strbuf_free(schedule_strbuf_ptr[0])
 
