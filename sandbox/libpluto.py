@@ -1,7 +1,6 @@
 # from ctypes import cdll, Structure, c_int, c_double, c_uint
 from cffi import FFI
 import islpy as isl
-from debug_log import *
 
 TAG = "libpluto"
 _pluto_header_str = \
@@ -38,17 +37,17 @@ _pluto_header_str = \
         /* Extract scop information from libpet*/
         int pet;
 
-        /* dynamic scheduling 
+        /* dynamic scheduling
          * using Synthesized Runtime Interface */
         int dynschedule;
 
-        /* dynamic scheduling - previous technique of 
-         * building the entire task graph in memory 
+        /* dynamic scheduling - previous technique of
+         * building the entire task graph in memory
          * using Intel TBB Flow Graph scheduler */
         int dynschedule_graph;
 
-        /* dynamic scheduling - previous technique of 
-         * building the entire task graph in memory 
+        /* dynamic scheduling - previous technique of
+         * building the entire task graph in memory
          * using a custom DAG scheduler */
         // no longer maintained
         int dynschedule_graph_old;
@@ -184,7 +183,7 @@ _pluto_header_str = \
         int distmem;
 
         /*  adding support to generate opencl code */
-        int opencl; 
+        int opencl;
 
         /* use multi-level distribution function */
         /* for dynamic scheduling or distributed-memory code */
@@ -195,7 +194,7 @@ _pluto_header_str = \
 
         /*Communication code generation using flow-out partitioning */
         int commopt_fop;
-        /* generate code to choose between unicast pack and multicast pack 
+        /* generate code to choose between unicast pack and multicast pack
          * for each partition at runtime */
         int fop_unicast_runtime;
 
@@ -206,7 +205,7 @@ _pluto_header_str = \
         int timereport;
 
         /* if true, variables are not declared globally
-         * but each variable's declaration is provided 
+         * but each variable's declaration is provided
          * through the macro '#define __DECLARATION_OF_<variable-name> <declaration>'*/
         int variables_not_global;
 
@@ -257,7 +256,7 @@ _pluto_header_str = \
 
     struct remapping {
         int nstmts;
-        PlutoMatrix **stmt_inv_matrices; 
+        PlutoMatrix **stmt_inv_matrices;
         int **stmt_divs;
     };
     typedef struct remapping Remapping;
@@ -267,9 +266,10 @@ _pluto_header_str = \
 
 
     void pluto_schedule_str(const char *domains_str,
-            const char *dependences_str,
-            char** schedules_str_buffer_ptr,
-            PlutoOptions *options);
+        const char *dependences_str,
+        char** schedules_str_buffer_ptr,
+        char** p_loops,
+        PlutoOptions *options);
 
     void pluto_schedules_strbuf_free(char *schedules_str_buffer);
 
@@ -294,12 +294,9 @@ class Remapping(object):
         self._raw_ptr = raw_ptr
 
         self._nstmts = self._raw_ptr.nstmts
-        
+
         self._stmt_divs = []
         self._inv_matrices = []
-
-        # import pudb
-        # pudb.set_trace()
 
         for i in range(self._raw_ptr.nstmts):
             inv_matrix = self._raw_ptr.stmt_inv_matrices[i]
@@ -312,8 +309,7 @@ class Remapping(object):
                         for r in range(nrows)]
             self._inv_matrices.append(inv_matrix)
 
-            self._inv_matrices.append(inv_matrix)
-            stmt_div = [stmt_div[r] for r in range(nrows)] 
+            stmt_div = [stmt_div[r] for r in range(nrows)]
             self._stmt_divs.append(stmt_div)
 
     @property
@@ -343,7 +339,7 @@ class Remapping(object):
         for i in range(self.nstmts):
             matrix = self._inv_matrices[i]
             div = self._stmt_divs[i]
-            str +=  "inverse matrix:\n%s \n\n div:\n%s" % (np.array(matrix), 
+            str +=  "inverse matrix:\n%s \n\n div:\n%s" % (np.array(matrix),
                     np.array(div))
             str += "\n===\n"
         return str
@@ -447,15 +443,21 @@ class LibPluto(object):
         domains_str = domains.to_str().encode('utf-8')
         dependences_str = dependences.to_str().encode('utf-8')
         schedule_strbuf_ptr = self.ffi.new("char **")
+        p_loops_ptr = self.ffi.new("char **")
 
         self.so.pluto_schedule_str(domains_str, dependences_str,
                                           schedule_strbuf_ptr,
+                                          p_loops_ptr,
                                           pluto_options._raw_ptr)
 
         assert schedule_strbuf_ptr[0] != self.ffi.NULL, \
             ("unable to get schedule from PLUTO")
 
         schedule_str = self.ffi.string(schedule_strbuf_ptr[0]).decode('utf-8')
+        #import pudb; pudb.set_trace();
+        parallel_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
+        print("Parallel loops:")
+        print(parallel_str)
         schedule = isl.UnionMap.read_from_str(ctx, schedule_str)
 
         self.so.pluto_schedules_strbuf_free(schedule_strbuf_ptr[0])
@@ -463,7 +465,7 @@ class LibPluto(object):
         # remapping = self.create_remapping()
         remapping_ptr = self.ffi.new("Remapping **");
 
-        self.so.pluto_get_remapping_str(domains_str, dependences_str, 
+        self.so.pluto_get_remapping_str(domains_str, dependences_str,
                 remapping_ptr, pluto_options._raw_ptr)
 
         remapping = Remapping(self, remapping_ptr[0])
@@ -489,7 +491,7 @@ class LibPluto(object):
 
         remapping_ptr = self.ffi.new("Remapping **");
 
-        self.so.pluto_get_remapping_str(domains_str, dependences_str, 
+        self.so.pluto_get_remapping_str(domains_str, dependences_str,
                 remapping_ptr, pluto_options._raw_ptr)
 
         remapping = Remapping(self, remapping_ptr[0])
@@ -505,17 +507,17 @@ if __name__ == "__main__":
     ctx = isl.Context.alloc()
     pluto_opts = pluto.create_options()
     pluto_opts.partlbtile = 1
-    
+
     domains = isl.UnionSet.read_from_str(ctx, (
         " [R, T] -> { S_0[i0, i1] : 0 <= i0 <= T and 0 <= i1 <= R - 1; }"))
 
 
-    deps = isl.UnionMap.read_from_str(ctx, 
+    deps = isl.UnionMap.read_from_str(ctx,
         ("[R, T] -> {"
         "S_0[i0, i1] -> S_0[i0 + 1, i1 - 1] : 0 <= i0 <= T - 1 and 1 <= i1 <= R - 2; "
         "S_0[i0, i1] -> S_0[i0 + 1, i1 + 1] : 0 <= i0 <= T - 1 and 1 <= i1 <= R - 2; }"))
 
     sched  = pluto.schedule(ctx, domains, deps, pluto_opts)
     remapping = pluto.get_remapping(ctx, domains, deps, pluto_opts)
-    #print("schedule: %s" % sched)
-    #print("remapping: %s" % remapping)
+    print("schedule: %s" % sched)
+    print("remapping: %s" % remapping)
