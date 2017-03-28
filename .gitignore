@@ -97,3 +97,5 @@ sandbox/tests/*.cpp
 sandbox/tests/*.dot
 sandbox/tests/*.png
 
+# saved images in dsp folder
+sandbox/apps/python/dsp/**/*.jpg
