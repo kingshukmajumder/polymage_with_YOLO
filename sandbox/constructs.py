@@ -1833,6 +1833,23 @@ class Wave(Function):
         sig_down.defn = [ self(in_var * down) ]
         return sig_down
 
+    def upsample(self, up, out_name, _out_len=None):
+        ut = getType(up)
+
+        assert (ut is Int or ut is UInt)
+
+        N = self._len
+
+        in_var = self._variables[0]
+        out_typ = self._typ
+        out_len = N * up if _out_len is None else _out_len
+
+        sig_up = Wave(out_typ, out_name, out_len, in_var)
+        cond1 = Condition(in_var % up, '==', 0)
+        cond2 = Condition(in_var % up, '!=', 0)
+        sig_up.defn = [ Case(cond1, self(in_var / up)), Case(cond2, 0) ]
+        return sig_up
+
     def low_pass(self, cutoff, out_name, factor=0):
         ct = getType(cutoff)
         assert ct is Double or ct is Float
