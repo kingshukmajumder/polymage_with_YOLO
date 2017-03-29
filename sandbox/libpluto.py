@@ -425,7 +425,7 @@ class LibPluto(object):
         # HACK: don't free, try to figure out why there's a segfault
         # self.so.pluto_options_free(raw_options_ptr)
 
-    def schedule(self, ctx, domains, dependences, pluto_options):
+    def schedule(self, ctx, domains, dependences, pluto_options, parallel_loops):
 
         if isinstance(domains, isl.BasicSet):
             domains = isl.UnionSet.from_basic_set(domains)
@@ -455,17 +455,23 @@ class LibPluto(object):
 
         schedule_str = self.ffi.string(schedule_strbuf_ptr[0]).decode('utf-8')
         print("schedule_str = ", schedule_str)
-        #import pudb; pudb.set_trace();
 
-        print("p_loops_ptr = ", p_loops_ptr)
-        nploops_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
-        print("nploops_str = ", nploops_str)
-        # TODO: very dangerous - relying on string to contain int
-        nploops = int(nploops_str)
+        ploops_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
+        print("nploops_str = ", ploops_str)
+
+        # nploops_str would be a csv of list
+        ploops_str_list = ploops_str.split(",")
+
+        # TODO: very dangerous - relying on output string to represent int
+        # number of parallel loops
+        nploops = int(ploops_str_list[0])
+
+        # collect all parallel loop dims in parallel_loops
         for i in range(1, nploops+1):
-            parallel_str = self.ffi.string(p_loops_ptr[i]).decode('utf-8')
-            print("Parallel loops:")
-            print(parallel_str)
+            parallel_loop = int(ploops_str_list[i])
+            #print("Parallel loop:", parallel_loop)
+            parallel_loops.append(parallel_loop-1)  # convert to 0-indexing
+        #print("parallel_loops = ", parallel_loops)
 
         schedule = isl.UnionMap.read_from_str(ctx, schedule_str)
         print("schedule = ", schedule)
