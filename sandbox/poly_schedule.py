@@ -309,6 +309,30 @@ def mark_par_and_vec(poly_part, param_estimates):
 
     return
 
+def mark_par_and_vec_for_tstencil(poly_part, parallel_loops):
+    # TODO: assuming that the name of the out-dims of the part are prefixed with
+    # 'o'
+    prefix = 'o'
+
+    # init par and vec sched dims
+    poly_part.parallel_sched_dims = []
+    poly_part.vector_sched_dim = []
+
+    nploops = len(parallel_loops)
+    if nploops == 1:
+        # the only parallel dim will be outer parallel
+        par_dim = parallel_loops[0]
+        poly_part.parallel_sched_dims.append(prefix + str(par_dim))
+    elif nploops > 1:
+        # outermost dim
+        par_dim = min(parallel_loops)
+        poly_part.parallel_sched_dims.append(prefix + str(par_dim))
+        # innermost dim
+        vec_dim = max(parallel_loops)
+        poly_part.vector_sched_dim.append(prefix + str(vec_dim))
+
+    return
+
 def enable_tile_scratchpad(group_parts):
     # Determine the buffer sizes for stages in each dimension
     for p in group_parts:
@@ -455,10 +479,12 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
         pluto = libpluto.LibPluto()
         pluto_options = pluto.create_options()
         pluto_options.partlbtile = True
+        parallel_loops = []
         optimised_sched = pluto.schedule(isl_ctx,
                 isl.UnionSet.from_basic_set(in_domain),
                 in_schedule,
-                pluto_options).copy()
+                pluto_options,
+                parallel_loops).copy()
 
         #autolog("pluto optimised schedule: %s" % optimised_sched, TAG)
 
@@ -499,6 +525,7 @@ def fused_schedule(pipeline, isl_ctx, group, param_estimates):
         #autolog(header("Final chosen schedule") +  str(opt_schedule), TAG)
         poly_part.sched = opt_schedule
 
+        mark_par_and_vec_for_tstencil(poly_part, parallel_loops)
 
         # ----
         # Create the remapping matrix and divs - prune extra information from the
