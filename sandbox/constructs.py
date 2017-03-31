@@ -2027,6 +2027,19 @@ class Wave(Function):
 
         return y
 
+    def freq_shift(self, shift, sample, out_name):
+        N = self._len
+
+        out_typ = Complex
+        out_len = N
+        out_var = self._variables[0]
+
+        y = Wave(out_typ, out_name, out_len, out_var)
+        y.defn = [ self(out_var) \
+                        * Exp(Cast(Complex, 1.0j * 2 * Pi() * shift * \
+                        out_var / sample)) ]
+        return y
+
     @classmethod
     def get_window(cls, window, N, out_name):
         if isinstance(window, tuple):
