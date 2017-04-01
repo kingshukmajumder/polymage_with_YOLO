@@ -1,21 +1,22 @@
-#CXX=icpc
-#CXX_FLAGS=-openmp -ipo -O3 -xhost -ansi-alias
-CXX=g++
-CXX_FLAGS=-fopenmp -O3 -march=native -ftree-vectorize
+CXX=icpc
+CXX_FLAGS=-openmp -ipo -O3 -xhost -ansi-alias
+#CXX=g++
+#CXX_FLAGS=-fopenmp -O3 -march=native -ftree-vectorize
 PYTHON=python3
 
-RUNS=1
+RUNS=5
 
 # app inputs
 CYCLE='V'  # MG Cycle : V / W
 L=3  # MG levels
-SIZE=31  # coarse-grid size along each dimension
+SIZE=63  # coarse-grid size along each dimension
 NIT=10  # V / W Cycle iterations
-NU1=10  # pre-smoothing steps
-NU2=0  # post-smoothing steps
-NUC=0  # corase-smoothing steps
+NU1=4  # pre-smoothing steps
+NU2=4  # post-smoothing steps
+NUC=4  # corase-smoothing steps
+tiles="16,16,16,512"
 
-APP_ARGS=--cycle=${CYCLE} --nit=${NIT} --runs=${RUNS} --n=${SIZE} --L=${L} --nu1=${NU1} --nuc=${NUC} --nu2=${NU2}
+APP_ARGS=--cycle=${CYCLE} --nit=${NIT} --runs=${RUNS} --n=${SIZE} --L=${L} --nu1=${NU1} --nuc=${NUC} --nu2=${NU2} --pluto_tile_sizes=${tiles}
 OPT_ARGS=--pool_alloc --optimize_storage --early_free --multipar
 TOOL_ARGS=--graph-gen --runs=$(RUNS) --timer
 CXX_ARGS=--cxx="$(CXX)" --cxx_flags="$(CXX_FLAGS)"

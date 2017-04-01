@@ -123,6 +123,9 @@ def get_input(app_data):
     # multi-dimensional parallelism option
     app_data['multipar'] = bool(app_args.multipar)
 
+    # tile sizes
+    app_data['pluto_tile_sizes'] = app_args.pluto_tile_sizes
+
     return
 
 def init_all(app_data):

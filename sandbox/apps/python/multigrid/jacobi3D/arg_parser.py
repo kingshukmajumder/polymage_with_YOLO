@@ -61,6 +61,12 @@ def parse_args():
                       default=1,
                       help='Post-smoothing steps')
 
+    parser.add_option('--pluto_tile_sizes',
+                      action='store',
+                      dest='pluto_tile_sizes',
+                      default="16,16,16,512",
+                      help='Pluto tile sizes')
+
     parser.add_option('-p', '--problem',
                       action='store',
                       dest='problem',
