@@ -2059,6 +2059,18 @@ class Wave(Function):
         y.defn = [ self(out_var + start) ]
         return y
 
+    def scalar_mul(self, sval, out_name):
+        sval = Value.numericToValue(sval)
+        assert isinstance(sval, AbstractExpression)
+
+        out_typ = Complex if getType(sval) is Complex else self._typ
+        out_len = self._len
+        out_var = self._variables[0]
+
+        y = Wave(out_typ, out_name, out_len, out_var)
+        y.defn = [ sval * self(out_var) ]
+        return y
+
     @classmethod
     def get_window(cls, window, N, out_name):
         if isinstance(window, tuple):

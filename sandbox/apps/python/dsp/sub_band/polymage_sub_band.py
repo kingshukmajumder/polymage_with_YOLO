@@ -63,10 +63,8 @@ def sub_band(pipe_data):
     Ss3 = b3.upsample(2, "b3_up", _out_len=s3w.length)
 
     # Reconstruction filters
-    reconst_fil = Wave(Double, "reconst_fil_low", lp.length, x)
-    reconst_fil.defn = [ L * lp(x) ]
-    reconst_filh = Wave(Double, "reconst_fil_high", hp.length, x)
-    reconst_filh.defn = [ L * hp(x) ]
+    reconst_fil = lp.scalar_mul(L, "reconst_fil_low")
+    reconst_filh = hp.scalar_mul(L, "reconst_fil_high")
 
     sb0 = Ss0.lfilter_fir(reconst_fil, "b0_up_lp")
     sb1 = Ss1.lfilter_fir(reconst_filh, "b1_up_hp")
