@@ -47,6 +47,16 @@ def generate_graph(pipe, file_name, app_data):
 
     return
 
+def create_tile_sizes_file(t_sizes):
+    file_name = "tile.sizes"
+    tile_file = open(file_name, 'w')
+
+    for tile_size in t_sizes:
+        tile_file.write(str(tile_size) + "\n")
+    tile_file.close()
+
+    return
+
 def build_mg_cycle(app_data):
     pipe_data = app_data['pipe_data']
     cycle_type = app_data['cycle']
@@ -65,7 +75,7 @@ def build_mg_cycle(app_data):
     p_estimates = [(n, app_data['n'])]
     p_constraints = [ Condition(n, "==", app_data['n']) ]
     t_size = [32, 512]
-    g_size = 10
+    g_size = 1
     opts = []
     if app_data['early_free']:
         opts += ['early_free']
@@ -75,6 +85,10 @@ def build_mg_cycle(app_data):
         opts += ['pool_alloc']
     if app_data['multipar']:
         opts += ['multipar']
+
+    # Pluto schedule requires tile.sizes file
+    pluto_t_size = app_data['pluto_tile_sizes'].split(',')
+    create_tile_sizes_file(pluto_t_size)
 
     mg_pipe = buildPipeline(live_outs,
                             param_estimates=p_estimates,
