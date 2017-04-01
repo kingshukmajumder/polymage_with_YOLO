@@ -48,6 +48,6 @@ def w_jacobi(U_, F_, l, name, app_data, T):
 
     # TStencil function
     W_ = TStencil(([y, x], [extent[l], extent[l]]), Double, str(name), T)
-    W_.defn = [stencil - c * F_(y, x)]
+    W_.defn = [stencil + c * F_(y, x)]
 
     return W_
