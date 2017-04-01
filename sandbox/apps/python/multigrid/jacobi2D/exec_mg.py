@@ -88,6 +88,8 @@ def calc_norm(U_, app_data):
 def call_mg_cycle(U_, W_, app_data):
     n = app_data['n']
     nu1 = app_data['nu1']
+    nu2 = app_data['nu2']
+    nuc = app_data['nuc']
 
     grid_data = app_data['grid_data']
     F_ = grid_data['F_']
@@ -99,6 +101,8 @@ def call_mg_cycle(U_, W_, app_data):
     # lib function args
     mg_cycle_args = []
     mg_cycle_args += [ctypes.c_int(nu1)]
+    mg_cycle_args += [ctypes.c_int(nu2)]
+    mg_cycle_args += [ctypes.c_int(nuc)]
     mg_cycle_args += [ctypes.c_int(n)]
     mg_cycle_args += [ctypes.c_void_p(F_.ctypes.data)]
     mg_cycle_args += [ctypes.c_void_p(U_.ctypes.data)]
