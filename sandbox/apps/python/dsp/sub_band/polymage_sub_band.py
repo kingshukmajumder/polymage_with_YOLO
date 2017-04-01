@@ -71,10 +71,16 @@ def sub_band(pipe_data):
     sb2 = Ss2.lfilter_fir(reconst_fil, "b2_up_lp")
     sb3 = Ss3.lfilter_fir(reconst_filh, "b3_up_hp")
 
-    Slow = Wave(Double, "Slow", Ss0.length, x)
-    Slow.defn = [ sb0(x) + sb1(x) ]
-    Shigh = Wave(Double, "Shigh", Ss2.length, x)
-    Shigh.defn = [ sb2(x) + sb3(x) ]
+    sb0w = Wave(Double, "b0_up_lpw", Ss0.length, x)
+    sb0w.defn = [ sb0(x) ]
+    sb1w = Wave(Double, "b1_up_hpw", Ss1.length, x)
+    sb1w.defn = [ sb1(x) ]
+    sb2w = Wave(Double, "b2_up_lpw", Ss2.length, x)
+    sb2w.defn = [ sb2(x) ]
+    sb3w = Wave(Double, "b3_up_hpw", Ss3.length, x)
+    sb3w.defn = [ sb3(x) ]
+    Slow = sb0w + sb1w
+    Shigh = sb2w + sb3w
 
     subl = Slow.upsample(2, "subl", _out_len=N)
     subh = Shigh.upsample(2, "subh", _out_len=N)

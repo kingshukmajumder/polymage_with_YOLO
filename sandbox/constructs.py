@@ -1571,6 +1571,20 @@ class Wave(Function):
             newFunc.defn = newBody
         return newFunc
 
+    def __add__(self, other):
+        assert isinstance(other, Wave)
+        assert self._typ == other._typ
+        assert self._len == other._len
+
+        out_typ = self._typ
+        out_name = "_" + self._name + "_" + other._name + "_sum"
+        out_len = self._len
+        out_var = self._variables[0]
+
+        y = Wave(out_typ, out_name, out_len, out_var)
+        y.defn = [ self(out_var) + other(out_var) ]
+        return y
+
     def convolve(self, other, out_name):
         assert isinstance(other, Wave)
         assert self._typ == other._typ
