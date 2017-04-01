@@ -32,11 +32,11 @@ def call_pipe(app_data):
     pipe_args = []
     pipe_args += [ctypes.c_uint(length)]
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT0.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT1.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT2.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT3.ctypes.data)]
-    pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
 
     # call lib function
     pipe_func(*pipe_args)

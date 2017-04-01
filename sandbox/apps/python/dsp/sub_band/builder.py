@@ -49,11 +49,11 @@ def generate_graph(pipe, file_name, app_data):
 def build_sub_band(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_sub_band, b0, b1, b2, b3 = sub_band(pipe_data)
+    b0, b1, b2, b3, out_sub_band = sub_band(pipe_data)
     
     N = pipe_data['N']
 
-    live_outs = [out_sub_band, b0, b1, b2, b3]
+    live_outs = [b0, b1, b2, b3, out_sub_band]
     pipe_name = app_data['app']
 
     length = app_data['length']

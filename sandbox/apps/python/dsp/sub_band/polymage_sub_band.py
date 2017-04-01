@@ -88,7 +88,10 @@ def sub_band(pipe_data):
     subll = subl.lfilter_fir(reconst_fil, "subl_lp")
     subhh = subh.lfilter_fir(reconst_filh, "subh_hp")
 
-    yf = Wave(Double, "sig_synth", subl.length, x)
-    yf.defn = [ subll(x) + subhh(x) ]
+    subllw = Wave(Double, "subl_lpw", subl.length, x)
+    subllw.defn = [ subll(x) ]
+    subhhw = Wave(Double, "subh_hpw", subh.length, x)
+    subhhw.defn = [ subhh(x) ]
+    yf = subllw + subhhw
 
     return yf, b0, b1, b2, b3
