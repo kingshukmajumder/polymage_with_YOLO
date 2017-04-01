@@ -117,7 +117,8 @@ def multigrid(app_data):
 
     nit = app_data['nit']
     time_store = {}
-    time_taken = 0
+    # time_taken = 0
+    time_taken = 10000000
 
     print_layout(app_data)
     print_errors(0, app_data)
@@ -140,13 +141,18 @@ def multigrid(app_data):
             t2 = time.time()
             time_store[run] = float(t2) - float(t1)
             #print("Time taken for iter ", run," = ",time_store[run]*1000, "ms")
-            time_taken += time_store[run]
+            # time_taken += time_store[run]
+            time_taken = min(time_taken, time_store[run])
         run += 1
 
     if timer:
-        time_taken = time_taken / nruns
+        #time_taken = time_taken / nruns
         print("")
+        """
         print("[exec_mg] : Average time taken to execute = ",
+              time_taken*1000, " ms")
+        """
+        print("[exec_mg] : Minimum time taken to execute = ",
               time_taken*1000, " ms")
 
     return
