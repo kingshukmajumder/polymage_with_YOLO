@@ -35,8 +35,9 @@ def unwanted_spectral(pipe_data):
     # Filter the data and compensate for delay
     filtered_x = y.lfilter_fir(taps1, "filtered_sig")
 
-    ylp = Wave(Double, "ylp", N - ntaps + 1, x)
-    ylp.defn = [ filtered_x(x + ntaps - 1) ]
+    filtered_xw = Wave(Double, "filtered_sigw", y.length, x)
+    filtered_xw.defn = [ filtered_x(x) ]
+    ylp = filtered_xw.subset(ntaps - 1, N - 1, "ylp")
 
     # Downsample the lowpass filtered signal by a factor of 10
     Fd = Fs//10

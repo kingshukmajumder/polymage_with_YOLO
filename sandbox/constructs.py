@@ -2040,6 +2040,15 @@ class Wave(Function):
                         out_var / sample)) ]
         return y
 
+    def subset(self, start, stop, out_name):
+        out_typ = self._typ
+        out_len = stop - start + 1
+        out_var = self._variables[0]
+
+        y = Wave(out_typ, out_name, out_len, out_var)
+        y.defn = [ self(out_var + start) ]
+        return y
+
     @classmethod
     def get_window(cls, window, N, out_name):
         if isinstance(window, tuple):
