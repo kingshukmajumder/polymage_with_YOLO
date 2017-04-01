@@ -2028,6 +2028,11 @@ class Wave(Function):
         return y
 
     def freq_shift(self, shift, sample, out_name):
+        shift = Value.numericToValue(shift)
+        sample = Value.numericToValue(sample)
+        assert isinstance(shift, AbstractExpression)
+        assert isinstance(sample, AbstractExpression)
+
         N = self._len
 
         out_typ = Complex
@@ -2041,6 +2046,11 @@ class Wave(Function):
         return y
 
     def subset(self, start, stop, out_name):
+        start = Value.numericToValue(start)
+        stop = Value.numericToValue(stop)
+        assert isinstance(start, AbstractExpression)
+        assert isinstance(stop, AbstractExpression)
+
         out_typ = self._typ
         out_len = stop - start + 1
         out_var = self._variables[0]
