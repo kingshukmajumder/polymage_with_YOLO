@@ -31,7 +31,6 @@ from expression import *
 from utils import *
 import pipe
 import align_scale as aln_scl
-from debug_log import *
 
 TAG = "Poly"
 

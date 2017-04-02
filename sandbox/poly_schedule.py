@@ -27,7 +27,6 @@ from grouping import get_group_dep_vecs
 from utils import *
 from poly import *
 import libpluto
-from debug_log import *
 
 # LOG CONFIG #
 poly_sched_logger = logging.getLogger("poly_schedule.py")

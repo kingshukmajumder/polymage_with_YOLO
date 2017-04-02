@@ -30,7 +30,6 @@ import logging
 import targetc as genc
 import math
 import copy
-from debug_log import *
 
 logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s")
 

@@ -34,7 +34,6 @@ import islpy as isl
 import expr_ast as expr
 import targetc as genc
 import logging
-from debug_log import *
 TAG = "codegen"
 
 # LOG CONFIG #
