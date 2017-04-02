@@ -1027,6 +1027,11 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
             input_comp = pipeline.func_map[input_clone]
             input_array = input_comp.array
             buf_array = comp.array[0]
+
+            # handling the case where input_array is of another tstencil
+            if isinstance(input_array, tuple):
+                input_array = input_array[1]
+
             if buf_array.name != input_array.name:
                 size = input_array.get_total_size()
                 typ_size = genc.CSizeof(input_array.typ)
