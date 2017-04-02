@@ -1,6 +1,8 @@
 from __init__ import *
 import sys
 from polymage_common import set_ghosts
+import uuid
+import random
 
 sys.path.insert(0, ROOT)
 
@@ -41,7 +43,7 @@ def w_jacobi(U_, F_, l, name, app_data, T):
         # TODO: introducing a ZeroFunction (and UnityFunction) construct would help
         # in 'memset'ting or initializing such functions with 0 (and 1, resp.)
         U = Function(([y, x], [extent[l], extent[l]]),
-                     Double, 'zero_'+str(l))
+                     Double, 'zero_'+str(l)+'_'+str(random.randint(0,20000)))
         U.defn = [0]
 
     stencil = Stencil(U, [y, x], kernel)

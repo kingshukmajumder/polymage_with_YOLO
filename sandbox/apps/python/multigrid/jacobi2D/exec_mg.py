@@ -101,8 +101,9 @@ def call_mg_cycle(U_, W_, app_data):
     # lib function args
     mg_cycle_args = []
     mg_cycle_args += [ctypes.c_int(nu1)]
-    mg_cycle_args += [ctypes.c_int(nu2)]
-    mg_cycle_args += [ctypes.c_int(nuc)]
+    if nu2 != 0 and nuc != 0:
+        mg_cycle_args += [ctypes.c_int(nu2)]
+        mg_cycle_args += [ctypes.c_int(nuc)]
     mg_cycle_args += [ctypes.c_int(n)]
     mg_cycle_args += [ctypes.c_void_p(F_.ctypes.data)]
     mg_cycle_args += [ctypes.c_void_p(U_.ctypes.data)]

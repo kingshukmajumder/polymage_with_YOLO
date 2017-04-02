@@ -13,12 +13,17 @@ from constructs import *
 
 def w_cycle(app_data):
     pipe_data = app_data['pipe_data']
+
     N = pipe_data['N']
     L = app_data['L']
 
     nu1 = app_data['nu1']
     nu2 = app_data['nu2']
     nuc = app_data['nuc']
+
+    T1 = pipe_data['T1']
+    T2 = pipe_data['T2']
+    Tc = pipe_data['Tc']
 
     # initial guess
     V = Image(Double, "V_", [N[L]+2, N[L]+2])
@@ -57,23 +62,15 @@ def w_cycle(app_data):
             if visit[l] == 1:
                 smooth_p1[l] = {}
 
-            smooth_p1[l][visit[l]] = {}
+            if l == L:
+                fname = "Wcycle"
+            else:
+                fname = "Coarse"+"__visit_"+str(visit[l])
 
-            for t in range(0, nuc):
-                if l == L and t == nuc-1:
-                    fname = "Wcycle"
-                else:
-                    fname = "T"+str(t)+"_coarse"+"__"+str(visit[l])
+            smooth_p1[l][visit[l]] = \
+                w_jacobi(v, f, l, fname, app_data, Tc)
 
-                if t == 0:
-                    in_func = v
-                else:
-                    in_func = smooth_p1[l][visit[l]][t-1]
-
-                smooth_p1[l][visit[l]][t] = \
-                    w_jacobi(in_func, f, l, fname, app_data)
-
-            return smooth_p1[l][visit[l]][nuc-1]
+            return smooth_p1[l][visit[l]]
         ###################################################
         # all other finer levels
         else:
@@ -81,22 +78,15 @@ def w_cycle(app_data):
             if visit[l] == 1:
                 smooth_p1[l] = {}
 
-            smooth_p1[l][visit[l]] = {}
+            fname = "Pre_L"+str(l)+"__visit_"+str(visit[l])
 
-            for t in range(0, nu1):
-                fname = "T"+str(t)+"_pre_L"+str(l)+"__"+str(visit[l])
-                if t == 0:
-                    in_func = v
-                else:
-                    in_func = smooth_p1[l][visit[l]][t-1]
-
-                smooth_p1[l][visit[l]][t] = \
-                    w_jacobi(in_func, f, l, fname, app_data)
+            smooth_p1[l][visit[l]] = \
+                w_jacobi(v, f, l, fname, app_data, T1)
 
             if nu1 <= 0:
                 smooth_out = v
             else:
-                smooth_out = smooth_p1[l][visit[l]][nu1-1]
+                smooth_out = smooth_p1[l][visit[l]]
 
             ###############################################
             ''' RESIDUAL '''
@@ -104,8 +94,8 @@ def w_cycle(app_data):
             if visit[l] == 1:
                 r_h[l] = {}
 
-            name = "defect_L"+str(l)+"__"+str(visit[l])
-            r_h[l][visit[l]] = defect(smooth_out, f, l, name, pipe_data)
+            dname = "defect_L"+str(l)+"__visit_"+str(visit[l])
+            r_h[l][visit[l]] = defect(smooth_out, f, l, dname, pipe_data)
 
             ###############################################
   
@@ -113,8 +103,8 @@ def w_cycle(app_data):
             if visit[l] == 1:
                 r_2h[l] = {}
 
-            name = "restrict_L"+str(l-1)+"__"+str(visit[l])
-            r_2h[l][visit[l]] = restrict(r_h[l][visit[l]], l, name, pipe_data)
+            rname = "restrict_L"+str(l-1)+"__visit_"+str(visit[l])
+            r_2h[l][visit[l]] = restrict(r_h[l][visit[l]], l, rname, pipe_data)
 
             ###############################################
  
@@ -138,12 +128,12 @@ def w_cycle(app_data):
             if l == L and nu2 <= 0:
                 fname = "Wcycle"
             else:
-                fname = "interp_correct_L"+str(l)+"__"+str(visit[l])
+                fname = "interp_correct_L"+str(l)+"__visit_"+str(visit[l])
 
             if nu1 <= 0:
                 correct_in = v
             else:
-                correct_in = smooth_p1[l][visit[l]][nu1-1]
+                correct_in = smooth_p1[l][visit[l]]
 
             if visit[l] == 1:
                 ec[l] = {}
@@ -161,21 +151,14 @@ def w_cycle(app_data):
             if visit[l] == 1:
                 smooth_p2[l] = {}
 
-            smooth_p2[l][visit[l]] = {}
-            for t in range(0, nu2):
-                fname = "T"+str(t)+"_post_L"+str(l)+"__"+str(visit[l])
-                if l == L and t == nu2-1:
-                    fname = "Wcycle"
+            fname = "Post_L"+str(l)+"__visit_"+str(visit[l])
+            if l == L:
+                fname = "Wcycle"
 
-                if t == 0:
-                    in_func = ec[l][visit[l]]
-                else:
-                    in_func = smooth_p2[l][visit[l]][t-1]
-
-                smooth_p2[l][visit[l]][t] = \
-                    w_jacobi(in_func, f, l, fname, app_data)
+            smooth_p2[l][visit[l]] = \
+                w_jacobi(ec[l][visit[l]], f, l, fname, app_data, T2)
  
-            return smooth_p2[l][visit[l]][nu2-1]
+            return smooth_p2[l][visit[l]]
     #######################################################
 
     visit = {}
