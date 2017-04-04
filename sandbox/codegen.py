@@ -612,11 +612,19 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                 body.add(vec_pragma)
 
             if dim_reduce:
-                if node == red_nest[0]:
+                reductions = get_reductions(polyrep, \
+                            get_user_nodes_in_body(node.for_get_body()))
+                for red in reductions:
+                    pid = red.user_get_expr().get_op_arg(0).get_id()
+                    pp = isl_get_id_user(pid)
+                    part_size = pp.get_size(pipe._param_estimates)
+                    big_part = (part_size != '*' and \
+                                part_size > pipe._size_threshold)
+                if node == red_nest[0] and big_part:
                     omp_par_str = "omp parallel for schedule(static)"
                     omp_pragma = genc.CPragma(omp_par_str)
                     body.add(omp_pragma)
-                if node == red_nest[n_rloops-2]:
+                if node == red_nest[n_rloops-2] and big_part:
                     vec_pragma = genc.CPragma("ivdep")
                     body.add(vec_pragma)
             elif n_rloops == 1:
@@ -624,9 +632,12 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                 for red in reductions:
                     pid = red.user_get_expr().get_op_arg(0).get_id()
                     pp = isl_get_id_user(pid)
+                    part_size = pp.get_size(pipe._param_estimates)
+                    big_part = (part_size != '*' and \
+                                part_size > pipe._size_threshold)
                     if getType(pp.expr.accumulate_ref) is Complex \
                                 or hasReference(pp.expr.expression, \
-                                pp.expr.accumulate_ref):
+                                pp.expr.accumulate_ref) or not big_part:
                         continue
 
                     cm = cvariables_from_variables_and_sched(red,
