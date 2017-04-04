@@ -2176,8 +2176,11 @@ class Wave(Function):
         out_typ = Double
         out_var = Variable(UInt, "_" + out_name + str(0))
 
-        win_name = "_" + out_name + "_window"
-        win = cls.get_window(window, N, win_name)
+        if isinstance(window, Wave):
+            win = window
+        else:
+            win_name = "_" + out_name + "_window"
+            win = cls.get_window(window, N, win_name)
         win_var = win._variables[0]
 
         sc_name = "_" + out_name + "_scaled"

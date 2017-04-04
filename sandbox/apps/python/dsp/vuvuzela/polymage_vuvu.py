@@ -48,11 +48,13 @@ def vuvu(pipe_data):
     ntaps = 7238
     beta = Wave.kaiser_beta(ripple_db)
 
+    win = Wave.get_window(('kaiser', beta), ntaps+1, "taps_window")
+
     cutoff_hz1 = 215 # Passband frequency 1 in Hz
     cutoff_hz2 = 255 # Passband frequency 2 in Hz
 
     # Design the filter
-    taps1 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps1", window=('kaiser', beta))
+    taps1 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps1", window=win)
 
     # Filter the data and compensate for delay
     filtered_x1 = yds.lfilter_fir(taps1, "filtered_sig1")
@@ -65,7 +67,7 @@ def vuvu(pipe_data):
     cutoff_hz2 = 485 # Passband frequency 2 in Hz
 
     # Design the filter
-    taps2 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps2", window=('kaiser', beta))
+    taps2 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps2", window=win)
 
     # Filter the data and compensate for delay
     filtered_x2 = yf1.lfilter_fir(taps2, "filtered_sig2")
@@ -78,7 +80,7 @@ def vuvu(pipe_data):
     cutoff_hz2 = 950 # Passband frequency 2 in Hz
 
     # Design the filter
-    taps3 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps3", window=('kaiser', beta))
+    taps3 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps3", window=win)
 
     # Filter the data and compensate for delay
     filtered_x3 = yf2.lfilter_fir(taps3, "filtered_sig3")
@@ -91,7 +93,7 @@ def vuvu(pipe_data):
     cutoff_hz2 = 1880 # Passband frequency 2 in Hz
 
     # Design the filter
-    taps4 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps4", window=('kaiser', beta))
+    taps4 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps4", window=win)
 
     # Filter the data and compensate for delay
     filtered_x4 = yf3.lfilter_fir(taps4, "filtered_sig4")
