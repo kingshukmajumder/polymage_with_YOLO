@@ -27,8 +27,10 @@ def test_reduction():
     s = Reduction(([x], [row]), ([x, z, y], [row, row, col]), Float, "s")
     s.defn = [ Case(cond, Reduce(s(x), N * beta * img(z, y) * img(x, y), Op.Sum)) ]
 
+    p_estimates = [(R, 1000), (C, 1000)]
     pipeline = buildPipeline([s], \
-                             pipe_name="s")
+                             pipe_name="s",
+                             param_estimates=p_estimates)
 
     filename = 'red_naive.cpp'
     c_file = open(filename, 'w')
