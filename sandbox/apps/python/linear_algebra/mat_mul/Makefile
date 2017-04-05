@@ -37,4 +37,4 @@ clean:
 	rm -rf *.pyc *.so *.dot *.png __pycache__
 
 cleaner:
-	rm -rf *.pyc *.so *.dot *.png __pycache__ *.cpp
+	rm -rf *.pyc *.so *.dot *.png __pycache__ *.cpp tile.sizes
