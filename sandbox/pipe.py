@@ -1542,7 +1542,7 @@ def idiom_recognition(pipeline, group):
     return
 
 # Replace schedule and expr of identified computation with lib calls
-def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom, ctx):
+def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom, ctx=None):
     if idiom == Idiom_type.mat_mat_mul:
         if g_all_parts[0].expr == 0:
             poly_part = g_all_parts[1]
