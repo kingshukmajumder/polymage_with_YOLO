@@ -369,8 +369,8 @@ class Group:
         computation objects when possible.
     """
     # Construct a group from a set of language functions / reductions
-    def __init__(self, _ctx, _comp_objs, \
-                 _param_constraints):
+    # Adding _initialization_complete param, Decides if initialization for reduction matrix is required or not.
+    def __init__(self, _ctx, _comp_objs, _param_constraints, _initialization_complete):
 
         self._id = IdGen.get_grp_id()
 
@@ -380,10 +380,10 @@ class Group:
         # Function class. Input images cannot be part of a group.
         self._is_image_typ = False
         for comp in _comp_objs:
-            assert(isinstance(comp, ComputeObject))
+            assert (isinstance(comp, ComputeObject))
             if comp.is_image_typ:
                 self._is_image_typ = True
-        self._comps  = _comp_objs
+        self._comps = _comp_objs
         self._parents = []
         self._children = []
 
@@ -398,6 +398,8 @@ class Group:
         self._children_map = None
         self._polyrep = None
 
+        self._initialization_complete = _initialization_complete
+
         # Create a polyhedral representation if possible.
         # Currently doing extraction only when all the compute_objs
         # domains are affine. This can be revisited later.
@@ -408,6 +410,9 @@ class Group:
         self._liveness_map = None
         self._can_be_mapped_to_lib = False
 
+    @property
+    def initialization_complete(self):
+        return self._initialization_complete
     @property
     def id_(self):
         return self._id
@@ -654,7 +659,7 @@ class Pipeline:
         self.pluto_to_polymage_fname_map = {}
         self.function_schedule_map = {}
 
-        if 'matrix' in self.options:
+        if 'pluto' in self.options:
             self._pluto_sched_required = True
         else:
             self._pluto_sched_required = False
@@ -707,7 +712,7 @@ class Pipeline:
             # If Matrix optimization. Group all compute objects into one group
             # Pluto schedule will take care of fusion
             comps = self.comps
-            group = Group(self._ctx, comps, self._param_constraints)
+            group = Group(self._ctx, comps, self._param_constraints, self._pluto_sched_required)
             self._groups = [group]
         else:
             self._groups = self.build_initial_groups()
@@ -981,6 +986,7 @@ class Pipeline:
     # Accepts Reads, Writes and Initial Schedule
     # Returns Union Map of Dependencies (RAW, WAW and WAR)
     def getDependencies(self, read_map, write_map, initial_schedule):
+
         # initial_schedule << initial_schedule
         initial_schedule = initial_schedule.lex_lt_union_map(initial_schedule)
         # Read^-1
@@ -1012,11 +1018,9 @@ class Pipeline:
 
         main_poly_part = []
         for group in self._groups:
-            # Align and scale and generate inital Schedule.
+            # Generate inital Schedule.
             # Required for generating dependencies
-            align_and_scale(self, group)
-            base_schedule(group)
-
+            base_schedule_for_matrix_ops(group)
             for comp in group.comps:
                 poly_parts = group.polyRep.poly_parts[comp]
                 main_poly_part.extend(poly_parts)
@@ -1078,10 +1082,7 @@ class Pipeline:
         else:
             # If no dependencies found, then send empty UnionMap to Pluto
             LOG(log_level, "No dependencies found")
-            # str1 = '[R, C] -> { S_0[x, y, prod_var_mat1_mat2] -> S_4[x, y] : R = 128 and C = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat2 <= 127; S_2[x, y, prod_var_mat1_mat3] -> S_2[x, y, prod_var_mat1_mat3_1] : C = 128 and R = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat3 <= 127 and prod_var_mat1_mat3 < prod_var_mat1_mat3_1 <= 127; S_0[x, y, prod_var_mat1_mat2] -> S_0[x, y, prod_var_mat1_mat2_1] : C = 128 and R = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat2 <= 127 and prod_var_mat1_mat2 < prod_var_mat1_mat2_1 <= 127; S_2[x, y, prod_var_mat1_mat3] -> S_4[x, y] : R = 128 and C = 128 and 0 <= x <= 127 and 0 <= y <= 127 and 0 <= prod_var_mat1_mat3 <= 127; }'
-            # deps_union_map = isl.UnionMap.read_from_str(self._ctx, str1)
-            # LOG(log_level, deps_union_map.to_str())
-            # deps_union_map = isl.UnionMap.read_from_str(self._ctx, '{}')
+            deps_union_map = isl.UnionMap.read_from_str(self._ctx, '{}')
 
         # Pluto call
         pluto = LibPluto()
@@ -1091,7 +1092,6 @@ class Pipeline:
         # Making the remapping call to figure out which dims are scalar
         # and the tile information
         remapping = pluto.get_remapping(self._ctx, domain_union_set, deps_union_map, pluto_options)
-
 
         LOG(log_level,"Schedule recieved from Pluto:")
         LOG(log_level,out_schedule)
@@ -1127,20 +1127,32 @@ class Pipeline:
             if isinstance(poly_part.comp.func, Reduction) and not (poly_part.is_default_part):
                 for i, var in enumerate(poly_part.func.reductionVariables):
                     new_sched = new_sched.set_dim_name(isl.dim_type.in_, i, var.name)
-                num_vars = len(poly_part.func.reductionVariables)
             else:
                 for i, var in enumerate(poly_part.func.variables):
                     new_sched = new_sched.set_dim_name(isl.dim_type.in_, i, var.name)
-                num_vars = len(poly_part.func.variables)
             poly_part.sched = new_sched
 
-            #TODO: Retrieve the correct elements from inverse matrix
-            # time_index = num_vars
-            # stmt_num = poly_part.stmt_no
-            # inv_map = remapping.inv_matrices[stmt_num][time_index][time_index:time_index + num_vars + 1]
-            # divs = remapping.divs[stmt_num][time_index]
+            num_out_dims = poly_part.sched.dim(isl.dim_type.out)
+            num_in_dims = poly_part.sched.dim(isl.dim_type.in_)
 
-            # time_indexing_coeff = (inv_map, divs)
+            # TODO: Check if statement numbers are retrieved correctly (ordered by polypart or by statment num)
+            stmt_num = poly_part.stmt_no
+
+            inv_map = np.array(remapping.inv_matrices[stmt_num], dtype=object)
+
+            # inv_map = inv_map[0:num_in_dims, 0:num_out_dims]
+            # inv_map = inv_map.transpose()
+            # for dim in range(num_out_dims):
+            #     poly_part.scalar[dim] = np.sum(inv_map[dim])
+            divs = remapping.divs[stmt_num] #[0:num_in_dims]
+
+            poly_part.set_pluto_inv_and_div_matrix(inv_map,divs)
+
+            # Tiled check
+            if num_out_dims >= (2 * num_in_dims):
+                poly_part.tiled = True
+            else:
+                poly_part.tiled = False
             # Mark parallel and vector loops
             # TODO: Needs seperate implemetation for Pluto Schedule
             #TODO: Add mar_par_for_tiled_loops
@@ -1219,7 +1231,7 @@ class Pipeline:
         comps = self.comps
         groups = []
         for comp in comps:
-            group = Group(self._ctx, [comp], self._param_constraints)
+            group = Group(self._ctx, [comp], self._param_constraints, self.pluto_sched_required)
             groups.append(group)
 
         for group in groups:
@@ -1356,7 +1368,7 @@ class Pipeline:
 
         # Create a new group
         merged = Group(self._ctx, comps,
-                       self._param_constraints)
+                       self._param_constraints, self.pluto_sched_required)
 
         self.add_group(merged)
 
@@ -1511,11 +1523,11 @@ def idiom_recognition(pipeline, group):
         sig_fft_found = match_idiom_sig_fft(g_all_comp_parts)
         sig_ifft_found = match_idiom_sig_ifft(g_all_comp_parts)
         if matrix_mul_found:
-            if 'matrix' in pipeline.options:
+            if 'pluto' in pipeline.options:
                 isPlutoSchedule = True
             else:
                 isPlutoSchedule = False
-            replace_sched_expr_with_matched_idiom(g_all_comp_parts, isPlutoSchedule, Idiom_type.mat_mat_mul)
+            replace_sched_expr_with_matched_idiom(g_all_comp_parts, isPlutoSchedule, Idiom_type.mat_mat_mul, pipeline._ctx)
             LOG(log_level,"Idiom Match Found for comp: " + comp.func.name)
         elif sig_fft_found:
             zero_part = replace_sched_expr_with_matched_idiom(g_all_comp_parts, False, Idiom_type.sig_fft)
@@ -1530,7 +1542,7 @@ def idiom_recognition(pipeline, group):
     return
 
 # Replace schedule and expr of identified computation with lib calls
-def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom):
+def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom, ctx):
     if idiom == Idiom_type.mat_mat_mul:
         if g_all_parts[0].expr == 0:
             poly_part = g_all_parts[1]
@@ -1541,34 +1553,34 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom):
         tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
         eqs = []
         ineqs = []
-
-        if isPlutoSchedule:
+        if isPlutoSchedule and poly_part.tiled:
             #TODO: Assuming the code is tiled. Need to add a condition to check that
             n_dims = poly_part.sched.dim(isl._isl.dim_type.out)
-            if not n_dims >= 4:
+            if not n_dims >= 3:
                 log_level = logging.ERROR
                 LOG(log_level, "Wrong number of dimensions found for Idiom Match")
                 raise RuntimeError("Number of dimensions did not match with the Idiom")
-            n_dims = n_dims - 3
+            # n_dims = n_dims - 3 #(Removing the input dimensions)
             start_dim = n_dims - 3
             log_level = logging.INFO
             LOG(log_level, "Idiom Matching for Pluto Schedule")
+            poly_part.sched = poly_part.sched.project_out(isl._isl.dim_type.out,start_dim,3)
         else:
             # When Tiling is not performed or when Pluto schedule is not invoked.
             n_dims = poly_part.sched.dim(isl._isl.dim_type.out)
-            if not n_dims >= 4:
+            if not n_dims >= 3:
                 log_level = logging.ERROR
                 LOG(log_level, "Wrong number of dimensions found for Idiom Match")
                 raise RuntimeError("Number of dimensions did not match with the Idiom")
             start_dim = n_dims - 3
 
-        for i in range(start_dim, n_dims):
-            name = poly_part.sched.get_dim_name(isl._isl.dim_type.out, i)
-            coeff = {}
-            coeff[('out', name)] = 1
-            eqs.append(coeff)
+            for i in range(start_dim, n_dims):
+                name = poly_part.sched.get_dim_name(isl._isl.dim_type.out, i)
+                coeff = {}
+                coeff[('out', name)] = 1
+                eqs.append(coeff)
 
-        poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
+            poly_part.sched = add_constraints(poly_part.sched, ineqs, eqs)
         poly_part.sched = poly_part.sched.set_tuple_id(isl._isl.dim_type.in_, tuple_in)
     elif idiom == Idiom_type.sig_fft:
         if g_all_parts[0].expr == 0:

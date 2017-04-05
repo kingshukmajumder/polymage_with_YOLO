@@ -67,7 +67,7 @@ def build_matops(app_data):
     p_constraints = [ Condition(R, "==", rows), \
                       Condition(C, "==", cols) ]
     t_size = [16, 16]
-    g_size = 1
+    g_size = 10
     opts = []
     if app_data['early_free']:
         opts += ['early_free']
@@ -77,8 +77,8 @@ def build_matops(app_data):
         opts += ['pool_alloc']
     if app_data['blas']:
         opts += ['blas']
-    if app_data['matrix']:
-        opts += ['matrix']
+    if app_data['pluto']:
+        opts += ['pluto']
 
     pipe = buildPipeline(live_outs,
                          param_estimates=p_estimates,

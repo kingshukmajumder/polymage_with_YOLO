@@ -49,7 +49,7 @@ def bounds_check_pass(pipeline):
         inp_comp = pipeline.func_map[inp_func]
         inp_groups[inp_func] = \
             pipe.Group(pipeline._ctx, [inp_comp], \
-                       pipeline._param_constraints)
+                       pipeline._param_constraints, pipeline.pluto_sched_required)
 
     for group in pipeline.groups:
         for child in group.children:

@@ -308,7 +308,6 @@ class Remapping(object):
                         for r in range(nrows)]
             self._inv_matrices.append(inv_matrix)
 
-            self._inv_matrices.append(inv_matrix)
             stmt_div = [stmt_div[r] for r in range(nrows)]
             self._stmt_divs.append(stmt_div)
 

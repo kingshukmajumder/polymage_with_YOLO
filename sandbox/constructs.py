@@ -1007,10 +1007,9 @@ class Function(object):
         #   value at each point in the function domain is uniquely defined.
         self._body      = []
 
-        self._mat_func = False
-
         self.no_return_value = False
         self._dimensions = []
+        self._description = _name
 
     @property
     def name(self):
@@ -1030,6 +1029,13 @@ class Function(object):
     def no_return_value(self, _value):
         self._no_return_value = _value
 
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, desc):
+        self._description = desc
 
     # Property to check if the function is of Matrix type
     @property
@@ -1154,8 +1160,9 @@ class Function(object):
             _const = "const"
         newFunc = Function(varDom, self._typ, self._name, _const)
         newFunc.defn = newBody
-        newFunc.is_mat_func = self.is_mat_func
+        # newFunc.is_mat_func = self.is_mat_func
         newFunc.dimensions = self.dimensions
+        newFunc.description = self.description
         return newFunc
 
     def __str__(self):
@@ -1180,8 +1187,23 @@ class Function(object):
             assert(mat2.is_mat_func)
 
         assert (mat1.typ == mat2.typ)
-        assert(len(mat1.variables) == len(mat2.variables))
         return Matrix.mat_multiplication(mat1, mat2)
+
+    def __add__(self, other):
+        mat1 = self
+        mat2 = other
+        assert(mat1.is_mat_func)
+        if not isinstance(mat2, Matrix):
+            assert(mat2.is_mat_func)
+        return Matrix.mat_addition(mat1,mat2)
+
+    def __sub__(self, other):
+        mat1 = self
+        mat2 = other
+        assert(mat1.is_mat_func)
+        if not isinstance(mat2, Matrix):
+            assert(mat2.is_mat_func)
+        return Matrix.mat_subtraction(mat1,mat2)
 
     def set_variables_and_intervals(self, var, intr):
         self._variables = var
@@ -1327,9 +1349,9 @@ class Reduction(Function):
         newRed = Reduction(varDom, redDom, self._typ, self._name)
         newRed.defn = newBody
         newRed.default = self._default.clone()
-        newRed.is_mat_func = self.is_mat_func
         newRed.reductionDimensions = self.reductionDimensions
         newRed.dimensions = self.dimensions
+        newRed.description = self.description
         return newRed
 
     def __str__(self):
@@ -1350,7 +1372,6 @@ class Reduction(Function):
         else:
             return self._name
 
-
 class Matrix(Function):
     def __init__(self, _typ, _name, _dims, _var=None):
         _dims = [ Value.numericToValue(dim) for dim in _dims ]
@@ -1363,6 +1384,7 @@ class Matrix(Function):
         self._name = _name
         intervals = []
         variables = []
+        self.is_mat_func = True
         i = 0
         if(_var == None):
             for dim in self._dims:
@@ -1378,6 +1400,7 @@ class Matrix(Function):
             self._variables = _var
             variables = _var
         self._intervals = intervals
+        self.description = _name
         Function.__init__(self,(variables, intervals),_typ,_name)
 
     @property
@@ -1411,9 +1434,11 @@ class Matrix(Function):
         var = [v.clone() for v in self._variables]
         dimensions = self.dimensions.copy()
         newFunc = Matrix(self._typ, self._name, dimensions, var)
+        newFunc.is_mat_func = self.is_mat_func
         if not self.isInput:
             newBody = [c.clone() for c in self._body]
             newFunc.defn = newBody
+            newFunc.description = self.description
         return newFunc
 
     def convertReductionToMatrix(self, reduction):
@@ -1428,21 +1453,140 @@ class Matrix(Function):
         mat1 = self
         mat2 = other
         # Initial checks to make sure that the parameters are only Matrices.
-        if not isinstance(mat2, Matrix):
+        if not type(mat2) == Matrix:
             assert(mat2.is_mat_func)
         assert (mat1.typ == mat2.typ)
-        if isinstance(mat2, Matrix):
-            assert (len(mat1.dimensions) == len(mat2.dimensions))
-        else:
-            assert(len(mat1.dimensions) == len(mat2.variables))
-            assert(mat2.is_mat_func)
 
         return Matrix.mat_multiplication(mat1, mat2)
+
+    def __add__(self, other):
+        mat1 = self
+        mat2 = other
+        return Matrix.mat_addition(mat1,mat2)
+
+    def __sub__(self, other):
+        mat1 = self
+        mat2 = other
+        assert(mat1.is_mat_func)
+        if not isinstance(mat2, Matrix):
+            assert(mat2.is_mat_func)
+        return Matrix.mat_subtraction(mat1,mat2)
 
     @staticmethod
     def det(mat):
         # TODO: Add implementation
         return mat.dimensions[0]
+
+    @staticmethod
+    def mat_addition(mat1, mat2):
+        assert(len(mat1.variables) == len(mat2.variables))
+        assert(len(mat1.domain) == len(mat2.domain))
+        assert (len(mat1.dimensions) == len(mat2.dimensions))
+        cond = None
+        for dim in range(len(mat1.dimensions)):
+            if not cond:
+                cond = Condition(mat1.dimensions[dim], "==", mat2.dimensions[dim])
+            else:
+                cond = cond & Condition(mat1.dimensions[dim], "==", mat2.dimensions[dim])
+
+        assert(mat1.typ == mat2.typ)
+
+        name = '_add_' + random_num(2)
+        add = Matrix(mat1.typ, name, mat1.dimensions, mat1.variables)
+        add.defn = [Case(cond,mat1(*mat1.variables) + mat2(*mat1.variables))]
+        add.is_mat_func = True
+        desc = name + ' = ' + mat1.name + ' - ' + mat2.name
+        add.description = desc
+        return add
+
+    @staticmethod
+    def mat_subtraction(mat1, mat2):
+        assert (len(mat1.variables) == len(mat2.variables))
+        assert (len(mat1.domain) == len(mat2.domain))
+        assert (len(mat1.dimensions) == len(mat2.dimensions))
+        cond = None
+        for dim in range(len(mat1.dimensions)):
+            if not cond:
+                cond = Condition(mat1.dimensions[dim], "==", mat2.dimensions[dim])
+            else:
+                cond = cond & Condition(mat1.dimensions[dim], "==", mat2.dimensions[dim])
+
+        assert (mat1.typ == mat2.typ)
+
+        name = '_sub_' + random_num(2)
+        sub = Matrix(mat1.typ, name, mat1.dimensions, mat1.variables)
+        sub.defn = [Case(cond,mat1(*mat1.variables) - mat2(*mat1.variables))]
+        sub.is_mat_func = True
+        sub.description = name + ' = ' + mat1.name + ' - ' + mat2.name
+        return sub
+
+    @staticmethod
+    def elementwise_mul(mat1, mat2):
+        assert (len(mat1.variables) == len(mat2.variables))
+        assert (len(mat1.domain) == len(mat2.domain))
+        assert (len(mat1.dimensions) == len(mat2.dimensions))
+        cond = None
+        for dim in range(len(mat1.dimensions)):
+            if not cond:
+                cond = Condition(mat1.dimensions[dim], "==", mat2.dimensions[dim])
+            else:
+                cond = cond & Condition(mat1.dimensions[dim], "==", mat2.dimensions[dim])
+
+        assert (mat1.typ == mat2.typ)
+
+        name = '_elem_mul_' + random_num(2)
+        mul = Matrix(mat1.typ, name, mat1.dimensions, mat1.variables)
+        mul.defn = [Case(cond,mat1(*mat1.variables) * mat2(*mat1.variables))]
+        mul.is_mat_func = True
+        mul.description = name + ' = ' + mat1.name + ' - ' + mat2.name
+        return mul
+
+    @staticmethod
+    def elementwise_div(mat1, mat2):
+        assert (len(mat1.variables) == len(mat2.variables))
+        assert (len(mat1.domain) == len(mat2.domain))
+        assert (len(mat1.dimensions) == len(mat2.dimensions))
+        cond = None
+        for dim in range(len(mat1.dimensions)):
+            if not cond:
+                cond = Condition(mat1.dimensions[dim], "==", mat2.dimensions[dim])
+            else:
+                cond = cond & Condition(mat1.dimensions[dim], "==", mat2.dimensions[dim])
+
+        assert (mat1.typ == mat2.typ)
+
+        name = '_ele_div_' + random_num(2)
+        div = Matrix(mat1.typ, name, mat1.dimensions, mat1.variables)
+        div.defn = [Case(cond,mat1(*mat1.variables) / mat2(*mat1.variables))]
+        div.is_mat_func = True
+        div.description = name + ' = '+ mat1.name + ' - ' + mat2.name
+        return div
+
+    @staticmethod
+    def scalar_mul(mat1, scalar):
+        assert (mat1.is_mat_func)
+        # assert (type(scalar, Value))
+        name = '_scal_mul_' + random_num(2)
+        scal_mul = Matrix(mat1.typ, name, mat1.dimensions, mat1.variables)
+        scal_mul.defn = [mat1(*mat1.variables) * scalar]
+        scal_mul.is_mat_func = True
+        scal_mul.description = name + ' = ' + mat1.name + ' - ' + str(scalar)
+        return scal_mul
+
+    @staticmethod
+    def transpose(mat1):
+        assert (mat1.is_mat_func)
+        # assert (type(scalar, Value))
+        name = '_tran_' + random_num(2)
+        rev_var = mat1.variables.copy()
+        rev_var = [ var for var in reversed(rev_var)]
+        rev_dims = mat1.dimensions.copy()
+        rev_dims = [ dim for dim in reversed(rev_dims)]
+        transpose = Matrix(mat1.typ, name, rev_dims, mat1.variables)
+        transpose.defn = [mat1(*rev_var)]
+        transpose.is_mat_func = True
+        transpose.description = name + ' = ' + mat1.name
+        return transpose
 
     @staticmethod
     def mat_multiplication(mat1,mat2):
@@ -1451,23 +1595,15 @@ class Matrix(Function):
         dimensions = []
         redn_dimensions = []
 
-        if isinstance(mat1, Matrix):
-            total_dimension_mat1 = mat1.dimensions.__len__()
-            intervals = intervals.__add__(mat1.intervals[0:total_dimension_mat1 - 1])
-        else:
-            total_dimension_mat1 = mat1.variables.__len__()
-            intervals = intervals.__add__(mat1.domain[0:total_dimension_mat1-1])
+        total_dimension_mat1 = mat1.variables.__len__()
+        intervals = intervals.__add__(mat1.domain[0:total_dimension_mat1-1])
 
         variables = variables.__add__(mat1.variables[0:total_dimension_mat1 - 1])
         dimensions = dimensions.__add__(mat1.dimensions[0:total_dimension_mat1 - 1])
         redn_dimensions = redn_dimensions.__add__(mat1.dimensions)
 
-        if isinstance(mat2, Matrix):
-            total_dimension_mat2 = mat2.dimensions.__len__()
-            intervals = intervals.__add__(mat2.intervals[1:total_dimension_mat2])
-        else:
-            total_dimension_mat2 = mat2.variables.__len__()
-            intervals = intervals.__add__(mat2.domain[1:total_dimension_mat2])
+        total_dimension_mat2 = mat2.variables.__len__()
+        intervals = intervals.__add__(mat2.domain[1:total_dimension_mat2])
 
         variables = variables.__add__(mat2.variables[1:total_dimension_mat2])
         dimensions = dimensions.__add__(mat2.dimensions[1:total_dimension_mat2])
@@ -1488,7 +1624,7 @@ class Matrix(Function):
             reduction_interval.append(mat2.domain[0])
 
         red_dom = (reduction_variable, reduction_interval)
-        name = 'redn_prod_' + mat1.name + '_' + mat2.name
+        name = '_mul_' + random_num(2)
 
         # NOTE: This is the constraint given to isl, as a promise, that
         # the parameters of the dimension in which matrices are reduced
@@ -1517,8 +1653,34 @@ class Matrix(Function):
         matmul_as_reduction.is_mat_func = True
         matmul_as_reduction.dimensions = dimensions
         matmul_as_reduction.reductionDimensions = redn_dimensions
+        matmul_as_reduction.description = name + ' = ' + mat1.name + ' - ' + mat2.name
 
         return matmul_as_reduction
+
+class Vector(Matrix):
+    def __init__(self, _typ, _name, _dim, _var=None):
+        self.is_mat_func = True
+        _dim = Value.numericToValue(_dim)
+        assert(isinstance(_dim, AbstractExpression))
+        if _var:
+            Matrix.__init__(self, _typ, _name, [_dim,1], [_var])
+        else:
+            Matrix.__init__(self, _typ, _name, [_dim,1])
+
+    def clone(self, input=False):
+        var = [v.clone() for v in self._variables]
+        dimensions = self.dimensions.copy()
+        newFunc = Vector(self._typ, self._name, dimensions[0], var[0])
+        newFunc.is_mat_func = self.is_mat_func
+        if not self.isInput:
+            newBody = [c.clone() for c in self._body]
+            newFunc.defn = newBody
+            newFunc.description = self.description
+        return newFunc
+
+class Scalar(Matrix):
+    def __init__(self, _typ, _name):
+        Matrix.__init__(self, _typ, _name, [1])
 
 class Wave(Function):
     def __init__(self, _typ, _name, _len, _var=None, _const=""):

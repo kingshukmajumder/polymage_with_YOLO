@@ -119,7 +119,7 @@ def inline_and_update_graph(pipeline, group, child_group, inline_map):
 
     # create new Group for the child
     new_group = pipe.Group(pipeline._ctx, [child_comp],
-                           pipeline._param_constraints)
+                           pipeline._param_constraints, pipe.pluto_sched_required)
 
     pipeline.replace_group(child_group, new_group)
 

@@ -45,6 +45,14 @@ def generate_graph(pipe, file_name, app_data):
 
     return
 
+def create_tile_sizes_file(t_sizes):
+    file_name = "tile.sizes"
+    tile_file = open(file_name, 'w')
+    for tile_size in t_sizes:
+        tile_file.write(str(tile_size) + "\n")
+    tile_file.close()
+    return
+
 def build_matmul(app_data):
     pipe_data = app_data['pipe_data']
 
@@ -55,7 +63,12 @@ def build_matmul(app_data):
     #R2 = pipe_data['R2']
     #C2 = pipe_data['C2']
 
-    live_outs = [out_matmul]
+    # This implies that only one value was returned
+    if not isinstance(out_matmul, list):
+        live_outs = [out_matmul]
+    else:
+        live_outs = out_matmul
+
     pipe_name = app_data['app']
 
     rows1 = app_data['rows1']
@@ -69,7 +82,12 @@ def build_matmul(app_data):
                       #Condition(R2, "==", rows2), \
                       #Condition(C2, "==", cols2), \
                     ]
-    t_size = [16, 16]
+
+    # Pluto schedule requires tile.sizes file
+    if(app_data['pluto']):
+        t_size = app_data['tiles'].split(',')
+        create_tile_sizes_file(t_size)
+
     g_size = 1
     opts = []
     if app_data['early_free']:
@@ -80,13 +98,12 @@ def build_matmul(app_data):
         opts += ['pool_alloc']
     if app_data['blas']:
         opts += ['blas']
-    if app_data['matrix']:
-        opts += ['matrix']
+    if app_data['pluto']:
+        opts += ['pluto']
 
     pipe = buildPipeline(live_outs,
                          param_estimates=p_estimates,
                          param_constraints=p_constraints,
-                         #tile_sizes = t_size,
                          #group_size = g_size,
                          options = opts,
                          pipe_name = pipe_name)

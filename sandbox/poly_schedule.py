@@ -61,6 +61,25 @@ def format_schedule_constraints(dim_in, dim_out, align, scale, level_no):
             eq_coeff.append(coeff)
     return [ineq_coeff, eq_coeff]
 
+def format_schedule_constraints_without_align_scale(dim_in, dim_out,level_no):
+    ineq_coeff = []
+    eq_coeff = []
+    dim_set = [False for i in range(0, dim_out)]
+    # Setting the leading schedule dimension to level
+    level_coeff = {}
+    level_coeff[('out', 0)] = -1
+    level_coeff[('constant', 0)] = level_no - 1
+    eq_coeff.append(level_coeff)
+
+    # Setting the remaining dimensions to zero
+    for i in range(1, dim_out):
+        if not dim_set[i]:
+            coeff = {}
+            coeff[('out', i)] = -1
+            coeff[(('in', i - 1))] = 1
+            eq_coeff.append(coeff)
+    return [ineq_coeff, eq_coeff]
+
 def base_schedule(group):
     """
     Construct the base schedule for a group with a polyhedral representation.
@@ -78,6 +97,26 @@ def base_schedule(group):
         [ineqs, eqs] = format_schedule_constraints(dim_in, dim_out,
                                                    part.align,
                                                    part.scale,
+                                                   part.level)
+        part.sched = add_constraints(part.sched, ineqs, eqs)
+
+    return parts
+
+def base_schedule_for_matrix_ops(group):
+    """
+        Construct the base schedule for a group with a polyhedral representation.
+        """
+
+    assert (group.isPolyhedral)
+
+    parts = []
+    for sublist in group.polyRep.poly_parts.values():
+        parts.extend(sublist)
+
+    for part in parts:
+        dim_in = part.sched.dim(isl._isl.dim_type.in_)
+        dim_out = part.sched.dim(isl._isl.dim_type.out)
+        [ineqs, eqs] = format_schedule_constraints_without_align_scale(dim_in, dim_out,
                                                    part.level)
         part.sched = add_constraints(part.sched, ineqs, eqs)
 
@@ -445,7 +484,7 @@ def match_idiom_matrix_mul(parts):
                                 and is_object_matrix(reduce_expr.right.objectRef):
                             if reduce_expr.op == '*':
                                 reduction_found = True
-    if zero_found and reduction_found:
+    if reduction_found:
         return True
     return False
 

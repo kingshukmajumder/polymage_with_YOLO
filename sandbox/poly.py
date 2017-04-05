@@ -222,6 +222,10 @@ class PolyPart(object):
         # This is later to the correct statement no. in modifed in pipe.py
         self._stmt_no = _level_no
 
+        self._tiled = False
+
+        self._scalar = {}
+
     @property
     def align(self):
         return list(self._align)
@@ -256,6 +260,14 @@ class PolyPart(object):
     def idiom(self):
         return self._idiom
 
+    @property
+    def inv_matrix(self):
+        return self._inv_matrix
+
+    @property
+    def div_vector(self):
+        return self._div_vector
+
     @idiom.setter
     def idiom(self, _idiom):
         self._idiom = _idiom
@@ -271,6 +283,22 @@ class PolyPart(object):
     @is_default_part.setter
     def is_default_part(self, default_part):
         self._is_default_part = default_part
+
+    @property
+    def tiled(self):
+        return self._tiled
+
+    @tiled.setter
+    def tiled(self, isTiled):
+        self._tiled = isTiled
+
+    @property
+    def scalar(self):
+        return self._scalar
+
+    @scalar.setter
+    def scalar(self, scalar):
+        self._scalar = scalar
 
     def set_align(self, align):
         self._align = [i for i in align]
@@ -326,6 +354,10 @@ class PolyPart(object):
 
     def set_liveness(self, _is_liveout):
         self._is_liveout = _is_liveout
+
+    def set_pluto_inv_and_div_matrix(self, inv_matrix, div_vector):
+        self._inv_matrix = inv_matrix
+        self._div_vector = div_vector
 
     def compute_dependence_vector(self, parent_part,
                                   ref, scale_map = None):
@@ -548,6 +580,8 @@ class PolyRep(object):
         self.read_union_map = {}
         self.write_union_map = {}
 
+
+
         # TODO: move the following outside __init__()
         # For now, let this be. Compilation optimizations can come later.
 
@@ -590,7 +624,8 @@ class PolyRep(object):
                          [ self.getVarName()  for i in range(0, dim) ]
 
         for comp in comp_map:
-            if (type(comp.func) == Function or type(comp.func) == Image or type(comp.func) == Matrix or type(comp.func) == Wave):
+            if (type(comp.func) == Function or type(comp.func) == Image or type(comp.func) == Matrix or
+                        type(comp.func) == Wave or type(comp.func) == Vector or type(comp.func) == Scalar ):
                 self.extract_polyrep_from_function(comp, dim, schedule_names,
                                                    param_names, context_conds,
                                                    comp_map[comp]+1,
@@ -599,7 +634,7 @@ class PolyRep(object):
                 self.extract_polyrep_from_reduction(comp, dim, schedule_names,
                                                     param_names, context_conds,
                                                     comp_map[comp]+1,
-                                                    param_constraints)
+                                                    param_constraints, self.group.initialization_complete)
             else:
                 assert False
 
@@ -667,6 +702,19 @@ class PolyRep(object):
                 read_var_names.append(str(var))
         return read_var_names,eqs
 
+    def add_equality_constraints_to_access_maps(self, read_var_names, read_basic_map):
+        for i in range(len(read_var_names)):
+            ineq_coeff = []
+            eq_coeff = []
+            in_pos = read_basic_map.find_dim_by_name(isl._isl.dim_type.in_, read_var_names[i])
+            out_pos = read_basic_map.find_dim_by_name(isl._isl.dim_type.out, read_var_names[i])
+            coeff = {}
+            coeff[('out', out_pos)] = -1
+            coeff[(('in', in_pos))] = 1
+            eq_coeff.append(coeff)
+            read_basic_map = add_constraints(read_basic_map, ineq_coeff, eq_coeff)
+        return read_basic_map
+
     # Function updates the read and write access dictionary for each poly_part
     def update_read_and_write_access(self, comp):
         params = []
@@ -698,6 +746,7 @@ class PolyRep(object):
                 read_basic_map = read_basic_map.set_tuple_name(isl._isl.dim_type.in_,
                                                  part.sched.get_tuple_name(isl._isl.dim_type.in_))
                 read_basic_map = read_basic_map.set_tuple_name(isl._isl.dim_type.out, ref.objectRef.name)
+                read_basic_map = self.add_equality_constraints_to_access_maps(read_var_names,read_basic_map)
                 if len(eqs) > 0:
                     read_basic_map = add_constraints(read_basic_map, [], eqs)
                 if read_union_map is None:
@@ -714,6 +763,7 @@ class PolyRep(object):
             write_basic_map = isl.BasicMap.universe(write_space)
             write_basic_map = write_basic_map.set_tuple_name(isl._isl.dim_type.in_,
                                                            part.sched.get_tuple_name(isl._isl.dim_type.in_))
+            write_basic_map = self.add_equality_constraints_to_access_maps(var_names, write_basic_map)
             write_basic_map = write_basic_map.set_tuple_name(isl._isl.dim_type.out, comp.func.name)
             if write_union_map is None:
                 write_union_map = isl.UnionMap.from_basic_map(write_basic_map)
@@ -744,7 +794,7 @@ class PolyRep(object):
     def extract_polyrep_from_reduction(self, comp, max_dim,
                                        schedule_names, param_names,
                                        context_conds, level_no,
-                                       param_constraints):
+                                       param_constraints, initialization_complete):
         self.poly_doms[comp] = \
             self.extract_poly_dom_from_comp(comp, param_constraints)
         sched_map = self.create_sched_space(comp.func.reductionVariables,
@@ -760,10 +810,12 @@ class PolyRep(object):
                                           schedule_names, param_names,
                                           context_conds)
 
-        # Initializing the reduction earlier than any other function
-        self.create_poly_parts_from_default(comp, max_dim, dom_map, level_no,
+        # If Initializing matrix outside Polymage function, Dont create default part
+        if not initialization_complete:
+            # Initializing the reduction earlier than any other function
+            self.create_poly_parts_from_default(comp, max_dim, dom_map, level_no,
                                             schedule_names)
-        # TODO: Needs to be added only when matrix optimizations is specified
+
         self.update_read_and_write_access(comp)
 
     def create_sched_space(self, variables, domains,

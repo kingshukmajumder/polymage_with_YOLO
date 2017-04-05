@@ -41,6 +41,11 @@ def random_string(len):
         string.ascii_uppercase) \
                    for _ in range(len))
 
+def random_num(len):
+    return ''.join(random.SystemRandom().choice(
+        string.digits) \
+                   for _ in range(len))
+
 def convert_to_ctype(inp_type, inp_value):
     if inp_type == 'void':
         return ctypes.c_void(inp_value)

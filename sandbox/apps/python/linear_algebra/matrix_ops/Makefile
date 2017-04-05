@@ -10,8 +10,11 @@ IMG=$(ROOT)"/../images/venice_wikimedia.jpg"
 RUNS=1
 
 APP_ARGS=
-#APP_ARGS=--matrix --blas
+#APP_ARGS=--pluto
+#APP_ARGS=--blas
+#APP_ARGS=--pluto --blas
 OPT_ARGS=--pool_alloc --optimize_storage --early_free
+#OPT_ARGS=--pool_alloc --early_free
 TOOL_ARGS=--graph-gen --runs=${RUNS} --display --timer
 CXX_ARGS=--cxx="${CXX}" --cxx_flags="${CXX_FLAGS}"
 
