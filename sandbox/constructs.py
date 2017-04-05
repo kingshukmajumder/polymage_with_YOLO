@@ -1917,6 +1917,28 @@ class Wave(Function):
                                 Op.Sum)) ]
         return filtered_sig
 
+    def lfilter_fir_and_delay(self, b, out_name):
+        assert isinstance(b, Wave)
+        assert b._typ is Double
+
+        L = self._len
+        M = b._len
+
+        in_var = self._variables[0]
+        out_var = Variable(Int, "_" + out_name + str(0))
+        out_typ = self._typ
+
+        sig_interval = Interval(Int, 0, L-M)
+        coeff_interval = Interval(UInt, 0, M-1)
+
+        filtered_sig = Reduction(([out_var], [sig_interval]), \
+                ([out_var, in_var], [sig_interval, coeff_interval]), \
+                out_typ, out_name)
+        filtered_sig.defn = [ Reduce(filtered_sig(out_var), \
+                                self(out_var - in_var + M - 1) \
+                                * b(in_var), Op.Sum) ]
+        return filtered_sig
+
     def hilbert(self, out_name):
         assert self._typ is Double
 
