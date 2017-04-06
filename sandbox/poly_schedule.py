@@ -605,7 +605,7 @@ def match_sig_ifft2(reduce_expr, lhs_params, lhs_constant):
     return False
 
 def is_object_matrix(obj):
-    if not isinstance(obj, Wave) and \
+    if not isinstance(obj, (Reduction, Wave)) and \
             (isinstance(obj, Matrix) or (isinstance(obj, Function) \
             and obj.is_mat_func)):
         return True

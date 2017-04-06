@@ -1372,6 +1372,93 @@ class Reduction(Function):
         else:
             return self._name
 
+    def downsample(self, down, out_name):
+        dt = getType(down)
+        assert (dt is Int or dt is UInt)
+
+        assert len(self.domain) == 1
+        interval = self.domain[0]
+        length = interval.upperBound - interval.lowerBound + 1
+        N = length
+
+        in_var = Variable(UInt, "_" + out_name + str(0))
+        out_typ = self._typ
+
+        sig_down = Wave(out_typ, out_name, (N + down - 1)/down, in_var, \
+                                                                "const")
+        sig_down.defn = [ self(in_var * down) ]
+        return sig_down
+
+    def lfilter_fir_and_delay(self, b, out_name):
+        assert isinstance(b, Wave)
+        assert b._typ is Double
+
+        assert len(self.domain) == 1
+        interval = self.domain[0]
+        length = interval.upperBound - interval.lowerBound + 1
+        L = length
+        M = b._len
+
+        in_var = Variable(UInt, "_" + self._name + str(0))
+        out_var = Variable(Int, "_" + out_name + str(0))
+        out_typ = self._typ
+
+        sig_interval = Interval(Int, 0, L-M)
+        coeff_interval = Interval(UInt, 0, M-1)
+
+        filtered_sig = Reduction(([out_var], [sig_interval]), \
+                ([out_var, in_var], [sig_interval, coeff_interval]), \
+                out_typ, out_name)
+        filtered_sig.defn = [ Reduce(filtered_sig(out_var), \
+                                self(out_var - in_var + M - 1) \
+                                * b(in_var), Op.Sum) ]
+        return filtered_sig
+
+    def interp_fft(self, r, out_name):
+        rt = getType(r)
+        assert (rt is Int or rt is UInt)
+
+        assert len(self.domain) == 1
+        interval = self.domain[0]
+        length = interval.upperBound - interval.lowerBound + 1
+        N = length
+
+        in_var = Variable(UInt, "_" + self._name + str(0))
+        out_var = Variable(UInt, "_" + out_name + str(0))
+        out_typ = self._typ
+        out_len = N * r
+
+        if self._typ is Complex:
+            sig_complex = self
+        else:
+            sc_name = "_" + self._name + "_complex"
+            sig_complex = Wave(Complex, sc_name, N, in_var)
+            sig_complex.defn = [ Cast(Complex, self(in_var)) ]
+
+        sc_fft_name = sc_name + "_fft"
+        sig_complex_fft = sig_complex.fft(sc_fft_name)
+
+        Y_name = sc_name + "_zero_inserted"
+        Y = Wave(Complex, Y_name, out_len, out_var)
+        cond1 = Condition(2 * out_var, '<', N)
+        cond2 = Condition(2 * out_var, '>=', N) \
+                            & Condition(2 * (N - out_len + out_var), '<', N)
+        cond3 = Condition(2 * (N - out_len + out_var), '>=', N)
+        Y.defn = [ Case(cond1, sig_complex_fft(out_var)), \
+                   Case(cond2, 0), \
+                   Case(cond3, sig_complex_fft(N - out_len + out_var)) ]
+
+        ys_name = "_" + out_name + "_scaled"
+        y_scaled = Y.ifft(ys_name, out_len, real_input=False)
+
+        y = Wave(out_typ, out_name, out_len, out_var)
+        if out_typ is Complex:
+            y.defn = [ y_scaled(out_var) / Cast(Double, N) ]
+        else:
+            y.defn = [ Real(y_scaled(out_var)) / Cast(Double, N) ]
+
+        return y
+
 class Matrix(Function):
     def __init__(self, _typ, _name, _dims, _var=None):
         _dims = [ Value.numericToValue(dim) for dim in _dims ]
