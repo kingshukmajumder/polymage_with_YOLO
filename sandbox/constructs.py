@@ -1400,50 +1400,11 @@ class Reduction(Function):
                                                                 length)
 
     def interp_fft(self, r, out_name, _out_typ=None):
-        rt = getType(r)
-        assert (rt is Int or rt is UInt)
-
         assert len(self.domain) == 1
         interval = self.domain[0]
         length = interval.upperBound - interval.lowerBound + 1
-        N = length
 
-        in_var = Variable(UInt, "_" + self._name + str(0))
-        out_var = Variable(UInt, "_" + out_name + str(0))
-        out_typ = self._typ if _out_typ is None else _out_typ
-        out_len = N * r
-
-        if self._typ is Complex:
-            sc_name = self._name
-            sig_complex = self
-        else:
-            sc_name = "_" + self._name + "_complex"
-            sig_complex = Wave(Complex, sc_name, N, in_var)
-            sig_complex.defn = [ Cast(Complex, self(in_var)) ]
-
-        sc_fft_name = sc_name + "_fft"
-        sig_complex_fft = sig_complex.fft(sc_fft_name)
-
-        Y_name = sc_name + "_zero_inserted"
-        Y = Wave(Complex, Y_name, out_len, out_var)
-        cond1 = Condition(2 * out_var, '<', N)
-        cond2 = Condition(2 * out_var, '>=', N) \
-                            & Condition(2 * (N - out_len + out_var), '<', N)
-        cond3 = Condition(2 * (N - out_len + out_var), '>=', N)
-        Y.defn = [ Case(cond1, sig_complex_fft(out_var)), \
-                   Case(cond2, 0), \
-                   Case(cond3, sig_complex_fft(N - out_len + out_var)) ]
-
-        ys_name = "_" + out_name + "_scaled"
-        y_scaled = Y.ifft(ys_name, out_len, real_input=False)
-
-        y = Wave(out_typ, out_name, out_len, out_var)
-        if out_typ is Complex:
-            y.defn = [ y_scaled(out_var) / Cast(Double, N) ]
-        else:
-            y.defn = [ Real(y_scaled(out_var)) / Cast(Double, N) ]
-
-        return y
+        return Wave.interps_fft(self, r, out_name, _out_typ, length)
 
     def fft(self, out_name):
         if self._typ is Complex:
@@ -2311,23 +2272,25 @@ class Wave(Function):
         return w, h
 
     def interp_fft(self, r, out_name, _out_typ=None):
+        return Wave.interps_fft(self, r, out_name, _out_typ, self._len)
+
+    @staticmethod
+    def interps_fft(wav, r, out_name, _out_typ, N):
         rt = getType(r)
         assert (rt is Int or rt is UInt)
 
-        N = self._len
-
-        in_var = self._variables[0]
+        in_var = Variable(UInt, "_" + wav._name + str(0))
         out_var = Variable(UInt, "_" + out_name + str(0))
-        out_typ = self._typ if _out_typ is None else _out_typ
+        out_typ = wav._typ if _out_typ is None else _out_typ
         out_len = N * r
 
-        if self._typ is Complex:
-            sc_name = self._name
-            sig_complex = self
+        if wav._typ is Complex:
+            sc_name = wav._name
+            sig_complex = wav
         else:
-            sc_name = "_" + self._name + "_complex"
+            sc_name = "_" + wav._name + "_complex"
             sig_complex = Wave(Complex, sc_name, N, in_var)
-            sig_complex.defn = [ Cast(Complex, self(in_var)) ]
+            sig_complex.defn = [ Cast(Complex, wav(in_var)) ]
 
         sc_fft_name = sc_name + "_fft"
         sig_complex_fft = sig_complex.fft(sc_fft_name)
