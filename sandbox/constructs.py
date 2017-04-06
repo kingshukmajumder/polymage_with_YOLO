@@ -1407,21 +1407,11 @@ class Reduction(Function):
         return Wave.interps_fft(self, r, out_name, _out_typ, length)
 
     def fft(self, out_name):
-        if self._typ is Complex:
-            return self.__cfft(out_name)
-
         assert len(self.domain) == 1
         interval = self.domain[0]
         length = interval.upperBound - interval.lowerBound + 1
 
         return Wave.ffts(self, out_name, length)
-
-    def __cfft(self, out_name):
-        assert len(self.domain) == 1
-        interval = self.domain[0]
-        length = interval.upperBound - interval.lowerBound + 1
-
-        return Wave.cfft(self, out_name, length)
 
 class Matrix(Function):
     def __init__(self, _typ, _name, _dims, _var=None):
@@ -2557,13 +2547,13 @@ class Wave(Function):
         return fs
 
     def fft(self, out_name):
-        if self._typ is Complex:
-            return self.__cfft(out_name)
-
         return Wave.ffts(self, out_name, self._len)
 
     @staticmethod
     def ffts(wav, out_name, N):
+        if wav._typ is Complex:
+            return Wave.__cfft(wav, out_name, N)
+
         out_type = Complex
         out_len = N // 2 + 1
 
@@ -2581,11 +2571,8 @@ class Wave(Function):
 
         return out_wave
 
-    def __cfft(self, out_name):
-        return Wave.cfft(self, out_name, self._len)
-
     @staticmethod
-    def cfft(wav, out_name, out_len):
+    def __cfft(wav, out_name, out_len):
         out_type = Complex
 
         out_vars = [Variable(UInt, "_" + out_name + str(0))]
