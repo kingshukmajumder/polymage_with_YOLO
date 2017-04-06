@@ -1372,6 +1372,29 @@ class Reduction(Function):
         else:
             return self._name
 
+    def __add__(self, other):
+        assert isinstance(other, Reduction)
+        assert self._typ == other._typ
+        assert len(self.domain) == 1
+        interval = self.domain[0]
+        length = interval.upperBound - interval.lowerBound + 1
+        assert len(other.domain) == 1
+        interval = other.domain[0]
+        length_other = interval.upperBound - interval.lowerBound + 1
+        assert get_affine_var_and_param_coeff(length) \
+                    == get_affine_var_and_param_coeff(length_other) \
+                    and get_constant_from_expr(length) \
+                    == get_constant_from_expr(length_other)
+
+        out_typ = self._typ
+        out_name = "_" + self._name + "_" + other._name + "_sum"
+        out_len = length
+        out_var = Variable(UInt, "_" + out_name + str(0))
+
+        y = Wave(out_typ, out_name, out_len, out_var)
+        y.defn = [ self(out_var) + other(out_var) ]
+        return y
+
     def downsample(self, down, out_name):
         dt = getType(down)
         assert (dt is Int or dt is UInt)
