@@ -1389,32 +1389,15 @@ class Reduction(Function):
         interval = self.domain[0]
         length = interval.upperBound - interval.lowerBound + 1
 
-        return Wave.downsample(self, down, out_name, length)
+        return Wave.downsamples(self, down, out_name, length)
 
     def lfilter_fir_and_delay(self, b, out_name, _out_typ=None):
-        assert isinstance(b, Wave)
-        assert b._typ is Double
-
         assert len(self.domain) == 1
         interval = self.domain[0]
         length = interval.upperBound - interval.lowerBound + 1
-        L = length
-        M = b._len
 
-        in_var = Variable(UInt, "_" + self._name + str(0))
-        out_var = Variable(Int, "_" + out_name + str(0))
-        out_typ = self._typ if _out_typ is None else _out_typ
-
-        sig_interval = Interval(Int, 0, L-M)
-        coeff_interval = Interval(UInt, 0, M-1)
-
-        filtered_sig = Reduction(([out_var], [sig_interval]), \
-                ([out_var, in_var], [sig_interval, coeff_interval]), \
-                out_typ, out_name)
-        filtered_sig.defn = [ Reduce(filtered_sig(out_var), \
-                                self(out_var - in_var + M - 1) \
-                                * b(in_var), Op.Sum) ]
-        return filtered_sig
+        return Wave.lfilter_fir_and_delays(self, b, out_name, _out_typ, \
+                                                                length)
 
     def interp_fft(self, r, out_name, _out_typ=None):
         rt = getType(r)
@@ -2056,15 +2039,19 @@ class Wave(Function):
         return filtered_sig
 
     def lfilter_fir_and_delay(self, b, out_name, _out_typ=None):
+        return Wave.lfilter_fir_and_delays(self, b, out_name, _out_typ, \
+                                                            self._len)
+
+    @staticmethod
+    def lfilter_fir_and_delays(wav, b, out_name, _out_typ, L):
         assert isinstance(b, Wave)
         assert b._typ is Double
 
-        L = self._len
         M = b._len
 
-        in_var = self._variables[0]
+        in_var = Variable(UInt, "_" + wav._name + str(0))
         out_var = Variable(Int, "_" + out_name + str(0))
-        out_typ = self._typ if _out_typ is None else _out_typ
+        out_typ = wav._typ if _out_typ is None else _out_typ
 
         sig_interval = Interval(Int, 0, L-M)
         coeff_interval = Interval(UInt, 0, M-1)
@@ -2073,7 +2060,7 @@ class Wave(Function):
                 ([out_var, in_var], [sig_interval, coeff_interval]), \
                 out_typ, out_name)
         filtered_sig.defn = [ Reduce(filtered_sig(out_var), \
-                                self(out_var - in_var + M - 1) \
+                                wav(out_var - in_var + M - 1) \
                                 * b(in_var), Op.Sum) ]
         return filtered_sig
 
@@ -2156,10 +2143,10 @@ class Wave(Function):
         return suf_down
 
     def downsample(self, down, out_name):
-        return Wave.downsample(self, down, out_name, self._len)
+        return Wave.downsamples(self, down, out_name, self._len)
 
     @staticmethod
-    def downsample(wav, down, out_name, N):
+    def downsamples(wav, down, out_name, N):
         dt = getType(down)
         assert (dt is Int or dt is UInt)
 
