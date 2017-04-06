@@ -1374,7 +1374,6 @@ class Reduction(Function):
 
     def __add__(self, other):
         assert isinstance(other, Reduction)
-        assert self._typ == other._typ
         assert len(self.domain) == 1
         interval = self.domain[0]
         length = interval.upperBound - interval.lowerBound + 1
@@ -1386,9 +1385,6 @@ class Reduction(Function):
         return Wave.add(self, other, length)
 
     def downsample(self, down, out_name):
-        dt = getType(down)
-        assert (dt is Int or dt is UInt)
-
         assert len(self.domain) == 1
         interval = self.domain[0]
         length = interval.upperBound - interval.lowerBound + 1
@@ -1873,13 +1869,14 @@ class Wave(Function):
 
     def __add__(self, other):
         assert isinstance(other, Wave)
-        assert self._typ == other._typ
         assert self._len == other._len
 
         return Wave.add(self, other, self._len)
 
     @staticmethod
     def add(wav1, wav2, out_len):
+        assert wav1._typ == wav2._typ
+
         out_typ = wav1._typ
         out_name = "_" + wav1._name + "_" + wav2._name + "_sum"
         out_var = Variable(UInt, "_" + out_name + str(0))
@@ -2159,13 +2156,13 @@ class Wave(Function):
         return suf_down
 
     def downsample(self, down, out_name):
-        dt = getType(down)
-        assert (dt is Int or dt is UInt)
-
         return Wave.downsample(self, down, out_name, self._len)
 
     @staticmethod
     def downsample(wav, down, out_name, N):
+        dt = getType(down)
+        assert (dt is Int or dt is UInt)
+
         in_var = Variable(UInt, "_" + out_name + str(0))
         out_typ = wav._typ
 
