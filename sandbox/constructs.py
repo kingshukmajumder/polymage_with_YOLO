@@ -1410,25 +1410,11 @@ class Reduction(Function):
         if self._typ is Complex:
             return self.__cfft(out_name)
 
-        out_type = Complex
         assert len(self.domain) == 1
         interval = self.domain[0]
         length = interval.upperBound - interval.lowerBound + 1
-        out_len = length // 2 + 1
 
-        out_vars = [Variable(UInt, "_" + out_name + str(0))]
-        in_vars = [Variable(UInt, "_" + self._name + str(0))]
-
-        out_intervals = [Interval(UInt, 0, out_len - 1)]
-        in_intervals = [Interval(UInt, 0, self._len - 1)]
-
-        out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *in_intervals]), out_type, out_name)
-        out_wave.defn = [ Reduce(out_wave(*out_vars), \
-                                 self(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / length)), \
-                                 Op.Sum) ]
-        out_wave.reductionDimensions = [length]
-
-        return out_wave
+        return Wave.ffts(self, out_name, length)
 
     def __cfft(self, out_name):
         out_type = Complex
@@ -2587,20 +2573,24 @@ class Wave(Function):
         if self._typ is Complex:
             return self.__cfft(out_name)
 
+        return Wave.ffts(self, out_name, self._len)
+
+    @staticmethod
+    def ffts(wav, out_name, N):
         out_type = Complex
-        out_len = self._len // 2 + 1
+        out_len = N // 2 + 1
 
         out_vars = [Variable(UInt, "_" + out_name + str(0))]
-        in_vars = self._variables
+        in_vars = [Variable(UInt, "_" + wav._name + str(0))]
 
         out_intervals = [Interval(UInt, 0, out_len - 1)]
-        in_intervals = [Interval(UInt, 0, self._len - 1)]
+        in_intervals = [Interval(UInt, 0, N - 1)]
 
         out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *in_intervals]), out_type, out_name)
         out_wave.defn = [ Reduce(out_wave(*out_vars), \
-                                 self(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / self._len)), \
+                                 self(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / N)), \
                                  Op.Sum) ]
-        out_wave.reductionDimensions = [self._len]
+        out_wave.reductionDimensions = [N]
 
         return out_wave
 
