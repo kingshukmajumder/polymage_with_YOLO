@@ -1383,14 +1383,7 @@ class Reduction(Function):
         length_other = interval.upperBound - interval.lowerBound + 1
         assert length.__str__() == length_other.__str__()
 
-        out_typ = self._typ
-        out_name = "_" + self._name + "_" + other._name + "_sum"
-        out_len = length
-        out_var = Variable(UInt, "_" + out_name + str(0))
-
-        y = Wave(out_typ, out_name, out_len, out_var)
-        y.defn = [ self(out_var) + other(out_var) ]
-        return y
+        return Wave.add(self, other, length)
 
     def downsample(self, down, out_name):
         dt = getType(down)
@@ -1890,13 +1883,16 @@ class Wave(Function):
         assert self._typ == other._typ
         assert self._len == other._len
 
-        out_typ = self._typ
-        out_name = "_" + self._name + "_" + other._name + "_sum"
-        out_len = self._len
-        out_var = self._variables[0]
+        return Wave.add(self, other, self._len)
+
+    @staticmethod
+    def add(wav1, wav2, out_len):
+        out_typ = wav1._typ
+        out_name = "_" + wav1._name + "_" + wav2._name + "_sum"
+        out_var = Variable(UInt, "_" + out_name + str(0))
 
         y = Wave(out_typ, out_name, out_len, out_var)
-        y.defn = [ self(out_var) + other(out_var) ]
+        y.defn = [ wav1(out_var) + wav2(out_var) ]
         return y
 
     def convolve(self, other, out_name):
