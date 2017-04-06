@@ -1381,10 +1381,7 @@ class Reduction(Function):
         assert len(other.domain) == 1
         interval = other.domain[0]
         length_other = interval.upperBound - interval.lowerBound + 1
-        assert get_affine_var_and_param_coeff(length) \
-                    == get_affine_var_and_param_coeff(length_other) \
-                    and get_constant_from_expr(length) \
-                    == get_constant_from_expr(length_other)
+        assert length.__str__() == length_other.__str__()
 
         out_typ = self._typ
         out_name = "_" + self._name + "_" + other._name + "_sum"
@@ -1412,7 +1409,7 @@ class Reduction(Function):
         sig_down.defn = [ self(in_var * down) ]
         return sig_down
 
-    def lfilter_fir_and_delay(self, b, out_name):
+    def lfilter_fir_and_delay(self, b, out_name, _out_typ=None):
         assert isinstance(b, Wave)
         assert b._typ is Double
 
@@ -1424,7 +1421,7 @@ class Reduction(Function):
 
         in_var = Variable(UInt, "_" + self._name + str(0))
         out_var = Variable(Int, "_" + out_name + str(0))
-        out_typ = self._typ
+        out_typ = self._typ if _out_typ is None else _out_typ
 
         sig_interval = Interval(Int, 0, L-M)
         coeff_interval = Interval(UInt, 0, M-1)
@@ -1437,7 +1434,7 @@ class Reduction(Function):
                                 * b(in_var), Op.Sum) ]
         return filtered_sig
 
-    def interp_fft(self, r, out_name):
+    def interp_fft(self, r, out_name, _out_typ=None):
         rt = getType(r)
         assert (rt is Int or rt is UInt)
 
@@ -1448,10 +1445,11 @@ class Reduction(Function):
 
         in_var = Variable(UInt, "_" + self._name + str(0))
         out_var = Variable(UInt, "_" + out_name + str(0))
-        out_typ = self._typ
+        out_typ = self._typ if _out_typ is None else _out_typ
         out_len = N * r
 
         if self._typ is Complex:
+            sc_name = self._name
             sig_complex = self
         else:
             sc_name = "_" + self._name + "_complex"
@@ -1481,6 +1479,50 @@ class Reduction(Function):
             y.defn = [ Real(y_scaled(out_var)) / Cast(Double, N) ]
 
         return y
+
+    def fft(self, out_name):
+        if self._typ is Complex:
+            return self.__cfft(out_name)
+
+        out_type = Complex
+        assert len(self.domain) == 1
+        interval = self.domain[0]
+        length = interval.upperBound - interval.lowerBound + 1
+        out_len = length // 2 + 1
+
+        out_vars = [Variable(UInt, "_" + out_name + str(0))]
+        in_vars = [Variable(UInt, "_" + self._name + str(0))]
+
+        out_intervals = [Interval(UInt, 0, out_len - 1)]
+        in_intervals = [Interval(UInt, 0, self._len - 1)]
+
+        out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *in_intervals]), out_type, out_name)
+        out_wave.defn = [ Reduce(out_wave(*out_vars), \
+                                 self(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / length)), \
+                                 Op.Sum) ]
+        out_wave.reductionDimensions = [length]
+
+        return out_wave
+
+    def __cfft(self, out_name):
+        out_type = Complex
+        assert len(self.domain) == 1
+        interval = self.domain[0]
+        length = interval.upperBound - interval.lowerBound + 1
+        out_len = length
+
+        out_vars = [Variable(UInt, "_" + out_name + str(0))]
+        in_vars = [Variable(UInt, "_" + self._name + str(0))]
+
+        out_intervals = [Interval(UInt, 0, out_len - 1)]
+
+        out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *out_intervals]), out_type, out_name)
+        out_wave.defn = [ Reduce(out_wave(*out_vars), \
+                                 self(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / length)), \
+                                 Op.Sum) ]
+        out_wave.reductionDimensions = [out_len]
+
+        return out_wave
 
 class Matrix(Function):
     def __init__(self, _typ, _name, _dims, _var=None):
@@ -2027,7 +2069,7 @@ class Wave(Function):
                                 Op.Sum)) ]
         return filtered_sig
 
-    def lfilter_fir_and_delay(self, b, out_name):
+    def lfilter_fir_and_delay(self, b, out_name, _out_typ=None):
         assert isinstance(b, Wave)
         assert b._typ is Double
 
@@ -2036,7 +2078,7 @@ class Wave(Function):
 
         in_var = self._variables[0]
         out_var = Variable(Int, "_" + out_name + str(0))
-        out_typ = self._typ
+        out_typ = self._typ if _out_typ is None else _out_typ
 
         sig_interval = Interval(Int, 0, L-M)
         coeff_interval = Interval(UInt, 0, M-1)
@@ -2293,7 +2335,7 @@ class Wave(Function):
 
         return w, h
 
-    def interp_fft(self, r, out_name):
+    def interp_fft(self, r, out_name, _out_typ=None):
         rt = getType(r)
         assert (rt is Int or rt is UInt)
 
@@ -2301,10 +2343,11 @@ class Wave(Function):
 
         in_var = self._variables[0]
         out_var = Variable(UInt, "_" + out_name + str(0))
-        out_typ = self._typ
+        out_typ = self._typ if _out_typ is None else _out_typ
         out_len = N * r
 
         if self._typ is Complex:
+            sc_name = self._name
             sig_complex = self
         else:
             sc_name = "_" + self._name + "_complex"

@@ -80,9 +80,9 @@ def vuvu(pipe_data):
     taps4 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps4", window=win)
 
     # Filter the data and compensate for delay
-    yf4 = yf3.lfilter_fir_and_delay(taps4, "yf4")
+    yf4 = yf3.lfilter_fir_and_delay(taps4, "yf4", _out_typ=Complex)
 
     # Upsample the signal to bring it back to the original sample rate
-    yf = yf4.interp_fft(5, "yf")
+    yf = yf4.interp_fft(5, "yf", _out_typ=Double)
 
     return yf

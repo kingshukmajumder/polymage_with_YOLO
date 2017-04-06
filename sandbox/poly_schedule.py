@@ -516,6 +516,18 @@ def match_idiom_sig_fft(parts):
                                     and reduce_expr.right._args[0].typ is Complex \
                                     and reduce_expr.op == '*':
                                 fft_found = True
+                        elif isinstance(reduce_expr.left.objectRef, Reduction) \
+                                and isinstance(reduce_expr.right._args[0], Cast):
+                            rhs = reduce_expr.left.objectRef
+                            if len(rhs.domain) != 1:
+                                continue
+                            interval = rhs.domain[0]
+                            length = interval.upperBound - interval.lowerBound + 1
+                            if len(lhs.reductionDimensions) == 1 \
+                                    and lhs.reductionDimensions[0].__str__() == length.__str__() \
+                                    and reduce_expr.right._args[0].typ is Complex \
+                                    and reduce_expr.op == '*':
+                                fft_found = True
     return zero_found and fft_found
 
 def match_idiom_sig_ifft(parts):
