@@ -33,9 +33,7 @@ def unwanted_spectral(pipe_data):
     taps1 = Wave.firwin(ntaps, cutoff_hz / nyq_rate, "taps1", window=('kaiser', beta))
 
     # Filter the data and compensate for delay
-    ylpr = y.lfilter_fir_and_delay(taps1, "ylpr")
-    ylp = Wave(Double, "ylp", N - ntaps + 1, x)
-    ylp.defn = [ ylpr(x) ]
+    ylp = y.lfilter_fir_and_delay(taps1, "ylp")
 
     # Downsample the lowpass filtered signal by a factor of 10
     Fd = Fs//10
@@ -53,10 +51,7 @@ def unwanted_spectral(pipe_data):
     taps2 = Wave.firwin(ntaps+1, (cutoff_hz1 / nyq_rate, cutoff_hz2 / nyq_rate), "taps2", window=('kaiser', beta))
 
     # Filter the data and compensate for delay
-    ybsr = yds.lfilter_fir_and_delay(taps2, "ybsr")
-    M = yds.length
-    ybs = Wave(Double, "ybs", M - ntaps, x)
-    ybs.defn = [ ybsr(x) ]
+    ybs = yds.lfilter_fir_and_delay(taps2, "ybs")
 
     # Upsample the signal to bring it back to the original sample rate
     yf = ybs.interp_fft(10, "yf")
