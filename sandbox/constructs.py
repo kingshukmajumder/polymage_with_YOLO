@@ -1417,24 +1417,11 @@ class Reduction(Function):
         return Wave.ffts(self, out_name, length)
 
     def __cfft(self, out_name):
-        out_type = Complex
         assert len(self.domain) == 1
         interval = self.domain[0]
         length = interval.upperBound - interval.lowerBound + 1
-        out_len = length
 
-        out_vars = [Variable(UInt, "_" + out_name + str(0))]
-        in_vars = [Variable(UInt, "_" + self._name + str(0))]
-
-        out_intervals = [Interval(UInt, 0, out_len - 1)]
-
-        out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *out_intervals]), out_type, out_name)
-        out_wave.defn = [ Reduce(out_wave(*out_vars), \
-                                 self(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / length)), \
-                                 Op.Sum) ]
-        out_wave.reductionDimensions = [out_len]
-
-        return out_wave
+        return Wave.cfft(self, out_name, length)
 
 class Matrix(Function):
     def __init__(self, _typ, _name, _dims, _var=None):
@@ -2595,17 +2582,20 @@ class Wave(Function):
         return out_wave
 
     def __cfft(self, out_name):
+        return Wave.cfft(self, out_name, self._len)
+
+    @staticmethod
+    def cfft(wav, out_name, out_len):
         out_type = Complex
-        out_len = self._len
 
         out_vars = [Variable(UInt, "_" + out_name + str(0))]
-        in_vars = self._variables
+        in_vars = [Variable(UInt, "_" + wav._name + str(0))]
 
         out_intervals = [Interval(UInt, 0, out_len - 1)]
 
         out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *out_intervals]), out_type, out_name)
         out_wave.defn = [ Reduce(out_wave(*out_vars), \
-                                 self(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / self._len)), \
+                                 wav(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / out_len)), \
                                  Op.Sum) ]
         out_wave.reductionDimensions = [out_len]
 
