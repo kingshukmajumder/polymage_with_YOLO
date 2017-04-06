@@ -1392,15 +1392,8 @@ class Reduction(Function):
         assert len(self.domain) == 1
         interval = self.domain[0]
         length = interval.upperBound - interval.lowerBound + 1
-        N = length
 
-        in_var = Variable(UInt, "_" + out_name + str(0))
-        out_typ = self._typ
-
-        sig_down = Wave(out_typ, out_name, (N + down - 1)/down, in_var, \
-                                                                "const")
-        sig_down.defn = [ self(in_var * down) ]
-        return sig_down
+        return Wave.downsample(self, down, out_name, length)
 
     def lfilter_fir_and_delay(self, b, out_name, _out_typ=None):
         assert isinstance(b, Wave)
@@ -2169,14 +2162,16 @@ class Wave(Function):
         dt = getType(down)
         assert (dt is Int or dt is UInt)
 
-        N = self._len
+        return Wave.downsample(self, down, out_name, self._len)
 
-        in_var = self._variables[0]
-        out_typ = self._typ
+    @staticmethod
+    def downsample(wav, down, out_name, N):
+        in_var = Variable(UInt, "_" + out_name + str(0))
+        out_typ = wav._typ
 
         sig_down = Wave(out_typ, out_name, (N + down - 1)/down, in_var, \
                                                                 "const")
-        sig_down.defn = [ self(in_var * down) ]
+        sig_down.defn = [ wav(in_var * down) ]
         return sig_down
 
     def upsample(self, up, out_name, _out_len=None):
