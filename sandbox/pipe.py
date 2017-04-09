@@ -815,6 +815,8 @@ class Pipeline:
                 fused_schedule(self, g, self._param_estimates)
                 # idiom matching algorithm
                 idiom_recognition(self, g)
+                # tile reductions
+                self.reduction_tiling(g)
 
             # group
             self._grp_schedule = schedule_groups(self)
@@ -1130,6 +1132,168 @@ class Pipeline:
             else:
                 for i, var in enumerate(poly_part.func.variables):
                     new_sched = new_sched.set_dim_name(isl.dim_type.in_, i, var.name)
+            poly_part.sched = new_sched
+
+            num_out_dims = poly_part.sched.dim(isl.dim_type.out)
+            num_in_dims = poly_part.sched.dim(isl.dim_type.in_)
+
+            # TODO: Check if statement numbers are retrieved correctly (ordered by polypart or by statment num)
+            stmt_num = poly_part.stmt_no
+
+            inv_map = np.array(remapping.inv_matrices[stmt_num], dtype=object)
+
+            # inv_map = inv_map[0:num_in_dims, 0:num_out_dims]
+            # inv_map = inv_map.transpose()
+            # for dim in range(num_out_dims):
+            #     poly_part.scalar[dim] = np.sum(inv_map[dim])
+            divs = remapping.divs[stmt_num] #[0:num_in_dims]
+
+            poly_part.set_pluto_inv_and_div_matrix(inv_map,divs)
+
+            # Tiled check
+            if num_out_dims >= (2 * num_in_dims):
+                poly_part.tiled = True
+            else:
+                poly_part.tiled = False
+            # Mark parallel and vector loops
+            # TODO: Needs seperate implemetation for Pluto Schedule
+            #TODO: Add mar_par_for_tiled_loops
+
+        return
+
+    def reduction_tiling(self, group):
+        self.pluto_to_polymage_fname_map = {}
+
+        domain_union_set = None
+        deps_union_map = None
+        sched_union_map = None
+        read_map = None
+        write_map = None
+        i = 0
+
+        main_poly_part = []
+        if len(group.comps) != 1 or \
+                        not isinstance(group.comps[0].func, Reduction):
+            return
+        comp = group.comps[0]
+        poly_parts = group.polyRep.poly_parts[comp]
+        if len(poly_parts) == 1: # FFT or IFFT (don't tile in this case)
+            return
+        for poly_part in poly_parts:
+            main_poly_part.append(poly_part)
+
+        LOG(log_level, "Tiling " + comp.func.name)
+
+        for poly_part in main_poly_part:
+            in_schedule = poly_part.sched.copy()
+            domain = in_schedule.domain()
+            # Create Pluto compatible statement names
+            domain = self.get_updated_pluto_domain(self, i, domain)
+            poly_part.stmt_no = i
+            i = i + 1
+
+            # Collect Domain for all statements
+            if domain_union_set is None:
+                domain_union_set = isl.UnionSet.from_basic_set(domain)
+            else:
+                set = isl.Set.from_basic_set(domain)
+                domain_union_set = domain_union_set.add_set(set)
+
+            # Collect Read access for all statements
+            if group.polyRep.read_union_map[poly_part]:
+                if read_map is None:
+                    read_map = group.polyRep.read_union_map[poly_part]
+                else:
+                    read_map = read_map.union(group.polyRep.read_union_map[poly_part])
+
+            # Collect Write access for all statements
+            if group.polyRep.write_union_map[poly_part]:
+                if write_map is None:
+                    write_map = group.polyRep.write_union_map[poly_part]
+                else:
+                    write_map = write_map.union(group.polyRep.write_union_map[poly_part])
+
+            # Collect Initial Schedule for all statements
+            if sched_union_map is None:
+                sched_union_map = isl.UnionMap.from_basic_map(in_schedule)
+            else:
+                map = isl.Map.from_basic_map(in_schedule)
+                sched_union_map = sched_union_map.add_map(map)
+
+
+        LOG(log_level, "Read Access:   " + str(read_map))
+        LOG(log_level, "Write Access:    " + str(write_map))
+
+        deps_union_map = self.getDependencies(read_map, write_map, sched_union_map)
+
+        # Convert to Pluto compatible format
+        read_map = self.get_pluto_format_from_polymage_union_map(read_map, False)
+        write_map = self.get_pluto_format_from_polymage_union_map(write_map, False)
+        deps_union_map = self.get_pluto_format_from_polymage_union_map(deps_union_map, True)
+
+        LOG(log_level, "Statements converted to Pluto (S0, S1 ......)")
+        LOG(log_level, "Domain for all statements")
+        LOG(log_level, domain_union_set.to_str())
+
+        if deps_union_map:
+            LOG(log_level,"Dependencies across statements")
+            LOG(log_level,deps_union_map.to_str())
+        else:
+            # If no dependencies found, then send empty UnionMap to Pluto
+            LOG(log_level, "No dependencies found")
+            deps_union_map = isl.UnionMap.read_from_str(self._ctx, '{}')
+
+        # Pluto call
+        pluto = LibPluto()
+        pluto_options = pluto.create_options()
+        out_schedule = pluto.schedule(self._ctx, domain_union_set, deps_union_map, pluto_options)
+
+        # Making the remapping call to figure out which dims are scalar
+        # and the tile information
+        remapping = pluto.get_remapping(self._ctx, domain_union_set, deps_union_map, pluto_options)
+
+        LOG(log_level,"Schedule recieved from Pluto:")
+        LOG(log_level,out_schedule)
+
+        # Extract basic maps from UnionMap
+        if out_schedule.n_map() > 0:
+            maps = self.split_unionmaps_to_maps(out_schedule)
+
+        # Replace the schedule with the correct function names
+        polymage_schedules = self.get_polymage_from_pluto_schedule(maps)
+        LOG(log_level, "Schedule after converting to Polymage:")
+        LOG(log_level,polymage_schedules)
+
+
+        # Append these schedules to the corresponding polyparts
+        for poly_part in main_poly_part:
+            in_schedule = poly_part.sched
+            LOG(log_level, "Original Schedule")
+            LOG(log_level, in_schedule)
+            in_domain = in_schedule.domain()
+            func_sched_name = in_schedule.get_tuple_name(isl._isl.dim_type.in_)
+            new_sched = self.function_schedule_map[func_sched_name]
+
+            # Removes any scalar dimensions
+            new_sched = new_sched.copy().get_basic_maps()[0]
+            num_out_dim = new_sched.range().n_dim()
+            # Assigning dimension name for out dimension. Required for building ast
+            new_sched = new_sched.set_dim_name(isl.dim_type.out, 0, '_t')
+            for i in range(1, num_out_dim):
+                new_sched = new_sched.set_dim_name(isl.dim_type.out, i, 'o' + i.__str__())
+
+            # Intersect with domain in order to bound the schedule to the required space
+            new_sched = new_sched.intersect_domain(in_domain)
+
+            # Replace in dimensions with variable names
+            if isinstance(poly_part.comp.func, Reduction) and not (poly_part.is_default_part):
+                for i, var in enumerate(poly_part.func.reductionVariables):
+                    new_sched = new_sched.set_dim_name(isl.dim_type.in_, i, var.name)
+            else:
+                for i, var in enumerate(poly_part.func.variables):
+                    new_sched = new_sched.set_dim_name(isl.dim_type.in_, i, var.name)
+            LOG(log_level, "Updated Schedule")
+            LOG(log_level, new_sched)
             poly_part.sched = new_sched
 
             num_out_dims = poly_part.sched.dim(isl.dim_type.out)
