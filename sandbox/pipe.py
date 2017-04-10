@@ -1172,17 +1172,16 @@ class Pipeline:
         i = 0
 
         main_poly_part = []
-        if len(group.comps) != 1 or \
-                        not isinstance(group.comps[0].func, Reduction):
-            return
-        comp = group.comps[0]
-        poly_parts = group.polyRep.poly_parts[comp]
-        if len(poly_parts) == 1: # FFT or IFFT (don't tile in this case)
-            return
-        for poly_part in poly_parts:
-            main_poly_part.append(poly_part)
+        for comp in group.comps:
+            if not isinstance(comp.func, Reduction):
+                return
+            poly_parts = group.polyRep.poly_parts[comp]
+            if len(poly_parts) == 1: # FFT or IFFT (don't tile in this case)
+                return
+            for poly_part in poly_parts:
+                main_poly_part.append(poly_part)
 
-        LOG(log_level, "Tiling " + comp.func.name)
+        LOG(log_level, "Tiling " + group.__str__())
 
         for poly_part in main_poly_part:
             in_schedule = poly_part.sched.copy()
@@ -1223,6 +1222,7 @@ class Pipeline:
 
         LOG(log_level, "Read Access:   " + str(read_map))
         LOG(log_level, "Write Access:    " + str(write_map))
+        LOG(log_level, "Initial Schedule:    " + str(sched_union_map))
 
         deps_union_map = self.getDependencies(read_map, write_map, sched_union_map)
 
