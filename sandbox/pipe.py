@@ -1264,7 +1264,6 @@ class Pipeline:
         LOG(log_level, "Schedule after converting to Polymage:")
         LOG(log_level,polymage_schedules)
 
-
         # Append these schedules to the corresponding polyparts
         for poly_part in main_poly_part:
             in_schedule = poly_part.sched
@@ -1317,9 +1316,6 @@ class Pipeline:
                 poly_part.tiled = True
             else:
                 poly_part.tiled = False
-            # Mark parallel and vector loops
-            # TODO: Needs seperate implemetation for Pluto Schedule
-            #TODO: Add mar_par_for_tiled_loops
 
         return
 
