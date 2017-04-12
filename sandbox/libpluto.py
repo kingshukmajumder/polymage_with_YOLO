@@ -22,235 +22,147 @@ _pluto_header_str = \
 
     struct plutoOptions{
 
-        /* To tile or not? */
-        int tile;
+    /* To tile or not? */
+    int tile;
 
-        /* Intra-tile optimization */
-        int intratileopt;
+    /* Intra-tile optimization */
+    int intratileopt;
 
-        /* Load-balanced tiling */
-        int lbtile;
+    /* Load-balanced tiling */
+    int lbtile;
 
-        /* Load-balanced tiling (one dimensional concurrent start)*/
-        int partlbtile;
+    /* Load-balanced tiling (one dimensional concurrent start)*/
+    int partlbtile;
+    /* parallelization */
+    int parallel;
 
-        /* Extract scop information from libpet*/
-        int pet;
+    /* prefer pure inner parallelism to pipelined parallelism */
+    int innerpar;
 
-        /* dynamic scheduling
-         * using Synthesized Runtime Interface */
-        int dynschedule;
+    /* Automatic unroll/unroll-jamming of loops */
+    int unroll;
 
-        /* dynamic scheduling - previous technique of
-         * building the entire task graph in memory
-         * using Intel TBB Flow Graph scheduler */
-        int dynschedule_graph;
+    /* unroll/jam factor */
+    int ufactor;
 
-        /* dynamic scheduling - previous technique of
-         * building the entire task graph in memory
-         * using a custom DAG scheduler */
-        // no longer maintained
-        int dynschedule_graph_old;
+    /* Enable or disable post-transformations to make code amenable to
+     * vectorization (default - enabled) */
+    int prevector;
 
-        /* consider transitive dependences between tasks */
-        int dyn_trans_deps_tasks;
+    /* consider RAR dependences */
+    int rar;
 
-        /* parallelization */
-        int parallel;
+    /* Decides the fusion algorithm (MAXIMAL_FUSE, NO_FUSE, or SMART_FUSE) */
+    int fuse;
 
-        /* prefer pure inner parallelism to pipelined parallelism */
-        int innerpar;
+    /* for debugging - print default cloog-style total */
+    int scancount;
 
-        /* Automatic unroll/unroll-jamming of loops */
-        int unroll;
+    /* parameters will be assumed to be at least this much */
+    /* This is appended to the context passed to cloog */
+    int codegen_context;
 
-        /* unroll/jam factor */
-        int ufactor;
+    /* Loop depth (1-indexed) to force as parallel */
+    int forceparallel;
 
-        /* Enable or disable post-transformations to make code amenable to
-         * vectorization (default - enabled) */
-        int prevector;
+    /* multiple (currently two) degrees of pipelined parallelism */
+    int multipar;
 
-        /* consider RAR dependences */
-        int rar;
+    /* Tile for L2 too */
+    /* By default, only L1 tiling is done; under parallel execution, every
+     * processor executes a sequence of L1 tiles (OpenMP adds another blocking
+     * on the parallel loop). With L2 tiling, each processor executes a
+     * sequence of L2 tiles and barrier is done after a group of L2 tiles is
+     * exectuted -- causes load imbalance due to pipe startup when problem
+     * sizes are not huge */
+    int l2tile;
 
-        /* Decides the fusion algorithm (MAXIMAL_FUSE, NO_FUSE, or SMART_FUSE) */
-        int fuse;
 
-        /* for debugging - print default cloog-style total */
-        int scancount;
+    /* NOTE: --ft and --lt are to manually force tiling depths */
+    /* First depth to tile (starting from 0) */
+    int ft;
+    /* Last depth to tile (indexed from 0)  */
+    int lt;
 
-        /* parameters will be assumed to be at least this much */
-        /* This is appended to the context passed to cloog */
-        int codegen_context;
+    /* Output for debugging */
+    int debug;
 
-        /* Loop depth (1-indexed) to force as parallel */
-        int forceparallel;
+    /* More debugging output */
+    int moredebug;
 
-        /* multiple (currently two) degrees of pipelined parallelism */
-        int multipar;
+    /* Not implemented yet: Don't output anything unless something fails */
+    int quiet;
 
-        /* Tile for L2 too */
-        /* By default, only L1 tiling is done; under parallel execution, every
-         * processor executes a sequence of L1 tiles (OpenMP adds another blocking
-         * on the parallel loop). With L2 tiling, each processor executes a
-         * sequence of L2 tiles and barrier is done after a group of L2 tiles is
-         * exectuted -- causes load imbalance due to pipe startup when problem
-         * sizes are not huge */
-        int l2tile;
+    /* Pure polyhedral unrolling (instead of postpass) */
+    int polyunroll;
 
+    /* Identity transformation */
+    int identity;
 
-        /* NOTE: --ft and --lt are to manually force tiling depths */
-        /* First depth to tile (starting from 0) */
-        int ft;
-        /* Last depth to tile (indexed from 0)  */
-        int lt;
+    /* Generate scheduling pragmas for Bee+Cl@k */
+    int bee;
 
-        /* Output for debugging */
-        int debug;
+    /* Force this for cloog's -f */
+    int cloogf;
 
-        /* More debugging output */
-        int moredebug;
+    /* Force this for cloog's -l */
+    int cloogl;
 
-        /* Not implemented yet: Don't output anything unless something fails */
-        int quiet;
+    /* Enable cloog's -sh (simple convex hull) */
+    int cloogsh;
 
-        /* Pure polyhedral unrolling (instead of postpass) */
-        int polyunroll;
+    /* Enable cloog's -backtrack */
+    int cloogbacktrack;
 
-        /* Identity transformation */
-        int identity;
+    /* Use isl to compute dependences (default) */
+    int isldep;
 
-        /* Identity transformation */
-        int identity_data_dist;
+    /* Use candl to compute dependences */
+    int candldep;
 
-        /* Generate scheduling pragmas for Bee+Cl@k */
-        int bee;
+    /* Access-wise dependences with ISL */
+    int isldepaccesswise;
 
-        /* Force this for cloog's -f */
-        int cloogf;
+    /* Coalesce ISL deps */
+    int isldepcoalesce;
 
-        /* Force this for cloog's -l */
-        int cloogl;
+    /* Compute lastwriter for dependences */
+    int lastwriter;
 
-        /* Enable cloog's -sh (simple convex hull) */
-        int cloogsh;
+    /* DEV: Don't use cost function */
+    int nodepbound;
 
-        /* Enable cloog's -backtrack */
-        int cloogbacktrack;
+    /* hard upper bound for transformation coefficients */
+    int coeff_bound;
 
-        /* Use isl to compute dependences (default) */
-        int isldep;
+    /* Ask candl to privatize */
+    int scalpriv;
 
-        /* Use candl to compute dependences */
-        int candldep;
+    /* No output from Pluto if everything goes right */
+    int silent;
 
-        /* Access-wise dependences with ISL */
-        int isldepaccesswise;
+    /* Read input from a .scop file */
+    int readscop;
 
-        /* Coalesce ISL deps */
-        int isldepcoalesce;
+    /* Use PIP as ilp solver. */
+    int pipsolve;
 
-        /* Compute lastwriter for dependences */
-        int lastwriter;
+    /* Use isl as ilp solver. */
+    int islsolve;
 
-        /* DEV: Don't use cost function */
-        int nodepbound;
+    /* Index set splitting */
+    int iss;
 
-        /* hard upper bound for transformation coefficients */
-        int coeff_bound;
+    /* Output file name supplied from -o */
+    char *out_file;
 
-        /* Ask candl to privatize */
-        int scalpriv;
+    /* Polyhedral compile time stats */
+    int time;
 
-        /* No output from Pluto if everything goes right */
-        int silent;
-
-        /* Read input from a .scop file */
-        int readscop;
-
-        /* Use PIP as ilp solver. */
-        int pipsolve;
-
-        /* Use isl as ilp solver. */
-        int islsolve;
-
-        int glpksolve;
-
-        /* Index set splitting */
-        int iss;
-
-        int distmem;
-
-        /*  adding support to generate opencl code */
-        int opencl;
-
-        /* use multi-level distribution function */
-        /* for dynamic scheduling or distributed-memory code */
-        /* OFF by default */
-        int multi_level_distribution;
-
-        int commopt;
-
-        /*Communication code generation using flow-out partitioning */
-        int commopt_fop;
-        /* generate code to choose between unicast pack and multicast pack
-         * for each partition at runtime */
-        int fop_unicast_runtime;
-
-        /*Communication code generation using flow-out intersection flow-in */
-        int commopt_foifi;
-
-        /*Report communication for distributed memory*/
-        int timereport;
-
-        /* if true, variables are not declared globally
-         * but each variable's declaration is provided
-         * through the macro '#define __DECLARATION_OF_<variable-name> <declaration>'*/
-        int variables_not_global;
-
-        int data_dist;
-        int verify_output;
-
-        int mpiomp;
-        int fusesends;
-        int blockcyclic;
-        int cyclesize;
-
-        //enables mod eliminate and data ptr optimization for data tiling
-        int data_tile_opt;
-
-        //Propagates the bounding box constraints across non fused loops
-        int global_opt;
-
-        //auto compute pi
-        int compute_pi;
-
-        //max number of tiles to be used while computing pi
-        int num_tiles_per_dim;
-
-        //number of initial partitions used while computing pi
-        int num_inital_partitions;
-
-        /* Output file name supplied from -o */
-        char *out_file;
-
-        /* Polyhedral compile time stats */
-        int time;
-
-        /* Experimental optimizations to make Pluto faster/scalable */
-        int fast;
-
-        /* Eliminate Farkas multipliers using PolyLib */
-        int efup;
-
-        /* fast linear independence check */
-        int flic;
-
-        /* SCoP number when processing multiple SCoPs per file */
-        int scopnum;
-    };
-    typedef struct plutoOptions PlutoOptions;
+    /* fast linear independence check */
+    int flic;
+};
+typedef struct plutoOptions PlutoOptions;
 
 
 
@@ -264,19 +176,15 @@ _pluto_header_str = \
     PlutoOptions *pluto_options_alloc();
     void pluto_options_free(PlutoOptions *);
 
-
     void pluto_schedule_str(const char *domains_str,
-            const char *dependences_str,
-            char** schedules_str_buffer_ptr,
-            PlutoOptions *options);
+        const char *dependences_str,
+        char** schedules_str_buffer_ptr,
+        char** p_loops,
+        Remapping **remapping_ptr,
+        PlutoOptions *options);
+
 
     void pluto_schedules_strbuf_free(char *schedules_str_buffer);
-
-
-   // Remapping *pluto_get_remapping_str(const char *domains_str,
-   //     const char *dependences_str,
-   //     char** schedules_str_buffer_ptr,
-   //    PlutoOptions *options);
 
 
     void pluto_get_remapping_str(const char *domains_str,
@@ -354,12 +262,17 @@ class PlutoOptions(object):
         self._raw_ptr = raw_options_ptr
         self._raw_ptr.parallel = 1
         self._raw_ptr.lastwriter = 1
-        self._raw_ptr.partlbtile = 1
-        self._raw_ptr.lbtile = 1
+        self._raw_ptr.partlbtile = 0
+        self._raw_ptr.lbtile = 0
         self._raw_ptr.tile = 1
-        self._raw_ptr.fuse = 1
+        self._raw_ptr.l2tile = 0
+        # Use default Fusion option. In case of libpluto branch
+        # of Pluto it is type fuse
+        # self._raw_ptr.fuse = 3
         self._raw_ptr.intratileopt = 0
-        self._raw_ptr.debug = self._raw_ptr.moredebug = 1
+        self._raw_ptr.debug =1
+        self._raw_ptr.moredebug = 0
+        self._raw_ptr.silent = 1
 
     @property
     def partlbtile(self):
@@ -444,26 +357,34 @@ class LibPluto(object):
         domains_str = domains.to_str().encode('utf-8')
         dependences_str = dependences.to_str().encode('utf-8')
         schedule_strbuf_ptr = self.ffi.new("char **")
+        p_loops_ptr = self.ffi.new("char **")
+        remapping_ptr = self.ffi.new("Remapping **")
 
         self.so.pluto_schedule_str(domains_str, dependences_str,
                                           schedule_strbuf_ptr,
+                                          p_loops_ptr,
+                                          remapping_ptr,
                                           pluto_options._raw_ptr)
 
         assert schedule_strbuf_ptr[0] != self.ffi.NULL, \
             ("unable to get schedule from PLUTO")
 
         schedule_str = self.ffi.string(schedule_strbuf_ptr[0]).decode('utf-8')
+        parallel_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
+
+        print("Parallel loops:")
+        print(parallel_str)
         schedule = isl.UnionMap.read_from_str(ctx, schedule_str)
 
         self.so.pluto_schedules_strbuf_free(schedule_strbuf_ptr[0])
 
         # remapping = self.create_remapping()
-        remapping_ptr = self.ffi.new("Remapping **");
 
-        self.so.pluto_get_remapping_str(domains_str, dependences_str,
-                remapping_ptr, pluto_options._raw_ptr)
 
-        remapping = Remapping(self, remapping_ptr[0])
+        # self.so.pluto_get_remapping_str(domains_str, dependences_str,
+        #         remapping_ptr, pluto_options._raw_ptr)
+
+        self.remapping = Remapping(self, remapping_ptr[0])
 
         return schedule
 
