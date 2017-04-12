@@ -272,7 +272,7 @@ class PlutoOptions(object):
         self._raw_ptr.intratileopt = 0
         self._raw_ptr.debug =1
         self._raw_ptr.moredebug = 0
-        self._raw_ptr.silent = 1
+        self._raw_ptr.silent = 0
 
     @property
     def partlbtile(self):
