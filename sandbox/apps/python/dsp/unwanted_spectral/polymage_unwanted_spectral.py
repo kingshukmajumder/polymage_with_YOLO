@@ -41,7 +41,7 @@ def unwanted_spectral(pipe_data):
 
     nyq_rate = Fd / 2.0
     ripple_db = 60.0 # Stopband attenuation in dB
-    ntaps = 3998
+    ntaps = 5330
     beta = Wave.kaiser_beta(ripple_db)
 
     cutoff_hz1 = 55 # Passband frequency 1 in Hz
