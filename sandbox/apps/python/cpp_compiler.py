@@ -15,7 +15,10 @@ def gen_compile_string(app_data,in_file,out_file):
         include = "-I"+ROOT+"/memory_allocation/ "+\
                   ROOT+"/memory_allocation/simple_pool_allocator.cpp "
     if bool(arg_data.blas):
-        include += "-I /opt/OpenBLAS/include -L /opt/OpenBLAS/lib -lopenblas "
+        if arg_data.blas == "OpenBLAS":
+            include += "-I /opt/OpenBLAS/include -L /opt/OpenBLAS/lib -lopenblas "
+        elif arg_data.blas == "MKL":
+            include += "-I /opt/intel/mkl/include -L /opt/intel/mkl/lib/intel64 -mkl "
     if bool(arg_data.fft):
         include += "-lfftw3 -lm "
 

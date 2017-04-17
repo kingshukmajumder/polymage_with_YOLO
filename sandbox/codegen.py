@@ -1073,8 +1073,10 @@ def generate_code_for_pipeline(pipeline,
         inc_block.add(genc.CInclude('string.h'))
         if 'pool_alloc' in pipeline.options:
             inc_block.add(genc.CInclude('simple_pool_allocator.h'))
-        if 'blas' in pipeline.options:
+        if 'openblas' in pipeline.options:
             inc_block.add(genc.CInclude('cblas.h'))
+        if 'mkl' in pipeline.options:
+            inc_block.add(genc.CInclude('mkl.h'))
         if 'fft' in pipeline.options:
             inc_block.add(genc.CInclude('fftw3.h'))
         inc_block.add(genc.CMacroDecl(genc.c_macro_min))

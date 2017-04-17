@@ -1508,7 +1508,7 @@ class Pipeline:
 
 # Function to recognize computations which can be mapped to library calls
 def idiom_recognition(pipeline, group):
-    blas = 'blas' in pipeline.options
+    blas = 'openblas' in pipeline.options or 'mkl' in pipeline.options
     fft = 'fft' in pipeline.options
     if not blas and not fft:
         return
