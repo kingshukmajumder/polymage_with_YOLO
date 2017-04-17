@@ -39,6 +39,23 @@ def call_pipe(app_data):
 def unwanted_spectral(app_data):
     it  = 0
     app_args = app_data['app_args']
+    length = app_data['length']
+    freq = app_data['freq']
+
+    sig_data = app_data['sig_data']
+    IN = sig_data['IN']
+    OUT = sig_data['OUT']
+
+    # lib function name
+    func_name = 'pipeline_'+app_data['app']
+    pipe_func = app_data[func_name]
+
+    # lib function args
+    pipe_args = []
+    pipe_args += [ctypes.c_double(freq)]
+    pipe_args += [ctypes.c_uint(length)]
+    pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
    
     runs = int(app_args.runs)
     timer = app_args.timer
@@ -46,21 +63,22 @@ def unwanted_spectral(app_data):
         t1 = time.time()
 
     while it < runs :
-        call_pipe(app_data)
+        pipe_func(*pipe_args)
         it += 1
-
-    print('OUTPUT')
-    print(app_data['sig_data']['OUT'])
-
-    print('IN')
-    print(app_data['sig_data']['IN'])
 
     if timer == True:
         t2 = time.time()
 
         time_taken = float(t2) - float(t1)
         print("")
+        print("number of runs = ", runs)
         print("[exec_pipe] : time taken to execute = ", (time_taken * 1000) / runs, " ms")
+
+    print('OUTPUT')
+    print(app_data['sig_data']['OUT'])
+
+    print('IN')
+    print(app_data['sig_data']['IN'])
 
     Fs = app_data['freq']
     y = app_data['sig_data']['IN']
