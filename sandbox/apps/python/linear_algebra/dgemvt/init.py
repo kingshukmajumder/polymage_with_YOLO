@@ -67,7 +67,7 @@ def get_input(app_data):
     app_data['early_free'] = bool(app_args.early_free)
     # pool allocate option
     app_data['pool_alloc'] = bool(app_args.pool_alloc)
-    app_data['blas'] = bool(app_args.blas)
+    app_data['blas'] = app_args.blas
     app_data['pluto'] = bool(app_args.pluto)
     if(app_data['pluto']):
         # By default we add the tile size and 32

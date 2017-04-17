@@ -75,8 +75,10 @@ def build_matops(app_data):
         opts += ['optimize_storage']
     if app_data['pool_alloc']:
         opts += ['pool_alloc']
-    if app_data['blas']:
-        opts += ['blas']
+    if app_data['blas'] == 'OpenBLAS':
+        opts += ['openblas']
+    if app_data['blas'] == 'MKL':
+        opts += ['mkl']
     if app_data['pluto']:
         opts += ['pluto']
 
