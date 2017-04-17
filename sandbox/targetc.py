@@ -84,7 +84,7 @@ class CValue(Value):
         if (self._typ == Float):
             return self._value.__str__()
         if (self._typ == Complex):
-            return "(" + self._value.real.__str__() + ' + ' + self._value.imag.__str__() + "j)"
+            return "(" + float(self._value.real).__str__() + ' + ' + float(self._value.imag).__str__() + "j)"
         return self._value.__str__()
 
 class CSelect(Select):
