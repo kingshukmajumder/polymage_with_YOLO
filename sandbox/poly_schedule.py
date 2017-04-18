@@ -342,6 +342,30 @@ def mark_par_and_vec(poly_part, param_estimates):
 
     return
 
+def mark_par_and_vec_for_pluto_sched(poly_part, parallel_loops):
+    # TODO: assuming that the name of the out-dims of the part are prefixed with
+    # 'o'
+    prefix = 'o'
+
+    # init par and vec sched dims
+    poly_part.parallel_sched_dims = []
+    poly_part.vector_sched_dim = []
+
+    nploops = len(parallel_loops)
+    if nploops == 1:
+        # the only parallel dim will be outer parallel
+        par_dim = parallel_loops[0]
+        poly_part.parallel_sched_dims.append(prefix + str(par_dim))
+    elif nploops > 1:
+        # outermost dim
+        par_dim = min(parallel_loops)
+        poly_part.parallel_sched_dims.append(prefix + str(par_dim))
+        # innermost dim
+        vec_dim = max(parallel_loops)
+        poly_part.vector_sched_dim.append(prefix + str(vec_dim))
+
+    return
+
 def enable_tile_scratchpad(group_parts):
     # Determine the buffer sizes for stages in each dimension
     for p in group_parts:
