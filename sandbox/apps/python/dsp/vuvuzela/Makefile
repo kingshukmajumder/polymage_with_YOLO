@@ -1,13 +1,13 @@
-#CXX=icpc
-#CXX_FLAGS=-openmp -ipo -O3 -xhost
-CXX=g++
-CXX_FLAGS=-fopenmp -O3 -march=native -ftree-vectorize
+CXX=icpc
+CXX_FLAGS=-qopenmp -ipo -O3 -xhost
+#~ CXX=g++
+#~ CXX_FLAGS=-fopenmp -O3 -march=native -ftree-vectorize
 PYTHON=python3
 ROOT="../../../../"
 
 # app inputs
 IMG=$(ROOT)"/../images/venice_wikimedia.jpg"
-RUNS=1
+RUNS=50
 
 APP_ARGS=--fft
 #APP_ARGS=--matrix --blas
