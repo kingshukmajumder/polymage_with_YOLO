@@ -1084,11 +1084,8 @@ class Pipeline:
         # Pluto call
         pluto = LibPluto()
         pluto_options = pluto.create_options()
-        out_schedule = pluto.schedule(self._ctx, domain_union_set, deps_union_map, pluto_options)
-
-        # Making the remapping call to figure out which dims are scalar
-        # and the tile information
-        remapping = pluto.get_remapping(self._ctx, domain_union_set, deps_union_map, pluto_options)
+        # Returns transformed schedule and parallael loops for each statement
+        out_schedule,parallel_loops = pluto.schedule(self._ctx, domain_union_set, deps_union_map, pluto_options)
 
         LOG(log_level,"Schedule recieved from Pluto:")
         LOG(log_level,out_schedule)
@@ -1132,16 +1129,15 @@ class Pipeline:
             num_out_dims = poly_part.sched.dim(isl.dim_type.out)
             num_in_dims = poly_part.sched.dim(isl.dim_type.in_)
 
-            # TODO: Check if statement numbers are retrieved correctly (ordered by polypart or by statment num)
             stmt_num = poly_part.stmt_no
 
-            inv_map = np.array(remapping.inv_matrices[stmt_num], dtype=object)
+            inv_map = np.array(pluto.remapping.inv_matrices[stmt_num], dtype=object)
 
             # inv_map = inv_map[0:num_in_dims, 0:num_out_dims]
             # inv_map = inv_map.transpose()
             # for dim in range(num_out_dims):
             #     poly_part.scalar[dim] = np.sum(inv_map[dim])
-            divs = remapping.divs[stmt_num] #[0:num_in_dims]
+            divs = pluto.remapping.divs[stmt_num] #[0:num_in_dims]
 
             poly_part.set_pluto_inv_and_div_matrix(inv_map,divs)
 
@@ -1150,9 +1146,11 @@ class Pipeline:
                 poly_part.tiled = True
             else:
                 poly_part.tiled = False
+
             # Mark parallel and vector loops
-            # TODO: Needs seperate implemetation for Pluto Schedule
-            #TODO: Add mar_par_for_tiled_loops
+            # TODO: Check if vector loop is being set correctly
+            mark_par_and_vec_for_pluto_sched(poly_part, parallel_loops[stmt_num])
+
 
         return
 
