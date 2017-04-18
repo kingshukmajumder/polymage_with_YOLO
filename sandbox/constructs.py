@@ -2580,7 +2580,7 @@ class Wave(Function):
 
         out_intervals = [Interval(UInt, 0, out_len - 1)]
 
-        out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *out_intervals]), out_type, out_name)
+        out_wave = Reduction((out_vars, out_intervals), ([out_vars[0], in_vars[0]], [out_intervals[0], out_intervals[0]]), out_type, out_name)
         out_wave.defn = [ Reduce(out_wave(*out_vars), \
                                  wav(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / out_len)), \
                                  Op.Sum) ]
@@ -2605,7 +2605,7 @@ class Wave(Function):
         cond1 = Condition(2*in_vars[0], '<=', out_len)
         cond2 = Condition(2*in_vars[0], '>', out_len)
 
-        out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *out_intervals]), out_type, out_name)
+        out_wave = Reduction((out_vars, out_intervals), ([out_vars[0], in_vars[0]], [out_intervals[0], out_intervals[0]]), out_type, out_name)
         out_wave.defn = [ Case(cond1, Reduce(out_wave(*out_vars), \
                                  Real((Conj(self(*in_vars)) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / out_len)))), \
                                  Op.Sum)), \
@@ -2625,7 +2625,7 @@ class Wave(Function):
 
         out_intervals = [Interval(UInt, 0, out_len - 1)]
 
-        out_wave = Reduction((out_vars, out_intervals), ([*out_vars, *in_vars], [*out_intervals, *out_intervals]), out_type, out_name)
+        out_wave = Reduction((out_vars, out_intervals), ([out_vars[0], in_vars[0]], [out_intervals[0], out_intervals[0]]), out_type, out_name)
         out_wave.defn = [ Reduce(out_wave(*out_vars), \
                                  Conj((Conj(self(*in_vars)) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / out_len)))), \
                                  Op.Sum) ]
