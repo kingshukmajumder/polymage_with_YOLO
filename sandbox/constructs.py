@@ -1726,15 +1726,14 @@ class Scalar(Matrix):
 class Wave(Function):
     """Represents a discrete-time signal."""
 
-    def __init__(self, _typ, _name, _len, _var=None, _const=""):
+    def __init__(self, _typ, _name, _len, _var=None, _const=''):
         """Initialize the signal.
 
-        Args:
-            _typ: type of the signal samples - Double or Complex.
-            _name: name used for the signal during code generation.
-            _len: number of samples in the signal.
-            _var (optional)
-            _const (optional)
+        :param _typ: type of the signal samples - Double or Complex.
+        :param _name: name used for the signal during code generation.
+        :param _len: number of samples in the signal.
+        :param _var: (Default value = None)
+        :param _const: (Default value = '')
 
         """
         _len = Value.numericToValue(_len)
@@ -1781,8 +1780,7 @@ class Wave(Function):
     def clone(self):
         """Clone the signal.
 
-        Returns:
-            A deep copy of the signal.
+        :returns: A deep copy of the signal.
 
         """
         var = [v.clone() for v in self._variables]
@@ -1799,11 +1797,8 @@ class Wave(Function):
     def __add__(self, other):
         """Add two signals elementwise.
 
-        Args:
-            other: signal to be added to this one.
-
-        Returns:
-            Sum of the 2 signals.
+        :param other: signal to be added to this one.
+        :returns: Sum of the 2 signals.
 
         """
         assert isinstance(other, Wave)
@@ -1826,12 +1821,9 @@ class Wave(Function):
     def convolve(self, other, out_name):
         """Convolve two signals.
 
-        Args:
-            other: signal to convolved with this one.
-            out_name: name of the output signal.
-
-        Returns:
-            Discrete linear convolution of the 2 signals.
+        :param other: signal to convolved with this one.
+        :param out_name: name of the output signal.
+        :returns: Discrete linear convolution of the 2 signals.
 
         """
         assert isinstance(other, Wave)
@@ -1860,12 +1852,9 @@ class Wave(Function):
     def correlate(self, other, out_name):
         """Cross-correlate two signals.
 
-        Args:
-            other: signal to correlated with this one.
-            out_name: name of the output signal.
-
-        Returns:
-            Discrete linear cross-correlation of the 2 signals.
+        :param other: signal to correlated with this one.
+        :param out_name: name of the output signal.
+        :returns: Discrete linear cross-correlation of the 2 signals.
 
         """
         assert isinstance(other, Wave)
@@ -1901,12 +1890,9 @@ class Wave(Function):
     def fftconvolve(self, other, out_name):
         """Convolve two signals using FFT.
 
-        Args:
-            other: signal to convolved with this one.
-            out_name: name of the output signal.
-
-        Returns:
-            Discrete linear convolution of the 2 signals.
+        :param other: signal to convolved with this one.
+        :param out_name: name of the output signal.
+        :returns: Discrete linear convolution of the 2 signals.
 
         """
         assert isinstance(other, Wave)
@@ -1960,14 +1946,11 @@ class Wave(Function):
     def lfilter(self, b, a, out_name):
         """Filter signal with an IIR or FIR filter.
 
-        Args:
-            b: the numerator coefficient vector.
-            a: the denominator coefficient vector. Both a and b are
+        :param b: the numerator coefficient vector.
+        :param a: the denominator coefficient vector. Both a and b are
                 normalized by a[0] to make a[0] equal to 1.
-            out_name: name of the output signal.
-
-        Returns:
-            The output of the digital filter.
+        :param out_name: name of the output signal.
+        :returns: The output of the digital filter.
 
         """
         assert isinstance(b, Wave)
@@ -2015,12 +1998,9 @@ class Wave(Function):
     def lfilter_fir(self, b, out_name):
         """Filter signal with an FIR filter.
 
-        Args:
-            b: the filter coefficient vector.
-            out_name: name of the output signal.
-
-        Returns:
-            The output of the digital filter.
+        :param b: the filter coefficient vector.
+        :param out_name: name of the output signal.
+        :returns: The output of the digital filter.
 
         """
         assert isinstance(b, Wave)
@@ -2049,13 +2029,10 @@ class Wave(Function):
         """Filter signal with an FIR filter and compensate for the delay
         introduced by filtering.
 
-        Args:
-            b: the filter coefficient vector.
-            out_name: name of the output signal.
-            _out_typ: type of the output signal samples.
-
-        Returns:
-            The output of the digital filter compensated for delay.
+        :param b: the filter coefficient vector.
+        :param out_name: name of the output signal.
+        :param _out_typ: type of the output signal samples. (Default value = None)
+        :returns: The output of the digital filter compensated for delay.
 
         """
         return Wave.lfilter_fir_and_delays(self, b, out_name, _out_typ, \
@@ -2086,11 +2063,8 @@ class Wave(Function):
     def hilbert(self, out_name):
         """Compute the analytic signal, using the Hilbert transform.
 
-        Args:
-            out_name: name of the output signal.
-
-        Returns:
-            Analytic signal of this signal.
+        :param out_name: name of the output signal.
+        :returns: Analytic signal of this signal.
 
         """
         assert self._typ is Double
@@ -2130,14 +2104,11 @@ class Wave(Function):
     def upfirdn(self, h, out_name, up=1, down=1):
         """Upsample, FIR filter, and downsample.
 
-        Args:
-            h: FIR (finite-impulse response) filter coefficients.
-            out_name: name of the output signal.
-            up: upsampling rate.
-            down: downsampling rate.
-
-        Returns:
-            The output signal with size changed with respect to this
+        :param h: FIR (finite-impulse response) filter coefficients.
+        :param out_name: name of the output signal.
+        :param up: upsampling rate. (Default value = 1)
+        :param down: downsampling rate. (Default value = 1)
+        :returns: The output signal with size changed with respect to this
             signal based on the h, up, and down parameters.
 
         """
@@ -2186,12 +2157,9 @@ class Wave(Function):
     def downsample(self, down, out_name):
         """Downsample the signal.
 
-        Args:
-            down: the downsampling factor.
-            out_name: name of the output signal.
-
-        Returns:
-            The down-sampled signal.
+        :param down: the downsampling factor.
+        :param out_name: name of the output signal.
+        :returns: The down-sampled signal.
 
         """
         return Wave.downsamples(self, down, out_name, self._len)
@@ -2212,13 +2180,10 @@ class Wave(Function):
     def upsample(self, up, out_name, _out_len=None):
         """Upsample the signal.
 
-        Args:
-            up: the upsampling factor.
-            out_name: name of the output signal.
-            _out_len: number of samples in the output signal.
-
-        Returns:
-            The up-sampled signal.
+        :param up: the upsampling factor.
+        :param out_name: name of the output signal.
+        :param _out_len: number of samples in the output signal. (Default value = None)
+        :returns: The up-sampled signal.
 
         """
         ut = getType(up)
@@ -2240,13 +2205,10 @@ class Wave(Function):
     def low_pass(self, cutoff, out_name, factor=0):
         """Attenuate frequencies above the cutoff.
 
-        Args:
-            cutoff: frequency in Hz.
-            out_name: name of the output signal.
-            factor: what to multiply the magnitude by.
-
-        Returns:
-            Signal with magnitudes of frequencies above cutoff scaled by
+        :param cutoff: frequency in Hz.
+        :param out_name: name of the output signal.
+        :param factor: what to multiply the magnitude by. (Default value = 0)
+        :returns: Signal with magnitudes of frequencies above cutoff scaled by
             factor.
 
         """
@@ -2285,13 +2247,10 @@ class Wave(Function):
     def high_pass(self, cutoff, out_name, factor=0):
         """Attenuate frequencies below the cutoff.
 
-        Args:
-            cutoff: frequency in Hz.
-            out_name: name of the output signal.
-            factor: what to multiply the magnitude by.
-
-        Returns:
-            Signal with magnitudes of frequencies below cutoff scaled by
+        :param cutoff: frequency in Hz.
+        :param out_name: name of the output signal.
+        :param factor: what to multiply the magnitude by. (Default value = 0)
+        :returns: Signal with magnitudes of frequencies below cutoff scaled by
             factor.
 
         """
@@ -2330,14 +2289,11 @@ class Wave(Function):
     def band_stop(self, low_cutoff, high_cutoff, out_name, factor=0):
         """Attenuate frequencies between the cutoffs.
 
-        Args:
-            low_cutoff: frequency in Hz.
-            high_cutoff: frequency in Hz.
-            out_name: name of the output signal.
-            factor: what to multiply the magnitude by.
-
-        Returns:
-            Signal with magnitudes of frequencies between low_cutoff and
+        :param low_cutoff: frequency in Hz.
+        :param high_cutoff: frequency in Hz.
+        :param out_name: name of the output signal.
+        :param factor: what to multiply the magnitude by. (Default value = 0)
+        :returns: Signal with magnitudes of frequencies between low_cutoff and
             high_cutoff scaled by factor.
 
         """
@@ -2380,12 +2336,9 @@ class Wave(Function):
     def freqz(self, out_names):
         """Compute the frequency response of a digital filter.
 
-        Args:
-            out_names: tuple of 2 strings containing the names of output
+        :param out_names: tuple of 2 strings containing the names of output
                 vectors.
-
-        Returns:
-            The normalized frequencies at which the frequency response
+        :returns: The normalized frequencies at which the frequency response
             was computed, in radians/sample; the frequency response, as
             complex numbers.
 
@@ -2424,13 +2377,10 @@ class Wave(Function):
     def interp_fft(self, r, out_name, _out_typ=None):
         """Upsample the signal using Fourier method.
 
-        Args:
-            r: the upsampling factor.
-            out_name: name of the output signal.
-            _out_typ: type of the output signal samples.
-
-        Returns:
-            The up-sampled signal.
+        :param r: the upsampling factor.
+        :param out_name: name of the output signal.
+        :param _out_typ: type of the output signal samples. (Default value = None)
+        :returns: The up-sampled signal.
 
         """
         return Wave.interps_fft(self, r, out_name, _out_typ, self._len)
@@ -2480,13 +2430,10 @@ class Wave(Function):
     def freq_shift(self, shift, sample, out_name):
         """Apply a frequency shift to the signal.
 
-        Args:
-            shift: frequency in Hz.
-            sample: sampling frequency of the signal.
-            out_name: name of the output signal.
-
-        Returns:
-            Signal with frequency shift applied to it.
+        :param shift: frequency in Hz.
+        :param sample: sampling frequency of the signal.
+        :param out_name: name of the output signal.
+        :returns: Signal with frequency shift applied to it.
 
         """
         shift = Value.numericToValue(shift)
@@ -2509,13 +2456,10 @@ class Wave(Function):
     def subset(self, start, stop, out_name):
         """Take a subset of the signal.
 
-        Args:
-            start: first index of the subset in the signal.
-            stop: last index of the subset in the signal.
-            out_name: name of the output signal.
-
-        Returns:
-            Truncated signal of length stop - start + 1.
+        :param start: first index of the subset in the signal.
+        :param stop: last index of the subset in the signal.
+        :param out_name: name of the output signal.
+        :returns: Truncated signal of length stop - start + 1.
 
         """
         start = Value.numericToValue(start)
@@ -2534,12 +2478,9 @@ class Wave(Function):
     def scalar_mul(self, sval, out_name):
         """Multiply the elements of the signal by a scalar value.
 
-        Args:
-            sval: scalar value to multiply.
-            out_name: name of the output signal.
-
-        Returns:
-            Signal with amplitude scaled by a factor of sval.
+        :param sval: scalar value to multiply.
+        :param out_name: name of the output signal.
+        :returns: Signal with amplitude scaled by a factor of sval.
 
         """
         sval = Value.numericToValue(sval)
@@ -2557,13 +2498,10 @@ class Wave(Function):
     def get_window(cls, window, N, out_name):
         """Return a window.
 
-        Args:
-            window: the type of window to create.
-            N: the number of samples in the window.
-            out_name: name of the output window.
-
-        Returns:
-            A window of length N and type window.
+        :param window: the type of window to create
+        :param N: the number of samples in the window
+        :param out_name: name of the output window
+        :returns: A window of length N and type window.
 
         """
         if isinstance(window, tuple):
@@ -2654,17 +2592,14 @@ class Wave(Function):
     def firwin(cls, N, cutoff, out_name, window='hamming', pass_zero=True):
         """FIR filter design using the window method.
 
-        Args:
-            N: length of the filter (number of coefficients).
-            cutoff: cutoff frequency of filter OR a tuple of 2 cutoff
+        :param N: length of the filter (number of coefficients).
+        :param cutoff: cutoff frequency of filter OR a tuple of 2 cutoff
                 frequencies (that is, band edges).
-            out_name: name of the output filter coefficient vector.
-            window: desired window to use.
-            pass_zero: if True, the gain at the frequency 0 (i.e. the
-                “DC gain”) is 1. Otherwise the DC gain is 0.
-
-        Returns:
-            Coefficients of length N FIR filter.
+        :param out_name: name of the output filter coefficient vector.
+        :param window: desired window to use. (Default value = 'hamming')
+        :param pass_zero: if True, the gain at the frequency 0 (i.e. the
+                'DC gain') is 1. Otherwise the DC gain is 0. (Default value = True)
+        :returns: Coefficients of length N FIR filter.
 
         """
         out_typ = Double
@@ -2750,14 +2685,11 @@ class Wave(Function):
         """Design a Kaiser window to limit ripple and width of
         transition region.
 
-        Args:
-            ripple: positive number specifying maximum ripple in
+        :param ripple: positive number specifying maximum ripple in
                 passband (dB) and minimum ripple in stopband.
-            width: width of transition region (normalized so that 1
+        :param width: width of transition region (normalized so that 1
                 corresponds to pi radians / sample).
-
-        Returns:
-            The length of the kaiser window; the beta parameter for the
+        :returns: The length of the kaiser window; the beta parameter for the
             kaiser window.
 
         """
@@ -2780,12 +2712,9 @@ class Wave(Function):
     def kaiser_beta(cls, a):
         """Compute the Kaiser parameter beta, given the attenuation a.
 
-        Args:
-            a: the desired attenuation in the stopband and maximum
+        :param a: the desired attenuation in the stopband and maximum
                 ripple in the passband, in dB. This should be positive.
-
-        Returns:
-            The beta parameter to be used in the formula for a Kaiser
+        :returns: The beta parameter to be used in the formula for a Kaiser
             window.
 
         """
@@ -2804,13 +2733,10 @@ class Wave(Function):
     def fftfreq(cls, n, out_name, real_input=True):
         """Return the Discrete Fourier Transform sample frequencies.
 
-        Args:
-            n: window length.
-            out_name: name of the output frequency vector.
-            real_input: whether the input is real valued.
-
-        Returns:
-            Wave of length n containing the sample frequencies.
+        :param n: window length
+        :param out_name: name of the output frequency vector
+        :param real_input: whether the input is real valued (Default value = True)
+        :returns: Wave of length n containing the sample frequencies.
 
         """
         nt = getType(n)
@@ -2841,11 +2767,8 @@ class Wave(Function):
     def fft(self, out_name):
         """Compute the discrete Fourier Transform.
 
-        Args:
-            out_name: name of the output signal.
-
-        Returns:
-            The DFT of this signal.
+        :param out_name: name of the output signal.
+        :returns: The DFT of this signal.
 
         """
         return Wave.ffts(self, out_name, self._len)
@@ -2890,20 +2813,14 @@ class Wave(Function):
         return out_wave
 
     def ifft(self, out_name, _out_len=None, real_input=True):
-        """Compute the inverse discrete Fourier Transform.
+        """Compute the inverse discrete Fourier Transform. The computed
+        transform is unnormalized. The returned signal must be divided
+        by its length if the normalized transform is required.
 
-        Note:
-            The computed transform is unnormalized. The returned signal
-            must be divided by its length if the normalized transform is
-            required.
-
-        Args:
-            out_name: name of the output signal.
-            _out_len: number of samples in the output signal.
-            real_input: whether the input is real valued.
-
-        Returns:
-            The IDFT of this signal.
+        :param out_name: name of the output signal.
+        :param _out_len: number of samples in the output signal. (Default value = None)
+        :param real_input: whether the input is real valued. (Default value = True)
+        :returns: The IDFT of this signal.
 
         """
         assert self._typ == Complex
