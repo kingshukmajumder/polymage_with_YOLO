@@ -2052,7 +2052,7 @@ class Wave(Function):
         Args:
             b: the filter coefficient vector.
             out_name: name of the output signal.
-            _out_typ (optional): type of the output signal samples.
+            _out_typ: type of the output signal samples.
 
         Returns:
             The output of the digital filter compensated for delay.
@@ -2133,8 +2133,8 @@ class Wave(Function):
         Args:
             h: FIR (finite-impulse response) filter coefficients.
             out_name: name of the output signal.
-            up (optional): upsampling rate. Default is 1.
-            down (optional): downsampling rate. Default is 1.
+            up: upsampling rate.
+            down: downsampling rate.
 
         Returns:
             The output signal with size changed with respect to this
@@ -2215,7 +2215,7 @@ class Wave(Function):
         Args:
             up: the upsampling factor.
             out_name: name of the output signal.
-            _out_len (optional): number of samples in the output signal.
+            _out_len: number of samples in the output signal.
 
         Returns:
             The up-sampled signal.
@@ -2243,7 +2243,7 @@ class Wave(Function):
         Args:
             cutoff: frequency in Hz.
             out_name: name of the output signal.
-            factor (optional): what to multiply the magnitude by.
+            factor: what to multiply the magnitude by.
 
         Returns:
             Signal with magnitudes of frequencies above cutoff scaled by
@@ -2288,7 +2288,7 @@ class Wave(Function):
         Args:
             cutoff: frequency in Hz.
             out_name: name of the output signal.
-            factor (optional): what to multiply the magnitude by.
+            factor: what to multiply the magnitude by.
 
         Returns:
             Signal with magnitudes of frequencies below cutoff scaled by
@@ -2427,7 +2427,7 @@ class Wave(Function):
         Args:
             r: the upsampling factor.
             out_name: name of the output signal.
-            _out_typ (optional): type of the output signal samples.
+            _out_typ: type of the output signal samples.
 
         Returns:
             The up-sampled signal.
@@ -2659,9 +2659,9 @@ class Wave(Function):
             cutoff: cutoff frequency of filter OR a tuple of 2 cutoff
                 frequencies (that is, band edges).
             out_name: name of the output filter coefficient vector.
-            window (optional): desired window to use.
-            pass_zero (optional): if True, the gain at the frequency 0
-                (i.e. the “DC gain”) is 1. Otherwise the DC gain is 0.
+            window: desired window to use.
+            pass_zero: if True, the gain at the frequency 0 (i.e. the
+                “DC gain”) is 1. Otherwise the DC gain is 0.
 
         Returns:
             Coefficients of length N FIR filter.
@@ -2807,7 +2807,7 @@ class Wave(Function):
         Args:
             n: window length.
             out_name: name of the output frequency vector.
-            real_input (optional): whether the input is real valued.
+            real_input: whether the input is real valued.
 
         Returns:
             Wave of length n containing the sample frequencies.
@@ -2899,8 +2899,8 @@ class Wave(Function):
 
         Args:
             out_name: name of the output signal.
-            _out_len (optional): number of samples in the output signal.
-            real_input (optional): whether the input is real valued.
+            _out_len: number of samples in the output signal.
+            real_input: whether the input is real valued.
 
         Returns:
             The IDFT of this signal.
