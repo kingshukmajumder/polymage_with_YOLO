@@ -2385,9 +2385,9 @@ class Wave(Function):
                 vectors.
 
         Returns:
-            w: the normalized frequencies at which h was computed, in
-                radians/sample.
-            h: the frequency response, as complex numbers.
+            The normalized frequencies at which the frequency response
+            was computed, in radians/sample; the frequency response, as
+            complex numbers.
 
         """
         assert self._typ is Double
@@ -2757,8 +2757,8 @@ class Wave(Function):
                 corresponds to pi radians / sample).
 
         Returns:
-            numtaps: the length of the kaiser window.
-            beta: the beta parameter for the kaiser window.
+            The length of the kaiser window; the beta parameter for the
+            kaiser window.
 
         """
         rt = getType(ripple)
