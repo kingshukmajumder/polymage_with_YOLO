@@ -168,7 +168,7 @@ def extract_value_dependence(part, ref, ref_poly_dom):
             rel = add_constraints(rel, [], [coeff])
     if not rel.is_empty():
         deps.append(PolyDep(ref.objectRef, part.comp.func, rel))
-    return deps
+    return deps 
 
 class PolyPart(object):
     def __init__(self, _sched, _expr, _pred, _comp,
@@ -587,7 +587,6 @@ class PolyRep(object):
 
         self.extract_polyrep_from_group(_param_constraints)
 
-
     def extract_polyrep_from_group(self, param_constraints):
         # dict: comp_obj -> level_no
         comp_map = self.group.get_ordered_comps
@@ -601,6 +600,8 @@ class PolyRep(object):
                     dim = max(dim, len(comp.func.reductionVariables))
                     dim = max(dim, len(comp.func.variables))
                 elif type(comp.func) == Function or type(comp.func) == Image or type(comp.func) == Matrix or type(comp.func) == Wave:
+                    dim = max(dim, len(comp.func.variables))
+                elif type(comp.func) == TStencil:
                     dim = max(dim, len(comp.func.variables))
             return dim
 
@@ -621,7 +622,17 @@ class PolyRep(object):
 
         # The [t] is for the stage dimension
         schedule_names = ['_t'] + \
-                         [ self.getVarName()  for i in range(0, dim) ]
+                         [self.getVarName() for i in range(0, dim)]
+
+        # a mapping between compute objects and the function
+        # used on them to extract the polyhedral representation
+        polyrep_extraction_fn_map = {
+            Function: PolyRep.extract_polyrep_from_function,
+            Image: PolyRep.extract_polyrep_from_function,
+            Reduction: PolyRep.extract_polyrep_from_reduction,
+            TStencil: PolyRep.extract_polyrep_from_tstencil
+
+        }
 
         for comp in comp_map:
             if (type(comp.func) == Function or type(comp.func) == Image or type(comp.func) == Matrix or
@@ -635,6 +646,11 @@ class PolyRep(object):
                                                     param_names, context_conds,
                                                     comp_map[comp]+1,
                                                     param_constraints, self.group.initialization_complete)
+            elif (type(comp.func) == TStencil):
+                self.extract_polyrep_from_tstencil(comp, dim, schedule_names,
+                                                    param_names, context_conds,
+                                                    comp_map[comp]+1,
+                                                    param_constraints)
             else:
                 assert False
 
@@ -778,7 +794,6 @@ class PolyRep(object):
                                       schedule_names, param_names,
                                       context_conds, level_no,
                                       param_constraints):
-
         self.poly_doms[comp] = \
             self.extract_poly_dom_from_comp(comp, param_constraints)
         sched_map = self.create_sched_space(comp.func.variables,
@@ -815,8 +830,168 @@ class PolyRep(object):
             # Initializing the reduction earlier than any other function
             self.create_poly_parts_from_default(comp, max_dim, dom_map, level_no,
                                             schedule_names)
-
         self.update_read_and_write_access(comp)
+
+
+    @staticmethod
+    def set_map_pluto_names(sched_map):
+        """Configure a BasicMap to have PLUTO's naming convention for
+        dimensions"""
+        sched_map = sched_map.copy()
+        sched_map = sched_map.set_tuple_name(isl._isl.dim_type.in_, "S_0")
+        sched_map = sched_map.set_tuple_name(isl._isl.dim_type.out, "S_1")
+
+        return sched_map
+
+    @staticmethod
+    def add_tstencil_kernel_constraints(isl_ctx, sched_domain, sched_map, comp):
+        # Quick note on naming convention between domain and range:
+        # The domain will have the input tuple as  [time, x, y, z, ...]
+        # The range will have outputs as [_t, _i0, _i1]
+        # _t is untouched by us, since it is used later in the pipeline to resolve
+        # ordering during grouping.
+        # We will associate:
+        # time -> _i0 | x -> _i1 | y -> _i2 | ... | (nth_dim) -> _in
+        # original_basic_map = sched_map.copy()
+        
+
+        if isinstance(sched_map, isl.BasicMap):
+            sched_map = isl.Map.from_basic_map(sched_map)
+
+        time_constraint_map = \
+            isl.BasicMap.from_domain_and_range(sched_domain.copy(), 
+                sched_domain.copy())
+
+        # time_constraint_map is used by everyone else
+        # to create relationships between t -> t + 1
+        # add constraint corresponding to time = time + 1
+        equalities = []
+        equalities.append({
+            ('constant', 0): -1,
+            ('in', 'time'): -1,
+            ('out', 'time'): 1,
+        })
+
+
+        time_constraint_map = add_constraints(time_constraint_map,
+                                         ineqs=[],
+                                         eqs=equalities)
+
+        constraints_union = isl.UnionMap.empty(time_constraint_map.space)
+
+        # build an indexed kernel
+        kernel = comp.func._build_indexed_kernel()
+
+        for (indexing_list, weight) in kernel:
+            # do not generate constraints if the weight is 0
+            if weight == 0:
+                continue
+            else:
+                index_constraint_map = isl.BasicMap.copy(time_constraint_map)
+                tstencil_eqs = []
+                # for each indexing variable, generate a cone constraint
+                # for time (t + 1), from the variable to its output
+                for (i, (var_index, origin_dist)) in enumerate(indexing_list):
+                    var_name = str(comp.func.variables[i])
+                    tstencil_eqs.append({
+                        ('constant', 0): -1 * origin_dist,
+                        ('in', var_name): 1,
+                        ('out', var_name): -1
+                    })
+                index_constraint_map = add_constraints(index_constraint_map, ineqs=[], eqs=tstencil_eqs)
+                index_constraint_map = isl.UnionMap.from_basic_map(index_constraint_map)
+                constraints_union = constraints_union.union(index_constraint_map)
+
+        return constraints_union
+
+    def extract_polyrep_from_tstencil(self, comp, max_dim,
+                                      schedule_names, param_names,
+                                      context_conds, level_no,
+                                      param_constraints):
+
+
+
+        # add the time dimension to the tstencil
+        # schedule_names.append("time")
+
+        # self.poly_doms[comp] = \
+        #    self.extract_poly_dom_from_comp(comp, param_constraints)
+        # ------
+        # EXTRACT POLY DOM FROM COMP
+
+        tstencil = comp.func
+        tstencil_vars = [tstencil.time_var] + tstencil.variables
+        tstencil_domains = [Interval(Int, 0, tstencil.timesteps)]+ tstencil.domain
+
+        # HACK: we need to forcibly add a variable for our schedule name of "time"
+        schedule_names.append(self.getVarName())
+
+        var_names = [var.name for var in  tstencil_vars]
+        dom_map_names = [ name +'\'' for name in var_names ]
+
+        params = []
+        for interval in tstencil_domains:
+            params = params + interval.collect(Parameter)
+        # add the TStencil timestep if it's of type parameter
+        if isinstance(tstencil.timesteps, Parameter):
+            params = params + [tstencil.timesteps]
+        else:
+            assert(isinstance(tstencil.timesteps, Int))
+
+        params = list(set(params))
+        param_names = [ param.name for param in params ]
+
+        space = isl.Space.create_from_names(self.ctx, in_ = var_names,
+                                                      out = dom_map_names,
+                                                      params = param_names)
+        dom_map = isl.BasicMap.universe(space)
+        [ineqs, eqs] = format_domain_constraints(tstencil_domains, var_names)
+        dom_map = add_constraints(dom_map, ineqs, eqs)
+
+        param_conds = self.format_param_constraints(param_constraints, params)
+        [param_ineqs, param_eqs] = format_conjunct_constraints(param_conds)
+        dom_map = add_constraints(dom_map, param_ineqs, param_eqs) 
+        poly_dom = PolyDomain(dom_map.domain(), comp)
+        id_ = isl_alloc_id_for(self.ctx, comp.func.name, poly_dom)
+        poly_dom.set_tuple_id(id_)
+        isl_set_id_user(id_, poly_dom)
+
+        self.poly_doms[comp] = poly_dom
+
+        # -----
+        # CREATE_SCHED_SPACE
+        sched_map = self.create_sched_space(tstencil_vars,
+                                            tstencil_domains,
+                                            schedule_names, param_names,
+                                            context_conds)
+
+
+        # add Tstencil kernel constraints
+        # sched_map = self.add_tstenil_kernel_constraints(sched_map, comp)
+
+       # ------
+       # CREATE POLY PARTS FOR T STENCIL
+        sched_m = sched_map.copy()
+        align, scale = \
+            aln_scl.default_align_and_scale(sched_m, max_dim, shift=True)
+
+        tstencil_expr = tstencil.get_indexing_expr()
+        assert(isinstance(tstencil_expr, AbstractExpression))
+        poly_part = PolyPart(sched_m, tstencil_expr,
+                             None, comp,
+                             align, scale, level_no-1)
+
+        # Add names to domain and range
+        id_domain = isl_alloc_id_for(self.ctx, comp.func.name, poly_part)
+        isl_set_id_user(id_domain, poly_part)
+
+        poly_part.sched = poly_part.sched.set_tuple_id(isl.dim_type.in_, id_domain)
+
+        self.poly_parts[comp] = []
+        self.poly_parts[comp].append(poly_part)
+
+        return
+
 
     def create_sched_space(self, variables, domains,
                            schedule_names, param_names, context_conds):
@@ -1002,7 +1177,7 @@ class PolyRep(object):
                     true_sched = add_constraints(true_sched, [], eqs)
                     true_sched = true_sched.project_out(isl._isl.dim_type.in_,
                                                         dim_in, 1)
-                    broken_parts.append((true_sched, expr.trueExpression))
+                    broken_parts.append((true_sched, expr.true_expression))
 
                     # false branch schedule
                     false_sched = sched_map.copy()
@@ -1038,11 +1213,10 @@ class PolyRep(object):
                     false_sched = \
                         false_sched.project_out(isl._isl.dim_type.in_,
                                                 dim_in, 2)
-                    broken_parts.append((false_sched, expr.falseExpression))
+                    broken_parts.append((false_sched, expr.false_expression))
 
         # Note the align and scale lists are cloned otherwise all the parts
         # will be sharing the same alignment and scaling
-
         if not broken_parts:
             poly_part = PolyPart(sched_map, expr, pred, comp,
                                  list(align), list(scale), level_no)

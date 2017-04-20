@@ -24,7 +24,6 @@
 from __future__ import absolute_import, division, print_function
 
 # More Python 3 vs 2 mojo
-
 try:
     import queue
 except ImportError:
@@ -64,6 +63,7 @@ def get_parents_from_func(func, non_image=True):
                                      or (isinstance(ref.objectRef, Wave) and ref.objectRef.isInput)) ]
     else:
         refs = [ ref for ref in refs if not ref.objectRef == func ]
+
     return list(set([ref.objectRef for ref in refs]))
 
 def get_funcs_and_dep_maps(outputs):
@@ -124,12 +124,26 @@ def get_funcs(outputs):
     return funcs
 
 
+class ComputeTypes:
+    FUNCTION = 1
+    IMAGE = 2
+    REDUCTION = 3
+    TSTENCIL = 4
+
+
 class ComputeObject:
     def __init__(self, _func, _is_output=False):
-        assert isinstance(_func, Function)
+
+        self._set_type(_func)
+
+        self._is_parents_set = False
+        self._is_children_set = False
+        self._is_group_set = False
+
         self._func = _func
         self._parents = []
         self._children = []
+
         self._size = self.compute_size()
 
         self._group = None
@@ -161,11 +175,21 @@ class ComputeObject:
     def is_group_set(self):
         return self._is_group_set
     @property
+    def compute_type(self):
+        return self._compute_type
+
+    @property
+    def is_func_type(self):
+        return self._compute_type == ComputeTypes.FUNCTION
+    @property
     def is_image_typ(self):
         return self._is_image_typ
     @property
     def is_reduction_typ(self):
-        return self._is_reduction_typ
+        return self._compute_type == ComputeTypes.REDUCTION
+    @property
+    def is_tstencil_type(self):
+        return self._compute_type == ComputeTypes.TSTENCIL
 
     @property
     def parents(self):
@@ -216,6 +240,26 @@ class ComputeObject:
         self._is_image_typ = isinstance(self.func, Image) or (isinstance(self.func, Matrix) and self.func.isInput) \
                              or (isinstance(self.func, Wave) and self.func.isInput)
         self._is_reduction_typ = isinstance(self.func, Reduction)
+        return
+
+    def _set_type(self, _func):
+        self._compute_type = None
+        # NOTE: do NOT change this to if-elif-elif...else
+        # since this is an _inheritance hierarchy. Somthing can be a
+        # Function AND a reduction.
+        if isinstance(_func, Function):
+            self._compute_type = ComputeTypes.FUNCTION
+        if isinstance(_func, Image):
+            self._compute_type = ComputeTypes.IMAGE
+        if isinstance(_func, Reduction):
+            self._compute_type = ComputeTypes.REDUCTION
+        if isinstance(_func, TStencil):
+            self._compute_type = ComputeTypes.TSTENCIL
+
+        if self._compute_type is None:
+            raise TypeError("unknown compute object function type:\n"
+                            "Given: %s\n"
+                            "nType: %s" % (self._func, type(self.function)))
         return
 
     def add_child(self, comp):
@@ -356,7 +400,14 @@ class ComputeObject:
         self._storage_class = _storage_class
 
     def set_storage_object(self, _array):
-        assert isinstance(_array, genc.CArray)
+        if self.is_tstencil_type:
+            assert isinstance(_array, tuple)
+            assert len(_array) == 2
+            assert isinstance(_array[0], genc.CArray)
+            assert isinstance(_array[1], genc.CArray)
+            self._array = _array
+        else:
+            assert isinstance(_array, genc.CArray)
         self._array = _array
     def set_scratch_info(self, _scratch_info):
         self._scratch_info = _scratch_info
@@ -387,6 +438,7 @@ class Group:
         self._parents = []
         self._children = []
 
+        self._set_type()
         self.set_comp_group()
 
         self._level_order_comps = self.order_compute_objs()
@@ -426,9 +478,23 @@ class Group:
     def children(self):
         return self._children
 
+    # NOTE: Current assumptions:
+    # (1). A Reduction group, TStencil group, and Image group has only one
+    # compute object of the respective kind.
+    # (2). If a group is of pure function type, all its compute objects are
+    # of Function type, and not one of the types listed in (1).
+    @property
+    def is_func_type(self):
+        return self._group_type == ComputeTypes.FUNCTION
     @property
     def is_image_typ(self):
         return self._is_image_typ
+    @property
+    def is_reduction_typ(self):
+        return self._group_type == ComputeTypes.REDUCTION
+    @property
+    def is_tstencil_type(self):
+        return self._group_type == ComputeTypes.TSTENCIL
 
     @property
     def polyRep(self):
@@ -467,6 +533,27 @@ class Group:
     @property
     def liveness_map(self):
         return self._liveness_map
+
+    def _set_type(self):
+        '''
+        Depends on how specifically the ComputeObject's type was set, since all
+        types inherit from Function type.
+        '''
+        group_type = ComputeTypes.FUNCTION
+        for comp in self._comps:
+            group_type = comp.compute_type
+            if not group_type == ComputeTypes.FUNCTION:
+            # Ideally this case won't occur when the list of group's comps has
+            # more than one compute object, since as of now, we group only a
+            # bunch of pure compute objects. Images need no fusion since they
+            # are program inputs. Fusion and/or tiling optimizations for
+            # Reductions is not yet covered. TStencils will be standalone
+            # groups if diamond tiling is enabled.
+            # TODO: add flag to decide if TStencils are to be Diamond tiled or
+            # Overlap tiled.
+                break
+        self._group_type = group_type
+        return
 
     def set_comp_group(self):
         for comp in self.comps:
@@ -699,8 +786,6 @@ class Pipeline:
         self._func_map, self._comps = \
             self.create_compute_objects()
 
-
-
         self._level_order_comps = self.order_compute_objs()
         self._comps = self.get_sorted_comps()
 
@@ -721,9 +806,7 @@ class Pipeline:
         # self._initial_graph = self.draw_pipeline_graph()
 
         # Checking bounds
-        bounds_check_pass(self)
-
-
+        bounds_check_pass(self)        
 
         if self.pluto_sched_required:
             # Generate Schedule
@@ -800,7 +883,7 @@ class Pipeline:
             LOG(log_level, g.name+" ")
         # ***
 
-        ''' SCHEDULING '''
+        ''' SCHEDULING '''        
 
         if not self.pluto_sched_required:
             for g in self.groups:
@@ -809,7 +892,7 @@ class Pipeline:
                 # base schedule
                 base_schedule(g)
                 # grouping and tiling
-                fused_schedule(self, g, self._param_estimates)
+                fused_schedule(self, self._ctx, g, self._param_estimates)
                 # idiom matching algorithm
                 idiom_recognition(self, g)
 
@@ -827,8 +910,7 @@ class Pipeline:
         # groups
         for group in self.groups:
             liveness_for_group_comps(group, group.children_map,
-                                 group.comps_schedule)
-
+                                     group.comps_schedule)
 
         ''' STORAGE '''
         # MAPPING
@@ -838,7 +920,6 @@ class Pipeline:
         # classify the storage based on type, dimensionality and size
         self._storage_class_map = classify_storage(self)
         # remap logical storage
-
         self._storage_map = remap_storage(self)
 
         # ALLOCATION
@@ -857,6 +938,9 @@ class Pipeline:
     @property
     def comps(self):
         return self._comps
+    @property
+    def input_groups(self):
+        return self._inp_groups
     @property
     def groups(self):
         return self._groups
@@ -1167,6 +1251,7 @@ class Pipeline:
     def create_compute_objects(self):
         funcs, parents, children = \
             get_funcs_and_dep_maps(self.outputs)
+
         comps = []
         func_map = {}
         for func in funcs:
@@ -1192,6 +1277,7 @@ class Pipeline:
             inp_comp.set_parents([])
             inp_comp.set_children([])
             func_map[inp] = inp_comp
+
         return func_map, comps
 
     def order_compute_objs(self):
@@ -1223,6 +1309,17 @@ class Pipeline:
         Place each compute object of the pipeline in its own Group, and set the
         dependence relations between the created Group objects.
         """
+
+        # initial groups for inputs
+        inp_groups = {}
+        for inp_func in self.inputs:
+            inp_comp = self.func_map[inp_func]
+            inp_groups[inp_func] = \
+                pipe.Group(self._ctx, [inp_comp], self._param_constraints, self.pluto_sched_required)
+            # do not add input groups to the list of pipeline groups
+        self._inp_groups = inp_groups
+
+        # initial groups for functions
         comps = self.comps
         groups = []
         for comp in comps:
@@ -1242,24 +1339,39 @@ class Pipeline:
         for i in range(0, len(self.groups)):
             sub_graph_nodes = [comp.func.name for comp in self.groups[i].comps]
             for comp in self.groups[i].comps:
-                # liveout or not
-                style = 'rounded'
-                if comp.is_liveout:
-                    style += ', bold'
-                else:
-                    style += ', filled'
+                colour_index = self.storage_map[comp]
                 # comp's array mapping
-                color_index = self.storage_map[comp]
+                if comp.is_tstencil_type:
+                    node_colour = X11Colours.colour(colour_index[1]) + ";0.5:" + \
+                        X11Colours.colour(colour_index[0])
+                else:
+                    node_colour = X11Colours.colour(colour_index)
+
+                # liveout or not
+                node_style = 'rounded,'
+                if comp.is_liveout:
+                    node_style += 'bold,'
+                    node_style += 'filled,'
+                    node_shape = 'doublecircle'
+                    node_fillcolor = node_colour
+                    node_colour = ''
+                else:
+                    node_style += 'filled,'
+                    node_shape = 'box'
+                    node_fillcolor = ''
+
                 gr.add_node(comp.func.name,
-                            color=X11Colours.colour(color_index),
-                            style=style,
-                            shape="box")
+                    fillcolor=node_fillcolor,
+                    color=node_colour,
+                    style=node_style,
+                    gradientangle=90,
+                    shape=node_shape)
 
             # add group boundary
             gr.add_subgraph(nbunch = sub_graph_nodes,
                             name = "cluster_" + str(i),
                             label=str(self.group_schedule[self.groups[i]]),
-                            style="dashed, rounded")
+                            style="dashed,rounded,")
 
         for comp in self.comps:
             for p_comp in comp.parents:
@@ -1542,6 +1654,7 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom, c
         tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
         eqs = []
         ineqs = []
+        import pudb; pudb.set_trace();
         if isPlutoSchedule and poly_part.tiled:
             #TODO: Assuming the code is tiled. Need to add a condition to check that
             n_dims = poly_part.sched.dim(isl._isl.dim_type.out)

@@ -22,15 +22,18 @@ On a Fedora, these can be installed with 'sudo yum -y install opencv python-open
 5) Python bindings for isl  
 islpy http://documen.tician.de/islpy/  
 This can be easily installed via python3-pip  
+```
 $ sudo yum -y install python3-pip  
 $ sudo pip3 install islpy  
-
+```
 (islpy itself requires ffi development files -- this can be installed by 
 installing libffi-devel via yum/apt-get)
 
+6) The video demo (sandbox/video_demo) has additional requirements; see sandbox/video_demo/README.md
+
 
 **INSTALLATION**
-
+```
 $ git clone git@bitbucket.org:udayb/polymage.git
 
 $ cd polymage
@@ -42,7 +45,9 @@ $ cd cgen
 $ git am ../patches/0001-ctye-to-dtype-handle-void.patch
 
 $ cd ..
+```
 
+Also make sure to have install `libpluto` from the [Pluto website](http://pluto-compiler.sourceforge.net/) to be able to use time-iterated stencils
 
 **PROJECT STRUCTURE**
 sandbox is the main directory of interest and it contains most of the code.  
@@ -72,6 +77,10 @@ sandbox/codegen.py : code generation for the scheduled pipeline
 sandbox/targetc.py : c++ code generation  
 
 sandbox/tuner.py : autotuning code  
+
+sandbox/libpluto.py : FFI access to PLUTO
+
+sandbox/video_demo has a demo comparing PolyMage optimized versions of some of the benchmarks with other reference implementations -- it can be run on any video file. Strongly recommended that one tries this.
 
 The following repository contains just the base and the best PolyMage optimized codes (for Intel  
 Sandybridge) used for experiments in the ASPLOS 2015 paper for all of the benchmarks -- these are  
