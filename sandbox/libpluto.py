@@ -270,7 +270,7 @@ class PlutoOptions(object):
         # of Pluto it is type fuse
         # self._raw_ptr.fuse = 3
         self._raw_ptr.intratileopt = 0
-        self._raw_ptr.debug =1
+        self._raw_ptr.debug = 0
         self._raw_ptr.moredebug = 0
         self._raw_ptr.silent = 0
 
@@ -351,9 +351,6 @@ class LibPluto(object):
         assert isinstance(dependences, isl.UnionMap)
         assert isinstance(pluto_options, PlutoOptions)
 
-        #autolog(header("domains") + str(domains), TAG)
-        #autolog(header("depdendences") + str(dependences), TAG)
-
         domains_str = domains.to_str().encode('utf-8')
         dependences_str = dependences.to_str().encode('utf-8')
         schedule_strbuf_ptr = self.ffi.new("char **")
@@ -370,10 +367,28 @@ class LibPluto(object):
             ("unable to get schedule from PLUTO")
 
         schedule_str = self.ffi.string(schedule_strbuf_ptr[0]).decode('utf-8')
-        parallel_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
 
-        print("Parallel loops:")
-        print(parallel_str)
+        ploops_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
+        print("nploops_str = ", ploops_str)
+
+        # nploops_str would be a csv of list
+        ploops_str_list = ploops_str.split(",")
+
+        # collect all parallel loop dims in parallel_loops
+        # Parallel loops are sent in the below format
+        # ,5,4,2,1,,5,4,2,1,,
+        # The parallel loop for one statement is separated by comma(,)
+        # whereas that between statements is separated by two commas(,,)
+        parallel_loops = []
+        i = -1
+        for loop in ploops_str_list:
+            if loop == "":
+                i = i + 1
+                parallel_loops.append([])
+            else:
+                parallel_loop = int(loop)
+                parallel_loops[i].append(parallel_loop-1)  # convert to 0-indexing
+
         schedule = isl.UnionMap.read_from_str(ctx, schedule_str)
 
         self.so.pluto_schedules_strbuf_free(schedule_strbuf_ptr[0])
@@ -386,7 +401,7 @@ class LibPluto(object):
 
         self.remapping = Remapping(self, remapping_ptr[0])
 
-        return schedule
+        return schedule, parallel_loops
 
     def get_remapping(self, ctx, domains, dependences, pluto_options):
         if isinstance(domains, isl.BasicSet):

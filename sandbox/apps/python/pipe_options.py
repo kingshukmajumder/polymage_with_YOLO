@@ -58,8 +58,8 @@ parser.add_option('--multipar',
 
 # Used to map matrix function calls to their corresponding BLAS functions
 # if it exists
-parser.add_option('--blas',
-                  action='store_true',
+parser.add_option('--blas', '--blas',
+                  action='store',
                   dest='blas',
                   default=False,
                   help='True : Map matrix function calls to BLAS functions, \

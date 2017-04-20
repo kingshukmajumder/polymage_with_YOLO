@@ -397,10 +397,6 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
     array = poly_part.comp.array
     scratch = poly_part.comp.scratch
 
-    if poly_part.comp.func.description:
-        comment = genc.CComment(poly_part.comp.func.description)
-        body.add(comment)
-
     acc_scratch = [ False for i in range(0, dom_len) ]
     for i in range(0, dom_len):
         if i in poly_part.dim_tile_info:
@@ -442,11 +438,13 @@ def generate_c_naive_from_expression_node(pipe, polyrep, node, body,
             generate_c_expr(pipe, acc_expr, cparam_map, cvar_map, scratch_map)
         arglist.append(c_expr)
     prologue = []
-
     expr = generate_c_expr(pipe, poly_part.expr,
-                       cparam_map, cvar_map,
-                       scratch_map, prologue_stmts = prologue)
+                           cparam_map, cvar_map,
+                           scratch_map, prologue_stmts = prologue)
+    if isinstance(array, tuple):  # TStencil array tuple
+        array = array[1]  # Second entry is the output of TStencil
     assign = genc.CAssign(array(*arglist), expr)
+
     if prologue is not None:
         for s in prologue:
             body.add(s)
@@ -811,15 +809,17 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
         args = [ generate_c_expr(pipe, arg, cparam_map, cvar_map,
                                  scratch_map, prologue_stmts)
                  for arg in shifted_args ]
+        if isinstance(array, tuple):  # TStencil array tuple
+            array = array[1]  # Second entry is the output of TStencil
         return array(*args)
     if isinstance(exp, Select):
         c_cond = generate_c_cond(pipe, exp.condition,
                                  cparam_map, cvar_map,
                                  scratch_map, prologue_stmts)
-        true_expr = generate_c_expr(pipe, exp.trueExpression,
+        true_expr = generate_c_expr(pipe, exp.true_expression,
                                     cparam_map, cvar_map,
                                     scratch_map, prologue_stmts)
-        false_expr = generate_c_expr(pipe, exp.falseExpression,
+        false_expr = generate_c_expr(pipe, exp.false_expression,
                                      cparam_map, cvar_map,
                                      scratch_map, prologue_stmts)
         if prologue_stmts is not None:
@@ -827,13 +827,13 @@ def generate_c_expr(pipe, exp, cparam_map, cvar_map,
             # before the condition check
 
             # true path
-            var_type = genc.TypeMap.convert(getType(exp.trueExpression))
+            var_type = genc.TypeMap.convert(getType(exp.true_expression))
             true_c_var = genc.CVariable(var_type, new_temp())
             decl = genc.CDeclaration(var_type, true_c_var, true_expr)
             prologue_stmts.append(decl)
 
             # false path
-            var_type = genc.TypeMap.convert(getType(exp.falseExpression))
+            var_type = genc.TypeMap.convert(getType(exp.false_expression))
             false_c_var = genc.CVariable(var_type, new_temp())
             decl = genc.CDeclaration(var_type, false_c_var, false_expr)
             prologue_stmts.append(decl)
@@ -1107,8 +1107,6 @@ def generate_reduction_scan_loops(pipe, group, comp, pipe_body, cparam_map):
 
 def generate_code_for_group(pipeline, g, body, alloc_arrays,
                             out_arrays, cparam_map, outputs):
-
-
     if g.polyRep is not None:
         g.polyRep.generate_code()
         group_part_map = g.polyRep.poly_parts
@@ -1193,6 +1191,7 @@ def generate_code_for_pipeline(pipeline,
 
     # Create a top level module for the pipeline
     m = genc.CModule('Pipeline')
+
     # 1. Add header files which are requried by the pipeline
     with m.includes as inc_block:
         inc_block.add(genc.CInclude('stdio.h'))
@@ -1204,8 +1203,10 @@ def generate_code_for_pipeline(pipeline,
         inc_block.add(genc.CInclude('dsp_helpers.h'))
         if 'pool_alloc' in pipeline.options:
             inc_block.add(genc.CInclude('simple_pool_allocator.h'))
-        if 'blas' in pipeline.options:
+        if 'openblas' in pipeline.options:
             inc_block.add(genc.CInclude('cblas.h'))
+        if 'mkl' in pipeline.options:
+            inc_block.add(genc.CInclude('mkl.h'))
         if 'fft' in pipeline.options:
             inc_block.add(genc.CInclude('omp.h'))
             inc_block.add(genc.CInclude('fftw3.h'))

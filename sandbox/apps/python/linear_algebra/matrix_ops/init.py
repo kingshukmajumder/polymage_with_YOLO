@@ -53,7 +53,7 @@ def get_input(app_data):
     # pool allocate option
     app_data['pool_alloc'] = bool(app_args.pool_alloc)
 
-    app_data['blas'] = bool(app_args.blas)
+    app_data['blas'] = app_args.blas
 
     app_data['pluto'] = bool(app_args.pluto)
 
