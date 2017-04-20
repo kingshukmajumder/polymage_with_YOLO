@@ -368,26 +368,26 @@ class LibPluto(object):
 
         schedule_str = self.ffi.string(schedule_strbuf_ptr[0]).decode('utf-8')
 
-        ploops_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
-        print("nploops_str = ", ploops_str)
+        #~ ploops_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
+        #~ print("nploops_str = ", ploops_str)
 
         # nploops_str would be a csv of list
-        ploops_str_list = ploops_str.split(",")
+        #~ ploops_str_list = ploops_str.split(",")
 
         # collect all parallel loop dims in parallel_loops
         # Parallel loops are sent in the below format
         # ,5,4,2,1,,5,4,2,1,,
         # The parallel loop for one statement is separated by comma(,)
         # whereas that between statements is separated by two commas(,,)
-        parallel_loops = []
-        i = -1
-        for loop in ploops_str_list:
-            if loop == "":
-                i = i + 1
-                parallel_loops.append([])
-            else:
-                parallel_loop = int(loop)
-                parallel_loops[i].append(parallel_loop-1)  # convert to 0-indexing
+        #~ parallel_loops = []
+        #~ i = -1
+        #~ for loop in ploops_str_list:
+            #~ if loop == "":
+                #~ i = i + 1
+                #~ parallel_loops.append([])
+            #~ else:
+                #~ parallel_loop = int(loop)
+                #~ parallel_loops[i].append(parallel_loop-1)  # convert to 0-indexing
 
         schedule = isl.UnionMap.read_from_str(ctx, schedule_str)
 
@@ -401,7 +401,7 @@ class LibPluto(object):
 
         self.remapping = Remapping(self, remapping_ptr[0])
 
-        return schedule, parallel_loops
+        return schedule#, parallel_loops
 
     def get_remapping(self, ctx, domains, dependences, pluto_options):
         if isinstance(domains, isl.BasicSet):
