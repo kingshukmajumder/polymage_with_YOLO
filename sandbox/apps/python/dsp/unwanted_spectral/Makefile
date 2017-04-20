@@ -7,7 +7,7 @@ ROOT="../../../../"
 
 # app inputs
 IMG=$(ROOT)"/../images/venice_wikimedia.jpg"
-RUNS=500
+RUNS=1
 
 APP_ARGS=--fft
 #APP_ARGS=--matrix --blas
