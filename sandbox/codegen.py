@@ -626,6 +626,9 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                     omp_par_str = "omp parallel for schedule(static)"
                     omp_pragma = genc.CPragma(omp_par_str)
                     body.add(omp_pragma)
+                if node == red_nest[n_rloops-2] and big_part:
+                    ujam_pragma = genc.CPragma("unroll_and_jam (16)")
+                    body.add(ujam_pragma)
                 if node == red_nest[n_rloops-1] and big_part:
                     vec_pragma = genc.CPragma("ivdep")
                     body.add(vec_pragma)

@@ -899,7 +899,7 @@ class Pipeline:
                 # idiom matching algorithm
                 idiom_recognition(self, g)
                 # tile reductions
-                self.reduction_tiling(g)
+                #~ self.reduction_tiling(g)
 
             # group
             self._grp_schedule = schedule_groups(self)
