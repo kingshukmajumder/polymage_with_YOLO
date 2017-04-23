@@ -2260,6 +2260,44 @@ class Wave(Function):
                                 Op.Sum)) ]
         return filtered_sig
 
+    def lfilter_fir_and_delay_down(self, b, down, out_name, _out_typ=None):
+        """Filter signal with an FIR filter and compensate for the delay
+        introduced by filtering. Downsample resultant signal.
+
+        :param b: the filter coefficient vector.
+        :param down: the downsampling factor.
+        :param out_name: name of the output signal.
+        :param _out_typ: type of the output signal samples. (Default value = None)
+        :returns: The output of the digital filter compensated for delay.
+
+        """
+        return Wave.lfilter_fir_and_delay_downs(self, b, down, out_name, \
+                                                    _out_typ, self._len)
+
+    @staticmethod
+    def lfilter_fir_and_delay_downs(wav, b, down, out_name, _out_typ, L):
+        assert isinstance(b, Wave)
+        assert b._typ is Double
+        dt = getType(down)
+        assert (dt is Int or dt is UInt)
+
+        M = b._len
+
+        in_var = Variable(UInt, "_" + wav._name + str(0))
+        out_var = Variable(Int, "_" + out_name + str(0))
+        out_typ = wav._typ if _out_typ is None else _out_typ
+
+        sig_interval = Interval(Int, 0, (L-M)/down)
+        coeff_interval = Interval(UInt, 0, M-1)
+
+        filtered_sig = Reduction(([out_var], [sig_interval]), \
+                ([out_var, in_var], [sig_interval, coeff_interval]), \
+                out_typ, out_name)
+        filtered_sig.defn = [ Reduce(filtered_sig(out_var), \
+                                wav(out_var * down - in_var + M - 1) \
+                                * b(in_var), Op.Sum) ]
+        return filtered_sig
+
     def lfilter_fir_and_delay(self, b, out_name, _out_typ=None):
         """Filter signal with an FIR filter and compensate for the delay
         introduced by filtering.

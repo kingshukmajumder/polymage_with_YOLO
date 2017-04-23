@@ -33,11 +33,9 @@ def vuvu(pipe_data):
     taps = Wave.firwin(ntaps, cutoff_hz / nyq_rate, "taps", window=('kaiser', beta))
 
     # Filter the data and compensate for delay
-    ylp = y.lfilter_fir_and_delay(taps, "ylp")
-
     # Downsample the lowpass filtered signal by a factor of 5
     Fd = Fs//5
-    yds = ylp.downsample(5, "yds")
+    yds = y.lfilter_fir_and_delay_down(taps, 5, "yds")
 
     nyq_rate = Fd / 2.0
     ripple_db = 48.0 # Stopband attenuation in dB

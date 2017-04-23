@@ -33,11 +33,9 @@ def unwanted_spectral(pipe_data):
     taps1 = Wave.firwin(ntaps, cutoff_hz / nyq_rate, "taps1", window=('kaiser', beta))
 
     # Filter the data and compensate for delay
-    ylp = y.lfilter_fir_and_delay(taps1, "ylp")
-
     # Downsample the lowpass filtered signal by a factor of 10
     Fd = Fs//10
-    yds = ylp.downsample(10, "yds")
+    yds = y.lfilter_fir_and_delay_down(taps1, 10, "yds")
 
     nyq_rate = Fd / 2.0
     ripple_db = 60.0 # Stopband attenuation in dB
