@@ -580,7 +580,6 @@ class Stencil(AbstractExpression):
             self._origin = list(map(lambda x: (x-1) // 2, self._sizes))
 
     def collect(self, objType):
-        # import pudb; pudb.set_trace()
         objs = []
         if (type(self) is objType):
             objs = [self]

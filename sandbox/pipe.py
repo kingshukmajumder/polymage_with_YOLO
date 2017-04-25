@@ -1654,7 +1654,6 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom, c
         tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
         eqs = []
         ineqs = []
-        import pudb; pudb.set_trace();
         if isPlutoSchedule and poly_part.tiled:
             #TODO: Assuming the code is tiled. Need to add a condition to check that
             n_dims = poly_part.sched.dim(isl._isl.dim_type.out)
