@@ -54,12 +54,12 @@ def add_users_as_comment(pipeline, array):
     return comment
 
 def isl_expr_to_cgen(expr, prologue_stmts = None):
-
+    #print ("isl_expr_to_cgen", expr)
     prolog = prologue_stmts
     if expr.get_type() == isl._isl.ast_expr_type.op:
         # short hand
         op_typ = expr.get_op_type()
-
+        #print (op_typ, isl._isl.ast_op_type.pdiv_r)
         if (op_typ == isl._isl.ast_op_type.access or  # 23
             op_typ == isl._isl.ast_op_type.call or  # 22
             op_typ == isl._isl.ast_op_type.cond or  # 15
@@ -119,9 +119,10 @@ def isl_expr_to_cgen(expr, prologue_stmts = None):
                    expr.get_op_n_arg() == 2)
             return isl_expr_to_cgen(expr.get_op_arg(0), prolog) / \
                    isl_expr_to_cgen(expr.get_op_arg(1), prolog)
-        if op_typ == isl._isl.ast_op_type.pdiv_r:
+        if op_typ == isl._isl.ast_op_type.pdiv_r or op_typ == 14: #TODO: find a better way, this is just a jugad
             assert("Division must have exactly 2 arguments!" and \
                    expr.get_op_n_arg() == 2)
+            print ("op is pdiv_r")
             return isl_expr_to_cgen(expr.get_op_arg(0), prolog) % \
                    isl_expr_to_cgen(expr.get_op_arg(1), prolog)
         if op_typ == isl._isl.ast_op_type.sub:
@@ -150,6 +151,8 @@ def isl_expr_to_cgen(expr, prologue_stmts = None):
         return expr.get_val().to_python()
     if expr.get_type() == isl._isl.ast_expr_type.id:
         return genc.CVariable(genc.c_int, expr.get_id().get_name())
+        
+    assert (false)
 
 def isl_cond_to_cgen(cond, prologue_stmts = None, roundRhsToEven = False):
     comp_dict = { isl._isl.ast_op_type.eq: '==',
@@ -177,6 +180,7 @@ def isl_cond_to_cgen(cond, prologue_stmts = None, roundRhsToEven = False):
 
     if roundRhsToEven:
         right = 2 * (right // 2)
+
     return genc.CCond(left, comp_op, right)
 
 def is_inner_most_parallel(node):
@@ -263,7 +267,9 @@ def get_arrays_for_user_nodes(pipe, polyrep, user_nodes):
         part = isl_get_id_user(part_id)
         array = part.comp.array
         scratch = part.comp.scratch
+        #print (array.name, scratch, part.comp.func.name,)
         if array not in arrays and True in scratch:
+            #print ("not in array and true in scratch")
             arrays.append(array)
     return arrays
 
@@ -1138,6 +1144,7 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
         # full array
         if comp.is_liveout:
             array = comp.array
+            #print ("F ", array, comp.func.name)
             # do not allocate output arrays
             if not comp.is_output:
                 if not array in alloc_arrays and not array in out_arrays:

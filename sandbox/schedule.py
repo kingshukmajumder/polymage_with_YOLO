@@ -61,7 +61,8 @@ def naive_sched_objs(order):
             next_level += [obj for obj in reverse_map[l+1] \
                                   if obj not in next_level]
             reverse_map[l+1] = next_level
-
+    
+    
     return naive_order
 
 def sort_scheduled_objs(schedule):
@@ -142,7 +143,7 @@ def schedule_within_group(group):
     # create a sub-time dimension for poly_parts to introduce an order within
     # the group
     schedule_parts(group, sorted_comps)
-
+    
     return comp_schedule
 
 def schedule_liveouts(pipeline):
