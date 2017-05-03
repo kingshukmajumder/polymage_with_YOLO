@@ -3357,7 +3357,8 @@ class MemRefsAtIterationVisitor(AbstractExpressionVisitor):
         elif (binop.op == '*'):
             return left_visit * right_visit
         elif (binop.op == '/'):
-            return left_visit/right_visit
+            # TODO: determine correct value to return if right_visit == 0
+            return left_visit/right_visit if right_visit != 0 else 1
         elif (binop.op == '-'):
             return left_visit - right_visit
         elif (binop.op == '<<'):
