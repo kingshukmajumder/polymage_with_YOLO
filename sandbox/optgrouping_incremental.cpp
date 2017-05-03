@@ -17,7 +17,7 @@
 #include <numeric>
 
 #define PRINT_DEBUG (x) if (DEBUG) { x; }
-bool const DEBUG = false;
+bool const DEBUG = true;
 bool const checkForAssertions = false;
 bool const checkPythonExceptions = true;
 
