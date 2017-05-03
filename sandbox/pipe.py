@@ -1905,7 +1905,7 @@ class Pipeline:
                     comps[i].children[j] = comp_to_clone[comps[i].children[j]]
                 
         print (comps)
-        return Group (self._ctx, comps, self._param_constraints)
+        return Group (self._ctx, comps, self._param_constraints, False)
 
     def get_size_for_group (self, group):
         size = group.get_total_size ()
