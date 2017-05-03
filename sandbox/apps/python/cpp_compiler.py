@@ -12,7 +12,7 @@ def gen_compile_string(app_data,in_file,out_file):
     # Include Flags :
     include = "-I " + ROOT + "dsp_helpers/ " \
                                 + ROOT + "dsp_helpers/dsp_helpers.c "
-    if bool(arg_data.pool_alloc):
+    if True or bool(arg_data.pool_alloc):
         include += "-I"+ROOT+"memory_allocation/ "+\
                   ROOT+"memory_allocation/simple_pool_allocator.cpp "
     if bool(arg_data.blas):
