@@ -3339,9 +3339,9 @@ class MemRefsAtIterationVisitor(AbstractExpressionVisitor):
         left_visit = binop.left.visit (self)
         right_visit = binop.right.visit (self)
         
-        ##print (binop.op)
-        ##print (binop.left, type(binop.left), left_visit, type(left_visit))
-        ##print (binop.right, type(binop.right), right_visit, type(right_visit))
+        #~ print (binop.op)
+        #~ print (binop.left, type(binop.left), left_visit, type(left_visit))
+        #~ print (binop.right, type(binop.right), right_visit, type(right_visit))
             
             
         if (isinstance (binop.left, Reference) or
@@ -3357,8 +3357,7 @@ class MemRefsAtIterationVisitor(AbstractExpressionVisitor):
         elif (binop.op == '*'):
             return left_visit * right_visit
         elif (binop.op == '/'):
-            # TODO: determine correct value to return if right_visit == 0
-            return left_visit/right_visit if right_visit != 0 else 1
+            return left_visit/right_visit if right_visit != 0 else left_visit
         elif (binop.op == '-'):
             return left_visit - right_visit
         elif (binop.op == '<<'):

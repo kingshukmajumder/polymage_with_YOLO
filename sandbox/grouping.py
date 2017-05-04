@@ -92,7 +92,7 @@ def group_topological_sort (pipeline):
     
     return stack;
 
-def auto_group(pipeline):    
+def auto_group(pipeline):
     
     stack = group_topological_sort (pipeline)
     order = 0
