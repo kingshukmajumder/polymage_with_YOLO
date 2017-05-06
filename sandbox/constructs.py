@@ -3078,7 +3078,7 @@ class Wave(Function):
 
         out_wave = Reduction((out_vars, out_intervals), ([out_vars[0], in_vars[0]], [out_intervals[0], in_intervals[0]]), out_type, out_name)
         out_wave.defn = [ Reduce(out_wave(*out_vars), \
-                                 self(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / N)), \
+                                 wav(*in_vars) * Exp(Cast(Complex, -2 * Pi() * 1.0j * out_vars[0] * in_vars[0] / N)), \
                                  Op.Sum) ]
         out_wave.reductionDimensions = [N]
 
