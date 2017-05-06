@@ -54,20 +54,24 @@ pipe_logger.setLevel(logging.DEBUG)
 log_level = logging.INFO
 LOG = pipe_logger.log
 
-MACHINE_TYPE = ['personal', 'mcastle1', 'mcastle2'][1]
+MACHINE_TYPE = ['personal', 'mcastle1', 'mcastle2'][0]
+DSP_APP = True
     
 if (MACHINE_TYPE == 'personal'):
     #global IMAGE_ELEMENT_SIZE, L2_CACHE_SIZE, N_CORES, TILING_THRESHOLD, VECTOR_WIDTH_THRESHOLD
     #For Dekstop/Laptop Machine
-    IMAGE_ELEMENT_SIZE = 4
+    IMAGE_ELEMENT_SIZE = 8 if DSP_APP else 4
+    L1_CACHE_SIZE = int(32 * 1024 / IMAGE_ELEMENT_SIZE)
+    L1_INNER_MOST_DIM_SIZE = 1024
     L2_CACHE_SIZE = int(256*1024/IMAGE_ELEMENT_SIZE)
+    L2_INNER_MOST_DIM_SIZE = 1024
     N_CORES = 4
     TILING_THRESHOLD = 1
     VECTOR_WIDTH_THRESHOLD = 16
 elif (MACHINE_TYPE == 'mcastle1'): #Intel Haswell machine
     #global IMAGE_ELEMENT_SIZE, L2_CACHE_SIZE, N_CORES, TILING_THRESHOLD, VECTOR_WIDTH_THRESHOLD
     #For mcastle
-    IMAGE_ELEMENT_SIZE = 4
+    IMAGE_ELEMENT_SIZE = 8 if DSP_APP else 4
     L2_CACHE_SIZE = int(512*1024/IMAGE_ELEMENT_SIZE)
     N_CORES = 16
     TILING_THRESHOLD = 1
@@ -80,7 +84,7 @@ elif (MACHINE_TYPE == 'mcastle1'): #Intel Haswell machine
 elif (MACHINE_TYPE == 'mcastle2'): #AMD Opteron machine
     #global IMAGE_ELEMENT_SIZE, L2_CACHE_SIZE, N_CORES, TILING_THRESHOLD, VECTOR_WIDTH_THRESHOLD
     #For mcastle
-    IMAGE_ELEMENT_SIZE = 4
+    IMAGE_ELEMENT_SIZE = 8 if DSP_APP else 4
     L2_CACHE_SIZE = int(2*512*1024/IMAGE_ELEMENT_SIZE)
     N_CORES = 16
     TILING_THRESHOLD = 1
@@ -90,7 +94,6 @@ elif (MACHINE_TYPE == 'mcastle2'): #AMD Opteron machine
     L1_CACHE_SIZE = int(16*1024/IMAGE_ELEMENT_SIZE)
     OUTER_DIM_TILING_THRESH = 4
     THRESHOLD_TILE_SIZE = 4
-
     
 def get_next_power_of_2 (num):
     num -= 1
@@ -1260,6 +1263,7 @@ class Group:
         tile_sizes = {}
         total_used_size = self._total_used_size/IMAGE_ELEMENT_SIZE
         tile_size = total_used_size/N_CORES
+        print("tile_size initial ", tile_size)
         if (tile_size > CACHE_SIZE):
             tile_size = CACHE_SIZE
         tile_size = tile_size/self._n_buffers
@@ -1314,7 +1318,11 @@ class Group:
             for dim in range (len(slope_min)):
                 tile_sizes [dim] = int(get_next_power_of_2 (int(tile_size ** (1.0/len(slope_min))))/2)
             
-            tile_sizes [max(tile_sizes)] = LAST_DIM_SIZE
+            if len(tile_sizes) == 0:
+                tile_sizes[0] = max(int(tile_size / LAST_DIM_SIZE), 1)
+                tile_sizes[1] = LAST_DIM_SIZE
+            else:
+                tile_sizes [max(tile_sizes)] = LAST_DIM_SIZE
             
             return tile_sizes, tile_size
         
@@ -1431,7 +1439,7 @@ class Group:
             overlap_shift_greater = False
             
             for i in tile_sizes.keys ():
-                if (slope_min[i] != '*'):
+                if (i < len(slope_min) and slope_min[i] != '*'):
                     right = int(math.floor(Fraction(slope_min[i][0],
                                                     slope_min[i][1])))
                     left = int(math.ceil(Fraction(slope_max[i][0],
@@ -1450,8 +1458,16 @@ class Group:
                     #break
                     
             print ("tile_sizes from L1 ", tile_sizes)
+            use_l1 = True
+            if len(slope_min) == 0 and len(slope_max) == 0 and h is None:
+                total_used_size = self._total_used_size/IMAGE_ELEMENT_SIZE
+                tile_size = total_used_size/N_CORES
+                if tile_size > L2_CACHE_SIZE:
+                    l1_tile_sizes = tile_sizes
+                    use_l1 = False
             
-            if (not overlap_shift_greater and threshold_tile_size_met):
+            if (not overlap_shift_greater and threshold_tile_size_met \
+                                                            and use_l1):
                 self._tile_sizes = tile_sizes
                 return tile_size
 
@@ -1460,6 +1476,13 @@ class Group:
             L2_CACHE_SIZE, L2_INNER_MOST_DIM_SIZE)
         
         print ("tile_sizes from L2 ", tile_sizes)
+        #~ if not use_l1:
+            #~ ratios = {}
+            #~ for i in tile_sizes.keys():
+                #~ ratios[i] = tile_sizes[i] // l1_tile_sizes[i]
+            #~ tile_sizes = l1_tile_sizes
+            #~ for i in ratios.keys():
+                #~ tile_sizes[max(tile_sizes) + 1] = ratios[i]
         self._tile_sizes = tile_sizes
         return tile_size
         
@@ -1664,7 +1687,7 @@ class Pipeline:
                 # idiom matching algorithm
                 idiom_recognition(self, g)
                 # tile reductions
-                #~ self.reduction_tiling(g)
+                self.reduction_tiling(g)
 
             # group
             self._grp_schedule = schedule_groups(self)
@@ -2170,9 +2193,22 @@ class Pipeline:
             if len(poly_parts) == 1: # FFT or IFFT (don't tile in this case)
                 return
             for poly_part in poly_parts:
+                if isinstance(poly_part.expr, Reduce):
+                    used_size = poly_part.get_size(self.param_estimates, \
+                                                addInsteadOfMult=True)
+                    used_size += poly_part.get_size(self.param_estimates, \
+                                        useRedDomainForReductions=False)
+                    group.set_total_used_size(used_size * IMAGE_ELEMENT_SIZE)
                 main_poly_part.append(poly_part)
 
         LOG(log_level, "Tiling " + group.__str__())
+        group.set_n_buffers(1)
+        group.get_tile_sizes(self.param_estimates, [], [], main_poly_part, None)
+        print("Tile sizes: " + group.tile_sizes.__str__())
+        to_print = '\n'.join(str(group.tile_sizes[x]) for x in group.tile_sizes)
+        f = open('tile.sizes', 'w')
+        f.write(to_print)
+        f.close()
 
         for poly_part in main_poly_part:
             in_schedule = poly_part.sched.copy()
@@ -2237,11 +2273,13 @@ class Pipeline:
         # Pluto call
         pluto = LibPluto()
         pluto_options = pluto.create_options()
+        if len(group.tile_sizes) > 2:
+            pluto_options.l2tile = 1
         out_schedule = pluto.schedule(self._ctx, domain_union_set, deps_union_map, pluto_options)
 
         # Making the remapping call to figure out which dims are scalar
         # and the tile information
-        remapping = pluto.get_remapping(self._ctx, domain_union_set, deps_union_map, pluto_options)
+        #~ remapping = pluto.get_remapping(self._ctx, domain_union_set, deps_union_map, pluto_options)
 
         LOG(log_level,"Schedule recieved from Pluto:")
         LOG(log_level,out_schedule)
@@ -2292,13 +2330,13 @@ class Pipeline:
             # TODO: Check if statement numbers are retrieved correctly (ordered by polypart or by statment num)
             stmt_num = poly_part.stmt_no
 
-            inv_map = np.array(remapping.inv_matrices[stmt_num], dtype=object)
+            inv_map = np.array(pluto.remapping.inv_matrices[stmt_num], dtype=object)
 
             # inv_map = inv_map[0:num_in_dims, 0:num_out_dims]
             # inv_map = inv_map.transpose()
             # for dim in range(num_out_dims):
             #     poly_part.scalar[dim] = np.sum(inv_map[dim])
-            divs = remapping.divs[stmt_num] #[0:num_in_dims]
+            divs = pluto.remapping.divs[stmt_num] #[0:num_in_dims]
 
             poly_part.set_pluto_inv_and_div_matrix(inv_map,divs)
 

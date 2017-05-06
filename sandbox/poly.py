@@ -321,17 +321,20 @@ class PolyPart(object):
             return True
         return False
 
-    def get_size(self, param_estimates):
+    def get_size(self, param_estimates, useRedDomainForReductions=True,
+                 addInsteadOfMult=False):
         # returns the size of the computation that contains this poly part
         size = None
         domain = self.func.domain
-        if isinstance(self.func, Reduction):
+        if isinstance(self.func, Reduction) and useRedDomainForReductions:
             domain = self.func.reductionDomain
         for interval in domain:
             subs_size = get_dim_size(interval, param_estimates)
             if is_constant_expr(subs_size):
                 if size is not None:
-                    size = size * get_constant_from_expr(subs_size)
+                    size = size + get_constant_from_expr(subs_size) \
+                            if addInsteadOfMult \
+                            else size * get_constant_from_expr(subs_size)
                 else:
                     size = get_constant_from_expr(subs_size)
             else:
