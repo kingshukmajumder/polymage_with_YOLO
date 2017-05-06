@@ -293,6 +293,14 @@ class PlutoOptions(object):
         return
         # self._raw_ptr.partlbtile = 1 if partlbtile else 0
 
+    @property
+    def l2tile(self):
+        return self._raw_ptr.l2tile
+
+    @l2tile.setter
+    def l2tile(self, l2tile):
+        self._raw_ptr.l2tile = l2tile
+
     def __del__(self):
         self._pluto_ffi._destroy_raw_options_ptr(self._raw_ptr)
 
