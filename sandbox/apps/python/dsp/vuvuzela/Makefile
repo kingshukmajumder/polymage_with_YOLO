@@ -33,4 +33,4 @@ clean:
 	rm -rf *.pyc *.so *.dot *.png __pycache__
 
 cleaner:
-	rm -rf *.pyc *.so *.dot *.png __pycache__ *.cpp vuvuzela_filtered.wav
+	rm -rf *.pyc *.so *.dot *.png __pycache__ *.cpp vuvuzela_filtered.wav tile.sizes
