@@ -54,7 +54,7 @@ pipe_logger.setLevel(logging.DEBUG)
 log_level = logging.INFO
 LOG = pipe_logger.log
 
-MACHINE_TYPE = ['personal', 'mcastle1', 'mcastle2'][0]
+MACHINE_TYPE = ['personal', 'mcastle1', 'mcastle2', 'polymage'][0]
 DSP_APP = True
     
 if (MACHINE_TYPE == 'personal'):
@@ -94,6 +94,13 @@ elif (MACHINE_TYPE == 'mcastle2'): #AMD Opteron machine
     L1_CACHE_SIZE = int(16*1024/IMAGE_ELEMENT_SIZE)
     OUTER_DIM_TILING_THRESH = 4
     THRESHOLD_TILE_SIZE = 4
+elif (MACHINE_TYPE == 'polymage'): # Intel Xeon
+    IMAGE_ELEMENT_SIZE = 8 if DSP_APP else 4
+    L1_CACHE_SIZE = int(32 * 1024 / IMAGE_ELEMENT_SIZE)
+    L1_INNER_MOST_DIM_SIZE = 1024
+    L2_CACHE_SIZE = int(256 * 1024 / IMAGE_ELEMENT_SIZE)
+    L2_INNER_MOST_DIM_SIZE = 1024
+    N_CORES = 16
     
 def get_next_power_of_2 (num):
     num -= 1
