@@ -21,13 +21,9 @@ def filterbank(pipe_data):
     # input vector
     r = Wave(Double, "r", N)
 
-    x = Variable(UInt, "x")
-
     # filter responses
-    H = Wave(Double, "H", M, x)
-    H.defn = [ x * M + x + 1 ]
-    F = Wave(Double, "F", M, x)
-    F.defn = [ x ]
+    H = Wave(Double, "H", M)
+    F = Wave(Double, "F", M)
 
     # convolving H
     Vect_H = r.lfilter_fir(H, "Vect_H")

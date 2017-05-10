@@ -15,6 +15,8 @@ def call_pipe(app_data):
 
     sig_data = app_data['sig_data']
     r = sig_data['r']
+    H = sig_data['H']
+    F = sig_data['F']
     OUT = sig_data['OUT']
 
     # lib function name
@@ -24,6 +26,8 @@ def call_pipe(app_data):
     # lib function args
     pipe_args = []
     pipe_args += [ctypes.c_uint(length)]
+    pipe_args += [ctypes.c_void_p(F.ctypes.data)]
+    pipe_args += [ctypes.c_void_p(H.ctypes.data)]
     pipe_args += [ctypes.c_void_p(r.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
 
@@ -49,6 +53,12 @@ def filterbank(app_data):
 
     print('r')
     print(app_data['sig_data']['r'])
+
+    print('H')
+    print(app_data['sig_data']['H'])
+
+    print('F')
+    print(app_data['sig_data']['F'])
 
     if timer == True:
         t2 = time.time()

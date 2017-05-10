@@ -14,15 +14,22 @@ def init_signals(app_data):
     # input signal
     length = 16 * 2048
     r = np.array([i + 1 for i in range(length)])
+    M = 32
+    H = np.array([i * M + i + 1 for i in range(M)])
+    F = np.array([i for i in range(M)])
 
-    # convert to float array
+    # convert to float arrays
     r = r.astype(np.float64).ravel()
+    H = H.astype(np.float64).ravel()
+    F = F.astype(np.float64).ravel()
 
     # final output convolution
     OUT = np.zeros(length).astype(np.float64).ravel()
 
     sig_data = {}
     sig_data['r'] = r
+    sig_data['H'] = H
+    sig_data['F'] = F
     sig_data['OUT'] = OUT
 
     app_data['sig_data'] = sig_data
