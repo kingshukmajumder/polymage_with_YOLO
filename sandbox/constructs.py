@@ -186,6 +186,19 @@ class Cos(InbuiltFunction):
     def __str__(self):
         return "std::cos(" +  self._args[0].__str__() +  ")"
 
+class ATan(InbuiltFunction):
+    def __init__(self, _expr):
+        InbuiltFunction.__init__(self, _expr)
+
+    def getType(self):
+        return Double
+
+    def clone(self):
+        return ATan(self._args[0].clone())
+
+    def __str__(self):
+        return "std::atan(" +  self._args[0].__str__() +  ")"
+
 class Sqrt(InbuiltFunction):
     def __init__(self, _expr):
         InbuiltFunction.__init__(self, _expr)
