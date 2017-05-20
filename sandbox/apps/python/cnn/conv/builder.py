@@ -7,7 +7,7 @@ sys.path.insert(0, ROOT+'/apps/python/')
 
 from cpp_compiler import c_compile
 from loader import load_lib
-from polymage_cnn import polymage_conv
+from polymage_conv import polymage_conv
 
 from compiler import *
 from constructs import *
@@ -54,13 +54,12 @@ def build_conv(app_data):
     live_outs = [out_conv]
     pipe_name = app_data['app']
 
-    N = app_data['N'] 
-    Oc = app_data['Oc'] 
-    Ic = app_data['Ic'] 
+    K = app_data['K'] 
+    C = app_data['C'] 
     Y = app_data['Y'] 
     X = app_data['X'] 
-    Kh = app_data['Kh'] 
-    Kw = app_data['Kw'] 
+    Fh = app_data['Fh'] 
+    Fw = app_data['Fw'] 
 
     #p_estimates = [(R1, rows1), (C1, cols1), (R2, rows2), (C2, cols2)]
     #p_constraints = [ Condition(R1, "==", rows1), \

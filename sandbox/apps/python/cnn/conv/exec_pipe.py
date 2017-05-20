@@ -11,13 +11,12 @@ from constructs import *
 from utils import *
 
 def call_pipe(app_data):
-    N = app_data['N']
-    Oc = app_data['Oc']
-    Ic = app_data['Ic']
+    K = app_data['K']
+    C = app_data['C']
     Y = app_data['Y']
     X = app_data['X']
-    Kh = app_data['Kh']
-    Kw = app_data['Kw']
+    Fh = app_data['Fh']
+    Fw = app_data['Fw']
 
     img_data = app_data['img_data']
     IN = img_data['IN']
@@ -30,13 +29,12 @@ def call_pipe(app_data):
 
     # lib function args
     pipe_args = []
-    pipe_args += [ctypes.c_int(N)]
-    pipe_args += [ctypes.c_int(Oc)]
-    pipe_args += [ctypes.c_int(Ic)]
+    pipe_args += [ctypes.c_int(K)]
+    pipe_args += [ctypes.c_int(C)]
     pipe_args += [ctypes.c_int(Y)]
     pipe_args += [ctypes.c_int(X)]
-    pipe_args += [ctypes.c_int(Kh)]
-    pipe_args += [ctypes.c_int(Kw)]
+    pipe_args += [ctypes.c_int(Fh)]
+    pipe_args += [ctypes.c_int(Fw)]
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
@@ -58,9 +56,6 @@ def conv(app_data):
     while it < runs :
         call_pipe(app_data)
         it += 1
-
-    print('OUTPUT')
-    print(app_data['img_data']['OUT'])
 
     if timer == True:
         t2 = time.time()
