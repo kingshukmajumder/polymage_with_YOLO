@@ -133,8 +133,6 @@ class ReLULayer(Layer):
     @property
     def in_forward(self):
         return self._in_f
-    @property
-    def in_
 
     def back_propagate(self, bwd_func):
         assert(bwd_func)
@@ -176,4 +174,4 @@ class ReLULayer(Layer):
                 assert(0)
 
     def out_dim_size(i):
-        return in_layer->out_dim_size(i)
+        return in_layer.out_dim_size(i)
