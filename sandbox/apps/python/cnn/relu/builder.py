@@ -57,14 +57,12 @@ def build_relu(app_data):
     C = app_data['C'] 
     Y = app_data['Y'] 
     X = app_data['X'] 
-    norm = app_data['norm'] 
 
-    #p_estimates = [(R1, rows1), (C1, cols1), (R2, rows2), (C2, cols2)]
-    #p_constraints = [ Condition(R1, "==", rows1), \
-    #                  Condition(C1, "==", cols1), \
-    #                  Condition(R2, "==", rows2), \
-    #                  Condition(C2, "==", cols2), \
-    #                ]
+    p_estimates = [(C, app_data['C']), (Y, app_data['Y']), (X, app_data['X'])]
+    p_constraints = [ Condition(C, "==", app_data['C']), \
+                      Condition(Y, "==", app_data['Y']), \
+                      Condition(X, "==", app_data['X']) \
+                    ]
     t_size = [16, 16]
    # g_size = 1
     opts = []
@@ -98,8 +96,8 @@ def create_lib(build_func, pipe_name, app_data):
             pipe = build_func(app_data)
 
             # draw the pipeline graph to a png file
-            # if graph_gen:
-            #    generate_graph(pipe, pipe_name, app_data)
+            if graph_gen:
+                generate_graph(pipe, pipe_name, app_data)
 
             # generate pipeline cpp source
             codegen(pipe, pipe_src, app_data)

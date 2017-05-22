@@ -14,10 +14,9 @@ def call_pipe(app_data):
     C = app_data['C']
     Y = app_data['Y']
     X = app_data['X']
-    norm = app_data['norm']
 
     img_data = app_data['img_data']
-    IN1 = img_data['IN1']
+    IN = img_data['IN']
     OUT = img_data['OUT']
 
     # lib function name
@@ -27,10 +26,9 @@ def call_pipe(app_data):
     # lib function args
     pipe_args = []
     pipe_args += [ctypes.c_int(C)]
-    pipe_args += [ctypes.c_int(norm)]
-    pipe_args += [ctypes.c_int(Y)]
     pipe_args += [ctypes.c_int(X)]
-    pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
+    pipe_args += [ctypes.c_int(Y)]
+    pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
 
     # call lib function
@@ -51,12 +49,14 @@ def relu(app_data):
         call_pipe(app_data)
         it += 1
 
+    print('OUTPUT1')
+    print(app_data['img_data']['OUT'])
+
     if timer == True:
         t2 = time.time()
 
         time_taken = float(t2) - float(t1)
         print("")
         print("[exec_pipe] : time taken to execute = ", (time_taken * 1000) / runs, " ms")
-
     return
 

@@ -7,7 +7,7 @@ def print_line(to_file=None):
         print("--------------------------------------------------")
 
 def print_header():
-    print("Matrix Multiplication")
+    print("Convolution")
 
 def print_usage():
     print("[main]: Usage: ")

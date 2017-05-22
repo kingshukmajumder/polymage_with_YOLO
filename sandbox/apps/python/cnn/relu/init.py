@@ -15,25 +15,23 @@ def init_images(app_data):
     C = 3 
     Y = 32
     X = 32
-    norm = 0
     input_mat = np.full((X, Y, C), 1)
 
     # convert to float image
-    IN1 = np.array(input_mat)
-    IN1 = IN1.astype(np.float32).ravel()
+    IN = np.array(input_mat)
+    IN = IN.astype(np.float32).ravel()
 
     # final output image
     OUT = np.zeros((X, Y, C), np.float32).ravel()
 
     img_data = {}
-    img_data['IN1'] = IN1
+    img_data['IN'] = IN
     img_data['OUT'] = OUT
 
     app_data['img_data'] = img_data
     app_data['C'] = C
     app_data['Y'] = Y
     app_data['X'] = X
-    app_data['norm'] = norm
 
     return
 
