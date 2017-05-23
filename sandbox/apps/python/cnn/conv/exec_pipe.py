@@ -29,12 +29,12 @@ def call_pipe(app_data):
 
     # lib function args
     pipe_args = []
-    pipe_args += [ctypes.c_int(K)]
     pipe_args += [ctypes.c_int(C)]
-    pipe_args += [ctypes.c_int(Y)]
-    pipe_args += [ctypes.c_int(X)]
     pipe_args += [ctypes.c_int(Fh)]
     pipe_args += [ctypes.c_int(Fw)]
+    pipe_args += [ctypes.c_int(K)]
+    pipe_args += [ctypes.c_int(X)]
+    pipe_args += [ctypes.c_int(Y)]
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
