@@ -11,16 +11,11 @@ from constructs import *
 from utils import *
 
 def call_pipe(app_data):
-    K = app_data['K']
-    C = app_data['C']
-    Y = app_data['Y']
+    N = app_data['N']
     X = app_data['X']
-    Fh = app_data['Fh']
-    Fw = app_data['Fw']
 
     img_data = app_data['img_data']
     IN = img_data['IN']
-    IN1 = img_data['IN1']
     OUT = img_data['OUT']
 
     # lib function name
@@ -29,13 +24,8 @@ def call_pipe(app_data):
 
     # lib function args
     pipe_args = []
-    pipe_args += [ctypes.c_int(C)]
-    pipe_args += [ctypes.c_int(Fh)]
-    pipe_args += [ctypes.c_int(Fw)]
-    pipe_args += [ctypes.c_int(K)]
+    pipe_args += [ctypes.c_int(N)]
     pipe_args += [ctypes.c_int(X)]
-    pipe_args += [ctypes.c_int(Y)]
-    pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
     pipe_args += [ctypes.c_void_p(IN.ctypes.data)]
     pipe_args += [ctypes.c_void_p(OUT.ctypes.data)]
 
@@ -44,7 +34,7 @@ def call_pipe(app_data):
     
     return
 
-def conv(app_data):
+def softmax(app_data):
     it  = 0
     app_args = app_data['app_args']
    
