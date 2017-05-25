@@ -7,7 +7,7 @@ sys.path.insert(0, ROOT+'/apps/python/')
 
 from cpp_compiler import c_compile
 from loader import load_lib
-from polymage_softmax import polymage_softmax
+from polymage_fc import polymage_fc
 
 from compiler import *
 from constructs import *
@@ -46,16 +46,17 @@ def generate_graph(pipe, file_name, app_data):
 
     return
 
-def build_softmax(app_data):
+def build_fc(app_data):
     pipe_data = app_data['pipe_data']
 
-    out_softmax = polymage_softmax(pipe_data)
+    out_fc = polymage_fc(pipe_data)
     
-    live_outs = [out_softmax]
+    live_outs = [out_fc]
     pipe_name = app_data['app']
 
-    N = app_data['N'] 
+    Y = app_data['Y'] 
     X = app_data['X'] 
+    N = app_data['N'] 
 
     #p_estimates = [(R1, rows1), (C1, cols1), (R2, rows2), (C2, cols2)]
     #p_constraints = [ Condition(R1, "==", rows1), \
