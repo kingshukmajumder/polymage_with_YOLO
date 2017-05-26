@@ -31,7 +31,9 @@ def polymage_fc(pipe_data):
    
      
     output = Reduction(([y, n],[Yi, Ni]), ([x, y, n],[Xi, Yi, Ni]), Double, "output")
-    output.default = bias(y) 
-    output.defn = [Reduce(output(y, n), input_mat(x, n) * weights(x, clamp(y, 0, Y-1)), Op.Sum)]
+    output.default = bias(y)
+    clamp = Min(y, Y-1)
+    clamp = Max(clamp, Cast(UInt, 0))
+    output.defn = [Reduce(output(y, n), input_mat(x, n) * weights(x, clamp), Op.Sum)]
 
     return output
