@@ -12,14 +12,15 @@ def init_images(app_data):
     app_args = app_data['app_args']
 
     # input matrix: 
-    K = 12
+    K = 64
     C = 3 
-    Y = 32
-    X = 32
+    Y = 224
+    X = 224
     Fh = 3
     Fw = 3
+    N = 16
     weights = np.full((Fw, Fh, C, K), 1)
-    input_mat = np.full((X, Y, C), 1)
+    input_mat = np.full((X, Y, C, N), 1)
 
     # convert to float image
     IN = np.array(weights)
@@ -28,7 +29,7 @@ def init_images(app_data):
     IN1 = IN1.astype(np.float64).ravel()
 
     # final output image
-    OUT = np.zeros((X, Y, K), np.float64).ravel()
+    OUT = np.zeros((X, Y, K, N), np.float64).ravel()
 
     img_data = {}
     img_data['IN'] = IN
@@ -40,6 +41,7 @@ def init_images(app_data):
     app_data['C'] = C
     app_data['Y'] = Y
     app_data['X'] = X
+    app_data['N'] = N
     app_data['Fh'] = Fh
     app_data['Fw'] = Fw
 

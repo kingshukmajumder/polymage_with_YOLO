@@ -35,9 +35,6 @@ def polymage_maxpool(pipe_data):
     Fwi = Interval(UInt, 0, Fw-1)
     
     input_mat = Matrix(Double, "input", [X, Y, C], [x, y, c])
-    weights = Matrix(Double, "weights", [Fw, Fh, C, K], [fw, fh, c, k])
-    #weights = Function(([fw, fh, c, k], [Fwi, Fhi, Ci, Ki]), Double, "weights")
-    #weights.defn = [1]
     
     output = Reduction(([x, y, k],[Xi, Yi, Ki]), ([k, c, y, x, fh, fw],[Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, "output")
     output.defn = [Reduce(output(x, y, k), input_mat(x+fw, y+fh, c), Op.Max)]

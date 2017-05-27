@@ -58,6 +58,7 @@ def build_conv(app_data):
     C = app_data['C'] 
     Y = app_data['Y'] 
     X = app_data['X'] 
+    N = app_data['N']
     Fh = app_data['Fh'] 
     Fw = app_data['Fw'] 
 
@@ -100,8 +101,8 @@ def create_lib(build_func, pipe_name, app_data):
             pipe = build_func(app_data)
 
             # draw the pipeline graph to a png file
-            #if graph_gen:
-            #    generate_graph(pipe, pipe_name, app_data)
+            if graph_gen:
+                generate_graph(pipe, pipe_name, app_data)
 
             # generate pipeline cpp source
             codegen(pipe, pipe_src, app_data)
