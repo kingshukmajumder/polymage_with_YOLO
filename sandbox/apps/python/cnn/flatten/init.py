@@ -12,10 +12,10 @@ def init_images(app_data):
     app_args = app_data['app_args']
 
     # input matrix: 
-    C = 3 
-    Y = 32
-    X = 32
-    N = 10
+    C = 512
+    Y = 7
+    X = 7
+    N = 16
     out = X * Y * C
     input_mat = np.full((X, Y, C, N), 1)
 

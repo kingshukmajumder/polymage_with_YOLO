@@ -12,9 +12,9 @@ def init_images(app_data):
     app_args = app_data['app_args']
 
     # input matrix: 
-    Y = 64
-    X = 32
-    N = 3
+    Y = 4096
+    X = 4096
+    N = 16
     weights = np.full((X, Y), 1)
     input_mat = np.full((X, N), 1)
     bias = np.full((Y), 1)

@@ -13,8 +13,8 @@ def init_images(app_data):
 
     # input matrix: 
     C = 3 
-    Y = 32
-    X = 32
+    Y = 224
+    X = 224
     input_mat = np.full((X, Y, C), 1)
 
     # convert to float image

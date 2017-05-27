@@ -12,8 +12,8 @@ def init_images(app_data):
     app_args = app_data['app_args']
 
     # input matrix: 
-    N = 3
-    X = 32
+    N = 16
+    X = 1000
     input_mat = np.full((X, N), 1)
 
     # convert to float image
