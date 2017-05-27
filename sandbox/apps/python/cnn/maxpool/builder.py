@@ -55,12 +55,12 @@ def build_maxpool(app_data):
     pipe_name = app_data['app']
 
     K = app_data['K'] 
+    N = app_data['N']
     C = app_data['C'] 
     Y = app_data['Y'] 
     X = app_data['X'] 
-    Fh = app_data['Fh'] 
-    Fw = app_data['Fw'] 
-
+    Fh = app_data['Fh']
+    Fw = app_data['Fw']
     #p_estimates = [(R1, rows1), (C1, cols1), (R2, rows2), (C2, cols2)]
     #p_constraints = [ Condition(R1, "==", rows1), \
     #                  Condition(C1, "==", cols1), \
@@ -100,8 +100,8 @@ def create_lib(build_func, pipe_name, app_data):
             pipe = build_func(app_data)
 
             # draw the pipeline graph to a png file
-            # if graph_gen:
-            #    generate_graph(pipe, pipe_name, app_data)
+            if graph_gen:
+                generate_graph(pipe, pipe_name, app_data)
 
             # generate pipeline cpp source
             codegen(pipe, pipe_src, app_data)
