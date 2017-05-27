@@ -55,6 +55,7 @@ def build_crp(app_data):
     pipe_name = app_data['app']
 
     K = app_data['K'] 
+    N = app_data['N']
     C = app_data['C'] 
     Y = app_data['Y'] 
     X = app_data['X'] 
