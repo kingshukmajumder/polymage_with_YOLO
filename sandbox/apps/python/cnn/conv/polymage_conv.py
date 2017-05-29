@@ -13,12 +13,19 @@ from cnn_constructs import *
 
 def polymage_conv(pipe_data):
 
+    # Ouput Channel
     K = Parameter(UInt, "K")
+    # Batch Size
     N = Parameter(UInt, "N")
+    # Input channel
     C = Parameter(UInt, "C")
+    # Height of image
     Y = Parameter(UInt, "Y")
+    # Width of image
     X = Parameter(UInt, "X")
+    # Kernel Height
     Fh = Parameter(UInt, "Fh")
+    # kernel width
     Fw = Parameter(UInt, "Fw")
 
     k = Variable(UInt, 'k')
@@ -37,9 +44,12 @@ def polymage_conv(pipe_data):
     Fhi = Interval(UInt, 0, Fh-1)
     Fwi = Interval(UInt, 0, Fw-1)
     
+    # Input images (Contains N images of dimension X * Y * C)
     input_mat = Matrix(Double, "input", [X, Y, C, N], [x, y, c, n])
+    # Kernels (Contains K kernels of size Fw * Fh * C)
     weights = Matrix(Double, "weights", [Fw, Fh, C, K], [fw, fh, c, k])
     
+    # Convolution Operation
     output = Reduction(([x, y, k, n],[Xi, Yi, Ki, Ni]), ([n, k, c, y, x, fh, fw],[Ni, Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, "output")
     output.defn = [Reduce(output(x, y, k, n), input_mat(x+fw, y+fh, c, n) * weights(fw, fh, c, k), Op.Sum)]
 

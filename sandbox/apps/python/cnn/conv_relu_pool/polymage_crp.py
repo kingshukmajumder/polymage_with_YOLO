@@ -13,12 +13,19 @@ from cnn_constructs import *
 
 def polymage_crp(pipe_data):
 
+    # Output Channel
     K = Parameter(UInt, "K")
+    # Batch Size
     N = Parameter(UInt, "N")
+    # Input Channel
     C = Parameter(UInt, "C")
+    # Height
     Y = Parameter(UInt, "Y")
+    # Width
     X = Parameter(UInt, "X")
+    # Kernel Height
     Fh = Parameter(UInt, "Fh")
+    # Kernel Width
     Fw = Parameter(UInt, "Fw")
 
     k = Variable(UInt, 'k')
@@ -40,15 +47,20 @@ def polymage_crp(pipe_data):
     Yii = Interval(UInt, 0, Y-1-Fh-Fh)
     Xii = Interval(UInt, 0, X-1-Fw-Fw)
 
+    # Input Images
     input_mat = Matrix(Double, "input", [X, Y, C, N], [x, y, c, n])
+    # Convolution Kernels
     weights = Matrix(Double, "weights", [Fw, Fh, C, K], [fw, fh, c, k])
     
+    # Convolution
     conv = Reduction(([x, y, k, n], [Xi, Yi, Ki, Ni]), ([n, k, c, y, x, fh, fw], [Ni, Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, "conv")
     conv.defn = [Reduce(conv(x, y, k, n), input_mat(x+fw, y+fh, c, n) * weights(fw, fh, c, k), Op.Sum)]
 
+    # Rectified Linear Unit
     relu = Function(([x, y, k, n], [Xi, Yi, Ki, Ni]), Double, "relu")
     relu.defn = [Max(Cast(Double, 0.0), conv(x, y, k, n))]
 
+    # Maxpool (Fh x Fw)
     pool = Reduction(([x, y, k, n],[Xii, Yii, Ki, Ni]), ([n, k, y, x, fh, fw],[Ni, Ki, Yii, Xii, Fhi, Fwi]), Double, "pool")
     pool.defn = [Reduce(pool(x, y, k, n), relu(x+fw, y+fh, k, n), Op.Max)]
     return pool

@@ -13,7 +13,9 @@ from cnn_constructs import *
 
 def polymage_relu(pipe_data):
 
+    # Channel width
     C = Parameter(UInt, "C")
+    # Input / Output dimensions
     Y = Parameter(UInt, "Y")
     X = Parameter(UInt, "X")
 
@@ -25,7 +27,9 @@ def polymage_relu(pipe_data):
     Yi = Interval(UInt, 0, Y-1)
     Xi = Interval(UInt, 0, X-1)
     
+    # Input image
     input_mat = Matrix(Float, "input", [X, Y, C], [x, y, c])
+    # Rectified Linear Unit
     output = Matrix(Float, "output", [X, Y, C], [x, y, c])
     
     output.defn = [Max(0.0, input_mat(x, y, c))]

@@ -14,7 +14,9 @@ from cnn_constructs import *
 
 def polymage_dropout(pipe_data):
 
+    # Input Channels
     C = Parameter(UInt, "C")
+    # Image size
     Y = Parameter(UInt, "Y")
     X = Parameter(UInt, "X")
 
@@ -33,6 +35,7 @@ def polymage_dropout(pipe_data):
     mask = Matrix(Float, "mask", [X, Y, C], [x, y, c])
     output = Matrix(Float, "output", [X, Y, C], [x, y, c])
 
+    # Dropout operation
     mask.defn = [Select(Condition(random.random(), ">", thresh), scale, 0.0)]
     output.defn = [mask(x, y, c) * input_mat(x, y, c)]
 
