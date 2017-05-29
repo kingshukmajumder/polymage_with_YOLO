@@ -23,10 +23,10 @@ def init_images(app_data):
 
     # convert to float image
     IN = np.array(input_mat)
-    IN = IN.astype(np.float32).ravel()
+    IN = IN.astype(np.float64).ravel()
 
     # final output image
-    OUT = np.zeros((X, Y, K, N), np.float32).ravel()
+    OUT = np.zeros((X, Y, K, N), np.float64).ravel()
 
     img_data = {}
     img_data['IN'] = IN
