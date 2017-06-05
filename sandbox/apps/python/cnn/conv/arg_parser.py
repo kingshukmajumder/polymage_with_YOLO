@@ -76,6 +76,19 @@ def parse_args():
                       help='True : generate .dot & .png file of pipeline graph, \
                             False: don\'t')
 
+    parser.add_option('--pluto', '--pluto',
+                      action='store_true',
+                      dest='pluto',
+                      default=False,
+                      help='True : If it is Matrix execution, \
+                            False: Normal image processing application')
+
+    parser.add_option('--tiles', '--tiles',
+                      action='store',
+                      dest='tiles',
+                      default= 0,
+                      help='Tile Sizes for Pluto')
+
     (options, args) = parser.parse_args()
 
     return options

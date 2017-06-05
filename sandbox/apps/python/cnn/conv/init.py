@@ -11,11 +11,16 @@ def init_images(app_data):
 
     app_args = app_data['app_args']
 
-    # input matrix: 
+    # input image: 
+    img_path = app_args.img_file
+    input_mat = np.array(Image.open(img_path))
+    rows, cols, c = input_mat.shape
+
+    # input matrix:
     K = 64
-    C = 3 
-    Y = 224
-    X = 224
+    C = c
+    Y = cols
+    X = rows
     Fh = 3
     Fw = 3
     N = 16
@@ -44,7 +49,8 @@ def init_images(app_data):
     app_data['N'] = N
     app_data['Fh'] = Fh
     app_data['Fw'] = Fw
-
+    app_data['rows'] = rows
+    app_data['cols'] = cols
     return
 
 def get_input(app_data):
@@ -63,7 +69,14 @@ def get_input(app_data):
     app_data['early_free'] = bool(app_args.early_free)
     # pool allocate option
     app_data['pool_alloc'] = bool(app_args.pool_alloc)
-
+    app_data['blas'] = app_args.blas
+    app_data['pluto'] = bool(app_args.pluto)
+    if(app_data['pluto']):
+        # By default we add the tile size and 32
+        if(app_args.tiles):
+            app_data['tiles'] = app_args.tiles
+        else:
+            app_data['tiles'] = "32,32,32"
     return
 
 def init_all(app_data):
