@@ -45,9 +45,13 @@ def polymage_conv(pipe_data):
     input_mat = Matrix(Double, "input", [X, Y, C], [x, y, c])
     # Kernels (Contains K kernels of size Fw * Fh * C)
     weights = Matrix(Double, "weights", [Fw, Fh, C, K], [fw, fh, c, k])
+    bias = Matrix(Double, "bias", [K])
     
     # Convolution Operation
     output = Reduction(([x, y, k],[Xi, Yi, Ki]), ([k, c, y, x, fh, fw],[Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, "output")
     output.defn = [Reduce(output(x, y, k), input_mat(x+fw, y+fh, c) * weights(fw, fh, c, k), Op.Sum)]
 
-    return output
+    output_bias = Function(([x, y, k],[Xi, Yi, Ki]), Double, "output_bias")
+    output_bias.defn = [output(x,y,k) + bias(k)]
+
+    return output_bias

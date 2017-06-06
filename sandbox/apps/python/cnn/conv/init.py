@@ -25,12 +25,15 @@ def init_images(app_data):
     Fw = 3
     N = 16
     weights = np.full((Fw, Fh, C, K), 1)
+    bias = np.full((K), 1)
 
     # convert to float image
     IN = np.array(weights)
     IN1 = np.array(input_mat)
+    IN2 = np.array(bias)
     IN = IN.astype(np.float64).ravel()
     IN1 = IN1.astype(np.float64).ravel()
+    IN2 = IN2.astype(np.float64).ravel()
 
     # final output image
     OUT = np.zeros((X-Fw, Y-Fh, K), np.float64).ravel()
@@ -49,6 +52,7 @@ def init_images(app_data):
     app_data['Fw'] = Fw
     app_data['rows'] = rows
     app_data['cols'] = cols
+    app_data['IN2'] = IN2
 
     return
 
