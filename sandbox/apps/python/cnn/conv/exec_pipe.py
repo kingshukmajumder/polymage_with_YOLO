@@ -9,13 +9,13 @@ from printer import print_line
 from compiler   import *
 from constructs import *
 from utils import *
+from PIL import Image
 
 def call_pipe(app_data):
     K = app_data['K']
     C = app_data['C']
     Y = app_data['Y']
     X = app_data['X']
-    N = app_data['N']
     Fh = app_data['Fh']
     Fw = app_data['Fw']
 
@@ -34,7 +34,6 @@ def call_pipe(app_data):
     pipe_args += [ctypes.c_int(Fh)]
     pipe_args += [ctypes.c_int(Fw)]
     pipe_args += [ctypes.c_int(K)]
-    pipe_args += [ctypes.c_int(N)]
     pipe_args += [ctypes.c_int(X)]
     pipe_args += [ctypes.c_int(Y)]
     pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
@@ -58,6 +57,31 @@ def conv(app_data):
     while it < runs :
         call_pipe(app_data)
         it += 1
+
+    print('INPUT')
+    print(app_data['img_data']['IN1'])
+    print('OUTPUT1')
+    print(app_data['img_data']['OUT'])
+
+    rows = app_data['X']
+    cols = app_data['Y']
+    c = app_data['C']
+    Fw = app_data['Fw']
+    Fh = app_data['Fh']
+    K = app_data['K']
+    # Display input image
+    inp_img = np.array(app_data['img_data']['IN1'].astype(np.uint8).reshape((rows, cols, c)))
+    img = Image.fromarray(inp_img, 'RGB')
+    img.save('in.png')
+    img.show()
+
+    # Display output image
+    rows = rows - Fw
+    cols = cols - Fh
+    inp_img = np.array(app_data['img_data']['OUT'].astype(np.uint8).reshape((rows, cols, K)))
+    img = Image.fromarray(inp_img, 'RGB')
+    img.save('out.png')
+    img.show()
 
     if timer == True:
         t2 = time.time()

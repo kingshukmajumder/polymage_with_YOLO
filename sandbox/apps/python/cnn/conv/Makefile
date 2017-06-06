@@ -6,7 +6,7 @@ PYTHON=python3
 ROOT="../../../../"
 
 # app inputs
-IMG="image.png"
+IMG="../image_32.png"
 RUNS=1
 
 APP_ARGS=--img=${IMG}

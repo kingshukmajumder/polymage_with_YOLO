@@ -58,7 +58,6 @@ def build_conv(app_data):
     C = app_data['C'] 
     Y = app_data['Y'] 
     X = app_data['X'] 
-    N = app_data['N']
     Fh = app_data['Fh'] 
     Fw = app_data['Fw'] 
 
@@ -77,6 +76,13 @@ def build_conv(app_data):
         opts += ['optimize_storage']
     if app_data['pool_alloc']:
         opts += ['pool_alloc']
+    if app_data['blas'] == 'OpenBLAS':
+        opts += ['openblas']
+    if app_data['blas'] == 'MKL':
+        opts += ['mkl']
+    if app_data['pluto']:
+        opts += ['pluto']
+
 
     pipe = buildPipeline(live_outs,
                          #param_estimates=p_estimates,
