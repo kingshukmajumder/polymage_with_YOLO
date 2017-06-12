@@ -131,6 +131,10 @@ class CCos(Cos):
     def __init__(self, _expr):
         Cos.__init__(self, _expr)
 
+class CATan(ATan):
+    def __init__(self, _expr):
+        ATan.__init__(self, _expr)
+
 class CSqrt(Sqrt):
     def __init__(self, _expr):
         Sqrt.__init__(self, _expr)

@@ -186,6 +186,19 @@ class Cos(InbuiltFunction):
     def __str__(self):
         return "std::cos(" +  self._args[0].__str__() +  ")"
 
+class ATan(InbuiltFunction):
+    def __init__(self, _expr):
+        InbuiltFunction.__init__(self, _expr)
+
+    def getType(self):
+        return Double
+
+    def clone(self):
+        return ATan(self._args[0].clone())
+
+    def __str__(self):
+        return "std::atan(" +  self._args[0].__str__() +  ")"
+
 class Sqrt(InbuiltFunction):
     def __init__(self, _expr):
         InbuiltFunction.__init__(self, _expr)
@@ -2878,7 +2891,7 @@ class Wave(Function):
                     Exp(x) * ChbEvl(32.0 / x - 2.0, 1) / Sqrt(x))
 
     @classmethod
-    def firwin(cls, N, cutoff, out_name, window='hamming', pass_zero=True):
+    def firwin(cls, N, cutoff, out_name, window='hamming', pass_zero=True, div_by_sum=True):
         """FIR filter design using the window method.
 
         :param N: length of the filter (number of coefficients).
@@ -2905,6 +2918,7 @@ class Wave(Function):
         scaled_coeffs = Wave(Double, sc_name, N, out_var)
         middle = (N - 1) // 2
         cond1 = Condition(out_var, '==', middle)
+        middle = (N - 1) / 2
 
         scalar_int = Interval(UInt, 0, 0)
         coeffs_int = Interval(UInt, 0, N-1)
@@ -2967,7 +2981,7 @@ class Wave(Function):
 
         fir_coeffs = Wave(out_typ, out_name, N, out_var)
         fir_coeffs.defn = [ scaled_coeffs(out_var) / coeffs_sum(0) ]
-        return fir_coeffs
+        return fir_coeffs if div_by_sum else scaled_coeffs
 
     @classmethod
     def kaiserord(cls, ripple, width):
