@@ -306,7 +306,19 @@ def get_mat_mul_lib_expr(mat1,mat2,mat3,dimensions):
     mat1_dim1 = dimensions[0].__str__()
     mat1_dim2 = dimensions[1].__str__()
     mat2_dim2 = dimensions[2].__str__()
-    lib_expr = "cblas_dgemm(CblasRowMajor, CblasNoTrans,CblasNoTrans, " \
+    # Vector Vector Multiplication
+    if (dimensions[1]==1 or ((dimensions[0]==1) and (dimensions[2]==1))):
+        lib_expr = "* "+mat3 + " = cblas_ddot("+mat1_dim2+", " \
+                            + mat1 + ", " + "1"+"," \
+                            + mat2  +", "+ "1" + ")"
+    # Matrix Vector Multiplication    
+    elif dimensions[0]==1 or dimensions[2]==1:
+        lib_expr = "cblas_dgemv(CblasRowMajor, CblasNoTrans, " \
+                           + mat1_dim1 + ", " + mat1_dim2 + ", 1.0, " + mat1 + ", " \
+                           + mat1_dim2 + ", " + mat2 +", " + mat2_dim2 + ", 0.0, " + mat3 + ", " + mat2_dim2 + ")"
+    # Matrix Matrix Multiplication
+    else:
+        lib_expr = "cblas_dgemm(CblasRowMajor, CblasNoTrans,CblasNoTrans, " \
                            + mat1_dim1 + ", " + mat1_dim2 + ", " + mat2_dim2 + ", 1.0, " + mat1 + ", " \
                            + mat2_dim2 + ", " + mat2 +", " + mat1_dim2 + ", 0.0, " + mat3 + ", " + mat1_dim2 + ")"
     return lib_expr
