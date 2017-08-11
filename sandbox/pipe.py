@@ -35,6 +35,7 @@ import targetc as genc
 from grouping import *
 
 from constructs import *
+from cnn_constructs import *
 from expression import *
 from codegen import *
 from schedule import *
@@ -60,7 +61,8 @@ def get_parents_from_func(func, non_image=True):
     if non_image:
         refs = [ ref for ref in refs if not ref.objectRef == func and \
                                      not (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput) \
-                                     or (isinstance(ref.objectRef, Wave) and ref.objectRef.isInput)) ]
+                                     or (isinstance(ref.objectRef, Wave) and ref.objectRef.isInput) \
+                                      or (isinstance(ref.objectRef, DataLayer))) ]
     else:
         refs = [ ref for ref in refs if not ref.objectRef == func ]
 
@@ -238,7 +240,7 @@ class ComputeObject:
         self._is_children_set = False
         self._is_group_set = False
         self._is_image_typ = isinstance(self.func, Image) or (isinstance(self.func, Matrix) and self.func.isInput) \
-                             or (isinstance(self.func, Wave) and self.func.isInput)
+                             or (isinstance(self.func, Wave) and self.func.isInput) or isinstance(self.func, DataLayer)
         self._is_reduction_typ = isinstance(self.func, Reduction)
         return
 
@@ -673,7 +675,7 @@ class Group:
             refs += comp.func.getObjects(Reference)
         image_refs = [ref.objectRef for ref in refs \
                       if isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput) \
-                      or (isinstance(ref.objectRef, Wave) and ref.objectRef.isInput)]
+                      or (isinstance(ref.objectRef, Wave) and ref.objectRef.isInput) or isinstance(ref.objectRef, DataLayer)]
         image_refs = list(set(image_refs))
         return image_refs
 
@@ -764,7 +766,7 @@ class Pipeline:
         self._clone_map = {}
         for func in self._orig_funcs:
             if isinstance(func, Image) or (isinstance(func, Matrix) and func.isInput) \
-               or (isinstance(func, Wave) and func.isInput):
+               or (isinstance(func, Wave) and func.isInput) or isinstance(func, DataLayer):
                 self._clone_map[func] = func
                 self._inputs.append(func)
             else:
@@ -779,7 +781,8 @@ class Pipeline:
                 if not (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix)
                                                              and ref.objectRef.isInput)
                                                          or (isinstance(ref.objectRef, Wave)
-                                                             and ref.objectRef.isInput)):
+                                                             and ref.objectRef.isInput)
+                                                         or isinstance(ref.objectRef, DataLayer)):
                     ref._replace_ref_object(self._clone_map[ref.objectRef])
 
         ''' DAG OF CLONES '''

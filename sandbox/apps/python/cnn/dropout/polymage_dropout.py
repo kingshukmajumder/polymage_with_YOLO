@@ -36,7 +36,7 @@ def polymage_dropout(pipe_data):
     output = Matrix(Float, "output", [X, Y, C], [x, y, c])
 
     # Dropout operation
-    mask.defn = [Select(Condition(random.random(), ">", thresh), scale, 0.0)]
+    mask.defn = [Select(Condition(RandomFloat(), ">", thresh), scale, 0.0)]
     output.defn = [mask(x, y, c) * input_mat(x, y, c)]
 
     return output

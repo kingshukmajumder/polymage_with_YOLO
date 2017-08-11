@@ -42,7 +42,7 @@ def polymage_maxpool(pipe_data):
     Fhi = Interval(UInt, 0, Fh-1)
     Fwi = Interval(UInt, 0, Fw-1)
     
-    input_mat = Matrix(Double, "input", [X, Y, C, N], [x, y, c, n])
+    input_mat = DataLayer(Double, "input", [X, Y, C, N], [x, y, c, n])
 
     # Maxpool operation (Fh x Fw)
     output = Reduction(([x, y, k, n],[Xi, Yi, Ki, Ni]), ([n, k, c, y, x, fh, fw],[Ni, Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, "output")

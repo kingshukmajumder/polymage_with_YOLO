@@ -7,8 +7,8 @@ from constructs import *
 
 logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s")
 
-class Layer(object):
-    def __init__(self, in_layer):
+class Layer(Function):
+    def __init__(self, in_layer, ):
         self._in_layer = in_layer
 
     @property
@@ -21,30 +21,39 @@ class Layer(object):
     def out_dim_size(self):
         return self._out_dim_size
     @property
-    def params(self):
-        return self._params
-    @property
-    def forward_pass(self):
-        return self._fwd_function
-    @property
     def typ(self):
         return self._typ
 
-    def back_propagate(self, bwd_func):
-        return bwd_func
+class DataLayer(Function):
+    def __init__(self, _typ, _name, _dims, _var):
+        self._in_w = _dims[0]
+        self._in_h = _dims[1]
+        self._in_ch = _dims[2]
+        self._out_dims = 3
+        self._typ = _typ
+        self._dims = _dims
+        intervals = []
+        variables = []
+        if(_var == None):
+            for dim in self._dims:
+                # Just assuming it will not be more that UInt
+                intervals.append(Interval(UInt, 0, dim-1))
+                variables.append(Variable(UInt, "_" + _name + str(i)))
+                i = i + 1
+            self._variables = variables
+        else:
+            for dim in self._dims:
+                # Just assuming it will not be more that UInt
+                intervals.append(Interval(UInt, 0, dim - 1))
+            self._variables = _var
+            variables = _var
+        self._intervals = intervals
+        self.description = _name
+        Function.__init__(self,(variables, intervals),_typ,_name)
 
-class DataLayer(Layer):
-    def __init__(self, in_w, in_h, in_ch, num_sample, data, typ):
-        self._data = data
-        self._in_w = in_w
-        self._in_h = in_h
-        self._in_ch = in_ch
-        self._num_sample = num_sample
-        self._out_dims = 4
-        self._fwd_function = data
-        self._typ = typ
-        Layer.__init__(0)
-
+    @property
+    def dimensions(self):
+        return self._dims
     @property
     def in_w(self):
         return self._in_w
@@ -55,14 +64,14 @@ class DataLayer(Layer):
     def in_ch(self):
         return self._in_ch
     @property
-    def num_sample(self):
-        return self._num_sample
-    @property
-    def data(self):
-        return self._data
-    @property
     def out_dims(self):
         return self._out_dims
+    @property
+    def name(self):
+        return self._name
+    @property
+    def type(self):
+        return self._type
     @property
     def out_dim_size(self, i):
         assert(i < 4)
@@ -77,11 +86,12 @@ class DataLayer(Layer):
             size = self.num_sample
         return size
 
-    def back_propagate(self, bwd_func):
-        assert(bwd_func)
-        # There is no back propogation for the data layer
-        # Simply returning
-        return
+    def clone(self, input=False):
+        var = [v.clone() for v in self._variables]
+        dimensions = self.dimensions.copy()
+        newFunc = DataLayer(self._typ, self._name, dimensions, var)
+        newFunc.description = self.description
+        return newFunc
 
 class ReLULayer(Layer):
     def __init__(self, in_layer):
