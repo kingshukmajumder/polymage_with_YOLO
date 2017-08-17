@@ -36,7 +36,7 @@ def init_images(app_data):
     IN2 = IN2.astype(np.float64).ravel()
 
     # final output image
-    OUT = np.zeros((X-Fw, Y-Fh, K), np.float64).ravel()
+    OUT = np.zeros((X, Y, K), np.float64).ravel()
 
     img_data = {}
     img_data['IN'] = IN

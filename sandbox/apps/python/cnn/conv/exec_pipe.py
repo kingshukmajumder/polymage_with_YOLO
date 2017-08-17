@@ -78,8 +78,6 @@ def conv(app_data):
     img.show()
 
     # Display output image
-    rows = rows - Fw
-    cols = cols - Fh
     inp_img = np.array(app_data['img_data']['OUT'].astype(np.uint8).reshape((rows, cols, K)))
     img = Image.fromarray(inp_img, 'RGB')
     img.save('out.png')
@@ -91,6 +89,5 @@ def conv(app_data):
         time_taken = float(t2) - float(t1)
         print("")
         print("[exec_pipe] : time taken to execute = ", (time_taken * 1000) / runs, " ms")
-
     return
 

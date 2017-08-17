@@ -16,6 +16,76 @@ logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s")
 class Network(Function):
 
     @staticmethod
+    def convolution(_input_layer, _weights, _bias=None, _pad=None):
+        assert (_input_layer)
+        assert (_weights)
+        input_layer = _input_layer
+        weights = _weights
+        bias = _bias
+        # Input parameters
+        assert (len(input_layer.dimensions) == 3)
+        in_w = input_layer.dimensions[0]
+        in_h = input_layer.dimensions[1]
+        in_ch = input_layer.dimensions[2]
+
+        k = Variable(UInt, 'k')
+        c = Variable(UInt, 'c')
+        x = Variable(UInt, 'x')
+        y = Variable(UInt, 'y')
+        fh = Variable(UInt, 'fh')
+        fw = Variable(UInt, 'fw')
+
+        # Padding for the input
+        pad = _pad
+        if not (pad == None or pad == 0):
+            p_w = in_w + (2 * pad)
+            p_h = in_h + (2 * pad)
+            cond = Condition(x, '>=', pad) & \
+                        Condition(x, '<=', p_w - pad - 1) & \
+                        Condition(y, '>=', pad) & \
+                        Condition(y, '<=', p_h - pad - 1)
+            input_pad = Matrix(Double, "input_pad", [p_w, p_h, in_ch], [x, y, c])
+            expr = input_layer(x - pad, y - pad, c)
+            input_pad.defn = [Case(cond, expr)]
+
+
+        # Weight parameters
+        assert (len(weights.dimensions) == 4)
+        wt_fw = weights.dimensions[0]
+        wt_fh = weights.dimensions[1]
+        wt_ch = weights.dimensions[2]
+        wt_k = weights.dimensions[3]
+
+        assert (wt_ch == in_ch)
+
+        Fhi = Interval(UInt, 0, wt_fh - 1)
+        Fwi = Interval(UInt, 0, wt_fw - 1)
+        Ki = Interval(UInt, 0, wt_k - 1)
+        Ci = Interval(UInt, 0, wt_ch - 1)
+        if (pad == None or pad == 0):
+            Yi = Interval(UInt, 0, in_h - wt_fh)
+            Xi = Interval(UInt, 0, in_w - wt_fw)
+        else:
+            Yi = Interval(UInt, 0, p_h - wt_fh)
+            Xi = Interval(UInt, 0, p_w - wt_fw)
+
+        output = Reduction(([x, y, k], [Xi, Yi, Ki]),
+                           ([k, c, y, x, fh, fw], [Ki, Ci, Yi, Xi, Fhi, Fwi]), Double,
+                           "output")
+        if (pad == None or pad == 0):
+            output.defn = [Reduce(output(x, y, k), input_layer(x + fw, y + fh, c) *
+                              weights(fw, fh, c, k), Op.Sum)]
+        else:
+            output.defn = [Reduce(output(x, y, k), input_pad(x + fw, y + fh, c) *
+                                  weights(fw, fh, c, k), Op.Sum)]
+        output.is_mat_func = True
+
+        if not (_bias == None):
+            output.default = bias(k)
+        return output
+
+
+    @staticmethod
     def ReLU(_input_layer):
         input_layer = _input_layer
         x = Variable(UInt, 'x')
