@@ -28,10 +28,11 @@ def polymage_relu(pipe_data):
     Xi = Interval(UInt, 0, X-1)
     
     # Input image
-    input_mat = Matrix(Float, "input", [X, Y, C], [x, y, c])
+    input_mat = DataLayer(Float, "input", [X, Y, C], [x, y, c])
     # Rectified Linear Unit
-    output = Matrix(Float, "output", [X, Y, C], [x, y, c])
-    
-    output.defn = [Max(0.0, input_mat(x, y, c))]
+    relu = Network.ReLU(input_mat)
+    return relu
 
-    return output
+    #output = Matrix(Float, "output", [X, Y, C], [x, y, c])
+    #output.defn = [Max(0.0, input_mat(x, y, c))]
+    #return output
