@@ -70,20 +70,16 @@ class Network(Function):
             Xi = Interval(UInt, 0, p_w - wt_fw)
 
         output = Reduction(([x, y, k], [Xi, Yi, Ki]),
-                           ([k, c, y, x, fh, fw], [Ki, Ci, Yi, Xi, Fhi, Fwi]), Double,
-                           "output")
+                           ([k, c, y, x, fh, fw], [Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, "output")
         if (pad == None or pad == 0):
-            output.defn = [Reduce(output(x, y, k), input_layer(x + fw, y + fh, c) *
-                              weights(fw, fh, c, k), Op.Sum)]
+            output.defn = [Reduce(output(x, y, k), input_layer(x + fw, y + fh, c) * weights(fw, fh, c, k), Op.Sum)]
         else:
-            output.defn = [Reduce(output(x, y, k), input_pad(x + fw, y + fh, c) *
-                                  weights(fw, fh, c, k), Op.Sum)]
+            output.defn = [Reduce(output(x, y, k), input_pad(x + fw, y + fh, c) * weights(fw, fh, c, k), Op.Sum)]
         output.is_mat_func = True
 
         if not (_bias == None):
             output.default = bias(k)
         return output
-
 
     @staticmethod
     def ReLU(_input_layer):
@@ -94,9 +90,41 @@ class Network(Function):
         Y = input_layer.dimensions[1]
         z = Variable(UInt, 'z')
         Z = input_layer.dimensions[2]
+
+        # Normalization
         forward = Matrix(input_layer.typ, "forward_relu", [X, Y, Z], [x, y, z])
         forward.defn = [Max(Cast(input_layer.typ, 0.0), input_layer(x, y, z))]
         return forward
+
+    @staticmethod
+    def maxpool(_input_layer, _fh, _fw, _stride):
+        input_layer = _input_layer
+        Fh = _fh
+        Fw = _fw
+        stride = _stride
+        k = Variable(Int, 'k')
+        x = Variable(Int, 'x')
+        y = Variable(Int, 'y')
+        fh = Variable(Int, 'fh')
+        fw = Variable(Int, 'fw')
+
+        # input parameters
+        X = input_layer.dimensions[0]
+        Y = input_layer.dimensions[1]
+        K = input_layer.dimensions[2]
+
+        Ki = Interval(Int, 0, K - 1)
+        Fhi = Interval(Int, 0, Fh - 1)
+        Fwi = Interval(Int, 0, Fw - 1)
+        Xi = Interval(Int, 0, (X - Fw) / stride)
+        Yi = Interval(Int, 0, (Y - Fh) / stride)
+
+        # Downsample operation
+        # TODO: Add default to max of negative double. Otherwise Max operation will always return 0
+        maxpool = Reduction(([x, y, k], [Xi, Yi, Ki]), ([k, y, x, fh, fw], [Ki, Yi, Xi, Fhi, Fwi]), Double, "maxpool")
+        maxpool.defn = [Reduce(maxpool(x, y, k), input_layer(stride * x + fw, stride * y + fh, k), Op.Max)]
+        maxpool.is_mat_func = True
+        return maxpool
 
 class DataLayer(Function):
     def __init__(self, _typ, _name, _dims, _var=None):
