@@ -13,39 +13,32 @@ from cnn_constructs import *
 
 def polymage_maxpool(pipe_data):
 
-    # Output Channels
-    K = Parameter(UInt, "K")
-    # Batch size
-    N = Parameter(UInt, "N")
-    # Input channel
-    C = Parameter(UInt, "C")
+    # Channels
+    K = Parameter(Int, "K")
     # Input dimensions
-    Y = Parameter(UInt, "Y")
-    X = Parameter(UInt, "X")
+    Y = Parameter(Int, "Y")
+    X = Parameter(Int, "X")
     # Pool size kernel
-    Fh = Parameter(UInt, "Fh")
-    Fw = Parameter(UInt, "Fw")
+    Fh = Parameter(Int, "Fh")
+    Fw = Parameter(Int, "Fw")
 
-    k = Variable(UInt, 'k')
-    n = Variable(UInt, 'n')
-    c = Variable(UInt, 'c')
-    x = Variable(UInt, 'x')
-    y = Variable(UInt, 'y')
-    fh = Variable(UInt, 'fh')
-    fw = Variable(UInt, 'fw')
+    k = Variable(Int, 'k')
+    x = Variable(Int, 'x')
+    y = Variable(Int, 'y')
+    fh = Variable(Int, 'fh')
+    fw = Variable(Int, 'fw')
 
-    Ki = Interval(UInt, 0, K-1)
-    Ni = Interval(UInt, 0, N-1)
-    Ci = Interval(UInt, 0, C-1)
-    Yi = Interval(UInt, 0, Y-1-Fh)
-    Xi = Interval(UInt, 0, X-1-Fw)
-    Fhi = Interval(UInt, 0, Fh-1)
-    Fwi = Interval(UInt, 0, Fw-1)
-    
-    input_mat = DataLayer(Double, "input", [X, Y, C, N], [x, y, c, n])
+    Ki = Interval(Int, 0, K-1)
+    Fhi = Interval(Int, 0, Fh-1)
+    Fwi = Interval(Int, 0, Fw-1)
+
+    Xi = Interval(Int, 0, (X-Fw)/2)
+    Yi = Interval(Int, 0, (Y-Fh)/2)
+
+    input_mat = DataLayer(Double, "input_mat", [X, Y, K])
 
     # Maxpool operation (Fh x Fw)
-    output = Reduction(([x, y, k, n],[Xi, Yi, Ki, Ni]), ([n, k, c, y, x, fh, fw],[Ni, Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, "output")
-    output.defn = [Reduce(output(x, y, k, n), input_mat(x+fw, y+fh, c, n), Op.Max)]
+    output = Reduction(([x, y, k],[Xi, Yi, Ki]), ([k, y, x, fh, fw],[Ki, Yi, Xi, Fhi, Fwi]), Double, "output")
+    output.defn = [Reduce(output(x, y, k), input_mat(2*x+fw, 2*y+fh, k), Op.Max)]
 
     return output

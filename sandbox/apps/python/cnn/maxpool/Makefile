@@ -6,11 +6,12 @@ PYTHON=python3
 ROOT="../../../../"
 
 # app inputs
-IMG=$(ROOT)"/../images/venice_wikimedia.jpg"
+IMG="../image_32.png"
 RUNS=1
 
-APP_ARGS=
-OPT_ARGS=--pool_alloc --optimize_storage --early_free
+#APP_ARGS=--img=${IMG}
+APP_ARGS=--img=${IMG}
+#OPT_ARGS=--pool_alloc --optimize_storage --early_free
 TOOL_ARGS=--graph-gen --runs=${RUNS} --display --timer
 CXX_ARGS=--cxx="${CXX}" --cxx_flags="${CXX_FLAGS}"
 

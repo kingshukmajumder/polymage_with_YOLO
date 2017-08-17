@@ -11,22 +11,24 @@ def init_images(app_data):
 
     app_args = app_data['app_args']
 
+    img_path = app_args.img_file
+    img = Image.open(img_path)
+    input_mat = np.array(img)
+    rows, cols, c = input_mat.shape
+
     # input matrix: 
-    N = 16
-    K = 12
-    C = 3 
-    Y = 32
-    X = 32
-    Fh = 3
-    Fw = 3
-    input_mat = np.full((X, Y, C, N), 1)
+    K = c
+    Y = cols
+    X = rows
+    Fh = 2
+    Fw = 2
 
     # convert to float image
     IN = np.array(input_mat)
     IN = IN.astype(np.float64).ravel()
 
     # final output image
-    OUT = np.zeros((X, Y, K, N), np.float64).ravel()
+    OUT = np.zeros((X/2, Y/2, K), np.float64).ravel()
 
     img_data = {}
     img_data['IN'] = IN
@@ -34,8 +36,6 @@ def init_images(app_data):
 
     app_data['img_data'] = img_data
     app_data['K'] = K
-    app_data['N'] = N
-    app_data['C'] = C
     app_data['Y'] = Y
     app_data['X'] = X
     app_data['Fh'] = Fh
@@ -70,4 +70,3 @@ def init_all(app_data):
     init_images(app_data)
 
     return
-

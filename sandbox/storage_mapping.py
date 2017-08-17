@@ -52,12 +52,21 @@ class TypeSizeMap(object):
 def get_dim_size(dim_storage, const=None):
     if const == None:
         const = dim_storage.const
-    if isinstance(dim_storage.coeff, Fraction):
-        numr = dim_storage.coeff.numerator
-        denr = dim_storage.coeff.denominator
-        param_part = numr * dim_storage.orig_param // denr
-    else:
-        param_part = sum([c * o for c, o in zip(dim_storage.coeff, dim_storage.orig_param)])
+    params = []
+    # Need to iterate through the dimension coefficients (Changed to support multiple parameters)
+    for i in range(len(dim_storage.coeff)):
+        if isinstance(dim_storage.coeff[i], Fraction):
+            numr = dim_storage.coeff[i].numerator
+            denr = dim_storage.coeff[i].denominator
+            param = numr * dim_storage.orig_param[i] // denr
+        else:
+            # Check if the index is only a constant
+            if not dim_storage.orig_param == []:
+                param = dim_storage.coeff[i] * dim_storage.orig_param[i]
+            else:
+                param = 0
+        params.append(param)
+    param_part = sum(params)
     size = param_part + const
     size = simplify_expr(size)
 
