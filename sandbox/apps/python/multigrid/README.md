@@ -2,20 +2,20 @@
 -------------------------------
 
 
-**Install polymage**
+**Install PolyMage**
 
-The instructions to install Polymage is present here - https://bitbucket.org/udayb/polymage
+Instructions on general pre-requisites to run Polymage apps are here:
+https://bitbucket.org/udayb/polymage
 
 *Note*:
 
-- Install Pluto to run the benchmarks in polymg-dtile-opt+ configuration
-
-- In case you get pygraphviz not found error, uninstall pygraphviz and install with the below options
+- If you encounter a 'pygraphviz not found' error, uninstall pygraphviz and
+  install with the below options
 
 > sudo pip3 install pygraphviz --install-option="--include-path=/usr/include/graphviz" --install-option="--library-path=/usr/lib/graphviz/"
 
 
-**Benchmarks**: 
+**Benchmarks**:
 
 - Jacobi 2D
 
@@ -29,17 +29,17 @@ The various configurations as mentioned in the paper can be obtained by varying 
 
  1. Multigrid Cycle (V / W) : CYCLE='V'
 
- 2. Multigrid levels : L=3      
+ 2. Multigrid levels : L=3
 
- 3. coarse-grid size along each dimension : SIZE=31  
+ 3. coarse-grid size along each dimension : SIZE=31
 
- 4. V / W Cycle iterations : NIT=10   
+ 4. V / W Cycle iterations : NIT=10
 
- 5. pre-smoothing steps : NU1=10   
+ 5. pre-smoothing steps : NU1=10
 
- 6. post-smoothing steps : NU2=0    
+ 6. post-smoothing steps : NU2=0
 
- 7. coarse-smoothing steps : NUC=0    
+ 7. coarse-smoothing steps : NUC=0
 
 
 **How to run**
@@ -50,11 +50,10 @@ Run the following commands before running any of the experiments.
 
 > $ export OMP\_NUM\_THREADS=24
 
-Make sure that you are in the master branch before running the below commands.
+In order to run any benchmark, navigate to its directory and run 'make'.
 
-In order to run any benchmark, navigate to its directory and run 'make'. 
-
-'make' runs polymg-opt+, polymg-opt, handopt and handopt-pluto configurations.
+'make' runs polymg-dtile-opt+ (Multigrid smoothing optimized with
+diamond tiling), libpluto (included as a submodule) is needed.
 
 Example:
 
@@ -64,35 +63,16 @@ Example:
 
 > $ make
 
-The make command can be run with the following arguments:
+The various make targets available and what they correspond to are listed
+below:
 
-- all - same as running make. (runs polymg-opt+, polymg-opt, handopt and handopt-pluto configurations)
+- all (polymg-dtile-opt+ configurations)
 
-- new - runs polymg-opt+ configurations.
+- clean/cleaner - deletes the shared object and the optimized Polymage generated C file.
 
-- polymg-opt-plus - runs polymg-opt+ configurations.
-
-- polymg-opt - runs polymg-opt configurations.
-
-- handopt - runs hand optimized code (for Jacobi2D and Jacobi3D only).
-
-- handopt-pluto - runs hand optimized code with Pluto's diamond tiling (for Jacobi2D and Jacobi3D only).
-
-- tune - uses the app\_tuner.py file and tunes for various group and tile size for polymg code.
-
-- clean/cleaner - deletes the shared object and the optimized Polymage generated C file. 
-
-The optimized Polymage code is written to the \*.cpp file, and it is also turned into 
+The optimized Polymage code is written to the \*.cpp file, and it is also turned into
 a shared library (\*.so file).
 
 The Polymage DSL code is written in the file named polymage\_\*.py
 
-To get results for polymg-dtile-opt+:
 
-- Make sure Pluto is installed.
-
-- change the branch to Tstencil.
-
->   $ git fetch && git checkout origin/Tstencils
-
->   $ make
