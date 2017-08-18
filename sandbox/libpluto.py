@@ -394,7 +394,7 @@ class LibPluto(object):
         self.ffi.cdef(_pluto_header_str)
         self.so = self.ffi.dlopen('libpluto.so')
 
-        print('Loaded lib {0}'.format(self.so))
+        #print('Loaded lib {0}'.format(self.so))
 
     def create_options(self):
         """
@@ -454,10 +454,10 @@ class LibPluto(object):
             ("unable to get schedule from PLUTO")
 
         schedule_str = self.ffi.string(schedule_strbuf_ptr[0]).decode('utf-8')
-        print("schedule_str = ", schedule_str)
+        #print("schedule_str = ", schedule_str)
 
         ploops_str = self.ffi.string(p_loops_ptr[0]).decode('utf-8')
-        print("nploops_str = ", ploops_str)
+        #print("nploops_str = ", ploops_str)
 
         # nploops_str would be a csv of list
         ploops_str_list = ploops_str.split(",")
@@ -474,7 +474,7 @@ class LibPluto(object):
         #print("parallel_loops = ", parallel_loops)
 
         schedule = isl.UnionMap.read_from_str(ctx, schedule_str)
-        print("schedule = ", schedule)
+        #print("schedule = ", schedule)
 
         self.so.pluto_schedules_strbuf_free(schedule_strbuf_ptr[0])
 
@@ -535,5 +535,5 @@ if __name__ == "__main__":
 
     sched  = pluto.schedule(ctx, domains, deps, pluto_opts)
     remapping = pluto.get_remapping(ctx, domains, deps, pluto_opts)
-    print("schedule: %s" % sched)
-    print("remapping: %s" % remapping)
+    #print("schedule: %s" % sched)
+    #print("remapping: %s" % remapping)
