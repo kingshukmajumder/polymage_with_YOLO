@@ -12,7 +12,6 @@ from utils import *
 
 def call_pipe(app_data):
     K = app_data['K']
-    N = app_data['N']
     C = app_data['C']
     Y = app_data['Y']
     X = app_data['X']
@@ -34,7 +33,6 @@ def call_pipe(app_data):
     pipe_args += [ctypes.c_int(Fh)]
     pipe_args += [ctypes.c_int(Fw)]
     pipe_args += [ctypes.c_int(K)]
-    pipe_args += [ctypes.c_int(N)]
     pipe_args += [ctypes.c_int(X)]
     pipe_args += [ctypes.c_int(Y)]
     pipe_args += [ctypes.c_void_p(IN1.ctypes.data)]
@@ -59,6 +57,8 @@ def crp(app_data):
         call_pipe(app_data)
         it += 1
 
+    print('OUTPUT')
+    print(app_data['img_data']['OUT'])
     if timer == True:
         t2 = time.time()
 

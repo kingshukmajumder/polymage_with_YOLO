@@ -15,8 +15,6 @@ def polymage_crp(pipe_data):
 
     # Output Channel
     K = Parameter(UInt, "K")
-    # Batch Size
-    N = Parameter(UInt, "N")
     # Input Channel
     C = Parameter(UInt, "C")
     # Height
@@ -29,38 +27,44 @@ def polymage_crp(pipe_data):
     Fw = Parameter(UInt, "Fw")
 
     k = Variable(UInt, 'k')
-    n = Variable(UInt, 'n')
     c = Variable(UInt, 'c')
     x = Variable(UInt, 'x')
     y = Variable(UInt, 'y')
     fh = Variable(UInt, 'fh')
     fw = Variable(UInt, 'fw')
 
-    Ki = Interval(UInt, 0, K-1)
-    Ni = Interval(UInt, 0, N-1)
-    Ci = Interval(UInt, 0, C-1)
-    Yi = Interval(UInt, 0, Y-1-Fh)
-    Xi = Interval(UInt, 0, X-1-Fw)
-    Fhi = Interval(UInt, 0, Fh-1)
-    Fwi = Interval(UInt, 0, Fw-1)
     
-    Yii = Interval(UInt, 0, Y-1-Fh-Fh)
-    Xii = Interval(UInt, 0, X-1-Fw-Fw)
-
     # Input Images
-    input_mat = Matrix(Double, "input", [X, Y, C, N], [x, y, c, n])
+    input_mat = Matrix(Double, "input", [X, Y, C], [x, y, c])
     # Convolution Kernels
     weights = Matrix(Double, "weights", [Fw, Fh, C, K], [fw, fh, c, k])
-    
+
     # Convolution
-    conv = Reduction(([x, y, k, n], [Xi, Yi, Ki, Ni]), ([n, k, c, y, x, fh, fw], [Ni, Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, "conv")
-    conv.defn = [Reduce(conv(x, y, k, n), input_mat(x+fw, y+fh, c, n) * weights(fw, fh, c, k), Op.Sum)]
+    conv = Network.convolution(input_mat, weights)
 
     # Rectified Linear Unit
-    relu = Function(([x, y, k, n], [Xi, Yi, Ki, Ni]), Double, "relu")
-    relu.defn = [Max(Cast(Double, 0.0), conv(x, y, k, n))]
+    relu = Network.ReLU(conv)
 
     # Maxpool (Fh x Fw)
-    pool = Reduction(([x, y, k, n],[Xii, Yii, Ki, Ni]), ([n, k, y, x, fh, fw],[Ni, Ki, Yii, Xii, Fhi, Fwi]), Double, "pool")
-    pool.defn = [Reduce(pool(x, y, k, n), relu(x+fw, y+fh, k, n), Op.Max)]
-    return pool
+    maxpool = Network.maxpool(relu, Fh, Fw, 2)
+    return maxpool
+
+    #Ki = Interval(UInt, 0, K-1)
+    #Ni = Interval(UInt, 0, N-1)
+    #Ci = Interval(UInt, 0, C-1)
+    #Yi = Interval(UInt, 0, Y-1-Fh)
+    #Xi = Interval(UInt, 0, X-1-Fw)
+    #Fhi = Interval(UInt, 0, Fh-1)
+    #Fwi = Interval(UInt, 0, Fw-1)
+    #Yii = Interval(UInt, 0, Y-1-Fh-Fh)
+    #Xii = Interval(UInt, 0, X-1-Fw-Fw)
+
+    #conv = Reduction(([x, y, k, n], [Xi, Yi, Ki, Ni]), ([n, k, c, y, x, fh, fw], [Ni, Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, "conv")
+    #conv.defn = [Reduce(conv(x, y, k, n), input_mat(x+fw, y+fh, c, n) * weights(fw, fh, c, k), Op.Sum)]
+
+    #relu = Function(([x, y, k, n], [Xi, Yi, Ki, Ni]), Double, "relu")
+    #relu.defn = [Max(Cast(Double, 0.0), conv(x, y, k, n))]
+
+    #pool = Reduction(([x, y, k, n],[Xii, Yii, Ki, Ni]), ([n, k, y, x, fh, fw],[Ni, Ki, Yii, Xii, Fhi, Fwi]), Double, "pool")
+    #pool.defn = [Reduce(pool(x, y, k, n), relu(x+fw, y+fh, k, n), Op.Max)]
+    #return pool

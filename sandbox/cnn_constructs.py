@@ -23,6 +23,7 @@ class Network(Function):
         weights = _weights
         bias = _bias
         # Input parameters
+        # Update this to 4 to support for batches
         assert (len(input_layer.dimensions) == 3)
         in_w = input_layer.dimensions[0]
         in_h = input_layer.dimensions[1]
@@ -76,6 +77,8 @@ class Network(Function):
         else:
             output.defn = [Reduce(output(x, y, k), input_pad(x + fw, y + fh, c) * weights(fw, fh, c, k), Op.Sum)]
         output.is_mat_func = True
+        output.dimensions = [in_w - wt_fw + 1, in_h - wt_fh+1, wt_k]
+        output.reductionDimensions = [wt_k, wt_ch, in_h - wt_fh+1, in_w - wt_fw + 1, wt_fh, wt_fw]
 
         if not (_bias == None):
             output.default = bias(k)
@@ -85,10 +88,11 @@ class Network(Function):
     def ReLU(_input_layer):
         input_layer = _input_layer
         x = Variable(UInt, 'x')
-        X = input_layer.dimensions[0]
         y = Variable(UInt, 'y')
-        Y = input_layer.dimensions[1]
         z = Variable(UInt, 'z')
+
+        X = input_layer.dimensions[0]
+        Y = input_layer.dimensions[1]
         Z = input_layer.dimensions[2]
 
         # Normalization
@@ -113,17 +117,22 @@ class Network(Function):
         Y = input_layer.dimensions[1]
         K = input_layer.dimensions[2]
 
+        Xo = (X - Fw) / stride + 1
+        Yo = (Y - Fh) / stride + 1
+
         Ki = Interval(Int, 0, K - 1)
         Fhi = Interval(Int, 0, Fh - 1)
         Fwi = Interval(Int, 0, Fw - 1)
-        Xi = Interval(Int, 0, (X - Fw) / stride)
-        Yi = Interval(Int, 0, (Y - Fh) / stride)
+        Xi = Interval(Int, 0, Xo - 1)
+        Yi = Interval(Int, 0, Yo - 1)
 
         # Downsample operation
         # TODO: Add default to max of negative double. Otherwise Max operation will always return 0
         maxpool = Reduction(([x, y, k], [Xi, Yi, Ki]), ([k, y, x, fh, fw], [Ki, Yi, Xi, Fhi, Fwi]), Double, "maxpool")
         maxpool.defn = [Reduce(maxpool(x, y, k), input_layer(stride * x + fw, stride * y + fh, k), Op.Max)]
         maxpool.is_mat_func = True
+        maxpool.dimensions = [Xo, Yo, K]
+        maxpool.reductionDimensions = [K, Yo, Xo, Fh, Fw]
         return maxpool
 
 class DataLayer(Function):
