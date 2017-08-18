@@ -15,13 +15,21 @@ logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s")
 
 class Network(Function):
 
+    # Convolution operation
+    # _input_layer: previous layer/ input to the convolution (in_w x in_h x in_ch)
+    # _weights: k kernels/stencils (f x f x in_ch x k)
+    # _fn_name: function name
+    # _bias: bias (optional parameter)
+    # _pad: pad size (optional parameter)
     @staticmethod
-    def convolution(_input_layer, _weights, _bias=None, _pad=None):
+    def convolution(_input_layer, _weights, _fn_name, _bias=None, _pad=None):
         assert (_input_layer)
         assert (_weights)
+        assert (_fn_name)
         input_layer = _input_layer
         weights = _weights
         bias = _bias
+        fn_name = _fn_name
         # Input parameters
         # Update this to 4 to support for batches
         assert (len(input_layer.dimensions) == 3)
@@ -45,7 +53,8 @@ class Network(Function):
                         Condition(x, '<=', p_w - pad - 1) & \
                         Condition(y, '>=', pad) & \
                         Condition(y, '<=', p_h - pad - 1)
-            input_pad = Matrix(Double, "input_pad", [p_w, p_h, in_ch], [x, y, c])
+            pad_fn_name = fn_name + "_pad"
+            input_pad = Matrix(Double, pad_fn_name, [p_w, p_h, in_ch], [x, y, c])
             expr = input_layer(x - pad, y - pad, c)
             input_pad.defn = [Case(cond, expr)]
 
@@ -71,7 +80,7 @@ class Network(Function):
             Xi = Interval(UInt, 0, p_w - wt_fw)
 
         output = Reduction(([x, y, k], [Xi, Yi, Ki]),
-                           ([k, c, y, x, fh, fw], [Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, "output")
+                           ([k, c, y, x, fh, fw], [Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, fn_name)
         if (pad == None or pad == 0):
             output.defn = [Reduce(output(x, y, k), input_layer(x + fw, y + fh, c) * weights(fw, fh, c, k), Op.Sum)]
         else:
@@ -84,9 +93,15 @@ class Network(Function):
             output.default = bias(k)
         return output
 
+    # Rectified Linear Unit (Normalization operation)
+    # _input_layer: previous layer/ input to the ReLU (in_w x in_h x in_ch)
+    # _fn_name: function name
     @staticmethod
-    def ReLU(_input_layer):
+    def ReLU(_input_layer, _fn_name):
+        assert (_fn_name)
+        assert (_input_layer)
         input_layer = _input_layer
+        fn_name = _fn_name
         x = Variable(UInt, 'x')
         y = Variable(UInt, 'y')
         z = Variable(UInt, 'z')
@@ -96,13 +111,22 @@ class Network(Function):
         Z = input_layer.dimensions[2]
 
         # Normalization
-        forward = Matrix(input_layer.typ, "forward_relu", [X, Y, Z], [x, y, z])
+        forward = Matrix(input_layer.typ, fn_name, [X, Y, Z], [x, y, z])
         forward.defn = [Max(Cast(input_layer.typ, 0.0), input_layer(x, y, z))]
         return forward
 
+    # Maxpooling operation. Downsamples image by using max operation
+    # _input_layer: previous layer/ input to the ReLU (in_w x in_h x in_ch)
+    # _fh: kernel/stencil height
+    # _fw: kernel/stencil weight
+    # _stride: stride for applying the kernel
+    # _fn_name: function name
     @staticmethod
-    def maxpool(_input_layer, _fh, _fw, _stride):
+    def maxpool(_input_layer, _fw, _fh, _stride, _fn_name):
+        assert (_fn_name)
+        assert (_input_layer)
         input_layer = _input_layer
+        fn_name = _fn_name
         Fh = _fh
         Fw = _fw
         stride = _stride
@@ -128,7 +152,7 @@ class Network(Function):
 
         # Downsample operation
         # TODO: Add default to max of negative double. Otherwise Max operation will always return 0
-        maxpool = Reduction(([x, y, k], [Xi, Yi, Ki]), ([k, y, x, fh, fw], [Ki, Yi, Xi, Fhi, Fwi]), Double, "maxpool")
+        maxpool = Reduction(([x, y, k], [Xi, Yi, Ki]), ([k, y, x, fh, fw], [Ki, Yi, Xi, Fhi, Fwi]), Double, fn_name)
         maxpool.defn = [Reduce(maxpool(x, y, k), input_layer(stride * x + fw, stride * y + fh, k), Op.Max)]
         maxpool.is_mat_func = True
         maxpool.dimensions = [Xo, Yo, K]

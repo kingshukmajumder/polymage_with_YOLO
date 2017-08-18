@@ -26,7 +26,7 @@ def polymage_maxpool(pipe_data):
     input_mat = DataLayer(Double, "input_mat", [X, Y, K])
 
     # Maxpool operation (Fh x Fw)
-    maxpool = Network.maxpool(input_mat, Fh, Fw, 2)
+    maxpool = Network.maxpool(input_mat, Fh, Fw, 2, "maxpool")
     return maxpool
 
     #k = Variable(Int, 'k')

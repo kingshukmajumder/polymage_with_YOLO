@@ -40,13 +40,13 @@ def polymage_crp(pipe_data):
     weights = Matrix(Double, "weights", [Fw, Fh, C, K], [fw, fh, c, k])
 
     # Convolution
-    conv = Network.convolution(input_mat, weights)
+    conv = Network.convolution(input_mat, weights, "conv")
 
     # Rectified Linear Unit
-    relu = Network.ReLU(conv)
+    relu = Network.ReLU(conv, "relu")
 
     # Maxpool (Fh x Fw)
-    maxpool = Network.maxpool(relu, Fh, Fw, 2)
+    maxpool = Network.maxpool(relu, Fw, Fh, 2, "maxpool")
     return maxpool
 
     #Ki = Interval(UInt, 0, K-1)

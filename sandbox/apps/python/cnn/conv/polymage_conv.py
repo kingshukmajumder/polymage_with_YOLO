@@ -42,7 +42,7 @@ def polymage_conv(pipe_data):
     bias = Matrix(Double, "bias", [K])
 
     # Convolution Operation
-    conv = Network.convolution(input_mat, weights, bias, P)
+    conv = Network.convolution(input_mat, weights, "conv", bias, P)
     return conv
 
     #Xp = X+(2*P)

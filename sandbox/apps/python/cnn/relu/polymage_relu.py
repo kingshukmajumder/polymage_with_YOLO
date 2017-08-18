@@ -30,7 +30,7 @@ def polymage_relu(pipe_data):
     # Input image
     input_mat = DataLayer(Float, "input", [X, Y, C], [x, y, c])
     # Rectified Linear Unit
-    relu = Network.ReLU(input_mat)
+    relu = Network.ReLU(input_mat, "relu")
     return relu
 
     #output = Matrix(Float, "output", [X, Y, C], [x, y, c])
