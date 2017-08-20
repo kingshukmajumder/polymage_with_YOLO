@@ -30,8 +30,9 @@ def main():
         create_lib(None, "norm", app_data)
         create_lib(build_mg_cycle, app_data['cycle_name'], app_data)
         #-------------------------------------------------------------------
-        init_norm(app_data)
-        multigrid(app_data)
+        if app_data['mode'] != 'new':
+            init_norm(app_data)
+            multigrid(app_data)
         #-------------------------------------------------------------------
 
     return
