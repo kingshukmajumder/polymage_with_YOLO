@@ -38,8 +38,8 @@ TAG = "codegen"
 
 # LOG CONFIG #
 codegen_logger = logging.getLogger("codegen.py")
-#codegen_logger.setLevel(logging.INFO)
-codegen_logger.setLevel(logging.DEBUG)
+codegen_logger.setLevel(logging.INFO)
+#codegen_logger.setLevel(logging.DEBUG)
 LOG = codegen_logger.log
 
 # short hands for methods

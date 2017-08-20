@@ -587,7 +587,7 @@ class PolyRep(object):
                                                (comp.func,
                                                 type(comp.func).__name__))
 
-            print("Extraction function: %s" % extraction_fn)
+            #print("Extraction function: %s" % extraction_fn)
 
             extraction_fn(self, comp, dim, schedule_names,
                           param_names, context_conds,
@@ -822,9 +822,9 @@ class PolyRep(object):
         space = isl.Space.create_from_names(self.ctx, in_ = var_names,
                                                       out = dom_map_names,
                                                       params = param_names)
-        print(">>>(TSTENCIL) Space: %s" % space)
+        #print(">>>(TSTENCIL) Space: %s" % space)
         dom_map = isl.BasicMap.universe(space)
-        print(">>>(TSTENCIL) domain map (on creation): %s" % dom_map)
+        #print(">>>(TSTENCIL) domain map (on creation): %s" % dom_map)
         [ineqs, eqs] = format_domain_constraints(tstencil_domains, var_names)
         dom_map = add_constraints(dom_map, ineqs, eqs)
 
@@ -838,7 +838,7 @@ class PolyRep(object):
         isl_set_id_user(id_, poly_dom)
 
         self.poly_doms[comp] = poly_dom
-        print(">>>(TSTENCIL) domain map (final): %s" % dom_map)
+        #print(">>>(TSTENCIL) domain map (final): %s" % dom_map)
 
 
         # -----
