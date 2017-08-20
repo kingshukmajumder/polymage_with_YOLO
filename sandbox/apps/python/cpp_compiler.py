@@ -7,22 +7,30 @@ def gen_compile_string(app_data):
     # CXX compiler and flags :
     cxx = arg_data.cxx
     cxx_flags = arg_data.cxx_flags
-    #fi
 
-    # Include Flags :
+    # include flags :
     if bool(arg_data.pool_alloc):
         include = "-I"+ROOT+"/memory_allocation/ "+\
                   ROOT+"/memory_allocation/simple_pool_allocator.cpp"
     else:
         include = ""
 
-    # Shared library Flags
+    # shared library flags
     shared = "-fPIC -shared"
+
+    # floating point math precision flags
+    if cxx == "icpc" or cxx == "icc":
+        prec = "-fp-model precise"
+    else:  # TODO: assuming "gcc / g++"
+        prec = "-fno-unsafe-math-optimizations -fno-finite-math-only\
+                -fmath-errno -ftrapping-math\
+                -frounding-math -fsignaling-nans"
 
     compile_str = cxx + " " \
                 + cxx_flags + " " \
                 + include + " " \
                 + shared + " " \
+                + prec
 
     app_data['cxx_string'] = compile_str
 
