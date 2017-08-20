@@ -22,9 +22,9 @@ def gen_compile_string(app_data):
     if cxx == "icpc" or cxx == "icc":
         prec = "-fp-model precise"
     else:  # TODO: assuming "gcc / g++"
-        prec = "-fno-unsafe-math-optimizations -fno-finite-math-only\
-                -fmath-errno -ftrapping-math\
-                -frounding-math -fsignaling-nans"
+        prec = "-fno-unsafe-math-optimizations -fno-finite-math-only" + \
+               " -fmath-errno -ftrapping-math" + \
+               " -frounding-math -fsignaling-nans"
 
     compile_str = cxx + " " \
                 + cxx_flags + " " \
