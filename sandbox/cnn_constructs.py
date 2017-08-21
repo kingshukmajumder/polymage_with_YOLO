@@ -10,8 +10,9 @@ from utils import *
 import copy
 from constructs import *
 
-
-logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s")
+pipe_logger = logging.getLogger("pipe.py")
+pipe_logger.setLevel(logging.DEBUG)
+LOG = pipe_logger.log
 
 class Network(Function):
 
@@ -26,6 +27,7 @@ class Network(Function):
         assert (_input_layer)
         assert (_weights)
         assert (_fn_name)
+
         input_layer = _input_layer
         weights = _weights
         bias = _bias
@@ -66,6 +68,8 @@ class Network(Function):
         wt_ch = weights.dimensions[2]
         wt_k = weights.dimensions[3]
 
+        LOG(logging.DEBUG, "Weights: "+str(wt_fw)+" x "+str(wt_fh)+" x "+str(wt_ch)+" x "+str(wt_k))
+
         assert (wt_ch == in_ch)
 
         Fhi = Interval(UInt, 0, wt_fh - 1)
@@ -83,11 +87,16 @@ class Network(Function):
                            ([k, c, y, x, fh, fw], [Ki, Ci, Yi, Xi, Fhi, Fwi]), Double, fn_name)
         if (pad == None or pad == 0):
             output.defn = [Reduce(output(x, y, k), input_layer(x + fw, y + fh, c) * weights(fw, fh, c, k), Op.Sum)]
+            output.dimensions = [in_w - wt_fw + 1, in_h - wt_fh + 1, wt_k]
+            output.reductionDimensions = [wt_k, wt_ch, in_h - wt_fh + 1, in_w - wt_fw + 1, wt_fh, wt_fw]
         else:
             output.defn = [Reduce(output(x, y, k), input_pad(x + fw, y + fh, c) * weights(fw, fh, c, k), Op.Sum)]
+            output.dimensions = [p_w - wt_fw + 1, p_h - wt_fh + 1, wt_k]
+            output.reductionDimensions = [wt_k, wt_ch, p_h - wt_fh + 1, p_w - wt_fw + 1, wt_fh, wt_fw]
+
         output.is_mat_func = True
-        output.dimensions = [in_w - wt_fw + 1, in_h - wt_fh+1, wt_k]
-        output.reductionDimensions = [wt_k, wt_ch, in_h - wt_fh+1, in_w - wt_fw + 1, wt_fh, wt_fw]
+
+        LOG(logging.DEBUG, "Convolution: " + str(output.dimensions[0]) + " x " + str(output.dimensions[1]) + " x " + str(output.dimensions[2]))
 
         if not (_bias == None):
             output.default = bias(k)
@@ -100,6 +109,7 @@ class Network(Function):
     def ReLU(_input_layer, _fn_name):
         assert (_fn_name)
         assert (_input_layer)
+
         input_layer = _input_layer
         fn_name = _fn_name
         x = Variable(UInt, 'x')
@@ -109,6 +119,8 @@ class Network(Function):
         X = input_layer.dimensions[0]
         Y = input_layer.dimensions[1]
         Z = input_layer.dimensions[2]
+
+        LOG(logging.DEBUG, "ReLU: " + str(X) + " x " + str(Y) + " x " + str(Z))
 
         # Normalization
         forward = Matrix(input_layer.typ, fn_name, [X, Y, Z], [x, y, z])
@@ -143,6 +155,8 @@ class Network(Function):
 
         Xo = (X - Fw) / stride + 1
         Yo = (Y - Fh) / stride + 1
+
+        LOG(logging.DEBUG, "Maxpool: "+str(Xo)+" x "+str(Yo)+" x "+str(K))
 
         Ki = Interval(Int, 0, K - 1)
         Fhi = Interval(Int, 0, Fh - 1)
