@@ -31,6 +31,7 @@ except ImportError:
 
 import pygraphviz as pgv
 import targetc as genc
+from functools import reduce
 
 from grouping import *
 
@@ -50,29 +51,38 @@ import islpy as isl
 
 # LOG CONFIG #
 pipe_logger = logging.getLogger("pipe.py")
-pipe_logger.setLevel(logging.DEBUG)
-log_level = logging.INFO
+pipe_logger.setLevel(logging.INFO)
 LOG = pipe_logger.log
+log_level=logging.INFO
 
-MACHINE_TYPE = ['personal', 'mcastle1', 'mcastle2', 'polymage'][0]
-DSP_APP = True
+MACHINE_TYPE = ['personal', 'mcastle1', 'mcastle2', 'polymage'][3]
     
 if (MACHINE_TYPE == 'personal'):
     #global IMAGE_ELEMENT_SIZE, L2_CACHE_SIZE, N_CORES, TILING_THRESHOLD, VECTOR_WIDTH_THRESHOLD
     #For Dekstop/Laptop Machine
-    IMAGE_ELEMENT_SIZE = 8 if DSP_APP else 4
-    L1_CACHE_SIZE = int(32 * 1024 / IMAGE_ELEMENT_SIZE)
-    L1_INNER_MOST_DIM_SIZE = 1024
+    IMAGE_ELEMENT_SIZE = 4
     L2_CACHE_SIZE = int(256*1024/IMAGE_ELEMENT_SIZE)
-    L2_INNER_MOST_DIM_SIZE = 1024
     N_CORES = 4
     TILING_THRESHOLD = 1
     VECTOR_WIDTH_THRESHOLD = 16
 elif (MACHINE_TYPE == 'mcastle1'): #Intel Haswell machine
     #global IMAGE_ELEMENT_SIZE, L2_CACHE_SIZE, N_CORES, TILING_THRESHOLD, VECTOR_WIDTH_THRESHOLD
     #For mcastle
-    IMAGE_ELEMENT_SIZE = 8 if DSP_APP else 4
+    IMAGE_ELEMENT_SIZE = 4
     L2_CACHE_SIZE = int(512*1024/IMAGE_ELEMENT_SIZE)
+    N_CORES = 16
+    TILING_THRESHOLD = 1
+    VECTOR_WIDTH_THRESHOLD = 64 #TODO: 
+    L2_INNER_MOST_DIM_SIZE = 256
+    L1_INNER_MOST_DIM_SIZE = 256
+    L1_CACHE_SIZE = int(32*1024/IMAGE_ELEMENT_SIZE)
+    OUTER_DIM_TILING_THRESH = 4
+    THRESHOLD_TILE_SIZE = 4
+elif (MACHINE_TYPE == 'polymage'): #Intel Haswell machine
+    #global IMAGE_ELEMENT_SIZE, L2_CACHE_SIZE, N_CORES, TILING_THRESHOLD, VECTOR_WIDTH_THRESHOLD
+    #For mcastle
+    IMAGE_ELEMENT_SIZE = 4
+    L2_CACHE_SIZE = int(256*1024/IMAGE_ELEMENT_SIZE)
     N_CORES = 16
     TILING_THRESHOLD = 1
     VECTOR_WIDTH_THRESHOLD = 64 #TODO: 
@@ -84,23 +94,22 @@ elif (MACHINE_TYPE == 'mcastle1'): #Intel Haswell machine
 elif (MACHINE_TYPE == 'mcastle2'): #AMD Opteron machine
     #global IMAGE_ELEMENT_SIZE, L2_CACHE_SIZE, N_CORES, TILING_THRESHOLD, VECTOR_WIDTH_THRESHOLD
     #For mcastle
-    IMAGE_ELEMENT_SIZE = 8 if DSP_APP else 4
-    L2_CACHE_SIZE = int(2*512*1024/IMAGE_ELEMENT_SIZE)
+    IMAGE_ELEMENT_SIZE = 4
+    L2_CACHE_SIZE = int(1024*1024/IMAGE_ELEMENT_SIZE)
+    #TODO: In case of multi level tiling L2_CACHE_SIZE must be set to 256KB
+    #It is automatically set to 256KB in MachineInformation class
     N_CORES = 16
     TILING_THRESHOLD = 1
     VECTOR_WIDTH_THRESHOLD = 64 #TODO: 
     L2_INNER_MOST_DIM_SIZE = 256
     L1_INNER_MOST_DIM_SIZE = 128
     L1_CACHE_SIZE = int(16*1024/IMAGE_ELEMENT_SIZE)
+    #TODO: For harris L1 Cache is 32KB, correct it in the implementation that
+    #in multi-level tiling for harris (i.e. L1 tile in L2 tile) 
+    #the size of _TL1_i0 should be atleast 5.
     OUTER_DIM_TILING_THRESH = 4
     THRESHOLD_TILE_SIZE = 4
-elif (MACHINE_TYPE == 'polymage'): # Intel Xeon
-    IMAGE_ELEMENT_SIZE = 8 if DSP_APP else 4
-    L1_CACHE_SIZE = int(32 * 1024 / IMAGE_ELEMENT_SIZE)
-    L1_INNER_MOST_DIM_SIZE = 1024
-    L2_CACHE_SIZE = int(256 * 1024 / IMAGE_ELEMENT_SIZE)
-    L2_INNER_MOST_DIM_SIZE = 1024
-    N_CORES = 16
+
     
 def get_next_power_of_2 (num):
     num -= 1
@@ -119,7 +128,7 @@ def is_power_of_2 (num):
     
 def get_parents_from_func(func, non_image=True):
     refs = func.getObjects(Reference)
-    # Filter out self and image references
+    # Filter out self and image references 
     if non_image:
         refs = [ ref for ref in refs if not ref.objectRef == func and \
                                      not (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput) \
@@ -223,9 +232,14 @@ class ComputeObject:
         self._storage_class = None
         self._array = None
         self._scratch_info = []
-
-    def clone (self):
-        comp = ComputeObject (self._func, self._is_output)
+        self._is_pointwise = None
+        
+    def clone (self, inline=False):
+        if not inline:
+            comp = ComputeObject (self._func, self._is_output)
+        else:
+            comp = ComputeObject (self._func.clone (), 
+                                  self._is_output)
         comp._parents = list(self.parents)
         comp._is_parents_set = self._is_parents_set
         comp._is_children_set = self._is_children_set
@@ -242,7 +256,6 @@ class ComputeObject:
     @property
     def func(self):
         return self._func
-
     @property
     def is_parents_set(self):
         return self._is_parents_set
@@ -284,7 +297,6 @@ class ComputeObject:
     def group(self):
         assert self.is_group_set
         return self._group
-
     @property
     def level(self):
         return self._level_no
@@ -297,7 +309,6 @@ class ComputeObject:
     @property
     def is_liveout(self):
         return self._is_liveout
-
     @property
     def orig_storage_class(self):
         return self._orig_storage_class
@@ -319,7 +330,19 @@ class ComputeObject:
                              or (isinstance(self.func, Wave) and self.func.isInput)
         self._is_reduction_typ = isinstance(self.func, Reduction)
         return
-
+    
+    def print_parent (self):
+        LOG (logging.INFO, self.func.name + " <- ")
+        for c in self.parents:
+            LOG (logging.INFO, str(c)+ " id: " + hex(id(c)), end = ', ')
+        LOG (logging.INFO, "")
+    
+    def print_children (self):
+        raise(Exception)
+        LOG (logging.INFO, self.func.name +  " -> ")
+        for c in self.children:
+            LOG (logging.INFO, str(c) + " id: " + hex(id(c)), end=', ')
+        LOG (logging.INFO, "")
     def _set_type(self, _func):
         self._compute_type = None
         # NOTE: do NOT change this to if-elif-elif...else
@@ -346,6 +369,7 @@ class ComputeObject:
         self._children = list(set(self._children))
         self._is_children_set = True
         return
+
     def add_parent(self, comp):
         assert isinstance(comp, ComputeObject)
         self._parents.append(comp)
@@ -357,6 +381,7 @@ class ComputeObject:
         if comp in self._children:
             self._children.remove(comp)
         return
+
     def remove_parent(self, comp):
         if comp in self._parents:
             self._parents.remove(comp)
@@ -490,6 +515,54 @@ class ComputeObject:
     def set_scratch_info(self, _scratch_info):
         self._scratch_info = _scratch_info
 
+    def is_pointwise (self):
+        if (self._is_pointwise != None):
+            return self._is_pointwise
+        
+        self._is_pointwise = False
+        name = self.func.name
+        refs = self._func.getObjects (Reference)
+        
+        if (not self.equal_dim_size_with_children ()):
+            return False
+        #A pointwise function works on only one point (x, y)
+        #Hence, all references in the function body should have 
+        #same index (x + k, y + k), where k is a constant
+     
+        if (len(refs) == 0):
+            return False
+            
+        arg_0 = refs[0].arguments
+        
+        for ref in refs:
+            if (len(arg_0) != len(ref.arguments)):
+                return False
+            
+            for i in range (0, len (arg_0)):
+                if (str(arg_0[i]) != str(ref.arguments[i])):
+                    return False
+                    
+        self._is_pointwise = True
+        return True
+    
+    def equal_dim_size_with_children (self):
+        
+        self_sizes = self.compute_size ()
+        for k in self.children:
+            child_sizes = k.compute_size ()
+            
+            if (len(self_sizes) != len(child_sizes)):
+                return False
+            for i in range(0, len(child_sizes)):
+                if (str (self_sizes[i][0]) != str(child_sizes[i][0]) or
+                    str (self_sizes[i][1]) != str(child_sizes[i][1])):
+                    return False
+        
+        return True
+        
+    def n_refs (self):
+        return len (self.func.getObjects (Reference))
+        
 class Group:
     """ 
         Group is a part of the pipeline which realizes a set of computation
@@ -509,10 +582,11 @@ class Group:
         # Function class. Input images cannot be part of a group.
         self._is_image_typ = False
         for comp in _comp_objs:
-            assert (isinstance(comp, ComputeObject))
+            assert(isinstance(comp, ComputeObject))
             if comp.is_image_typ:
                 self._is_image_typ = True
-        self._comps = _comp_objs
+
+        self._comps  = _comp_objs
         self._parents = []
         self._children = []
 
@@ -529,7 +603,7 @@ class Group:
         self._polyrep = None
         self._initialization_complete = _initialization_complete
         self._tile_sizes = {}
-
+        
         # Create a polyhedral representation if possible.
         # Currently doing extraction only when all the compute_objs
         # domains are affine. This can be revisited later.
@@ -541,7 +615,15 @@ class Group:
         self._can_be_mapped_to_lib = False
 
         self._total_used_size = -1
-    
+        self._param_constraints = _param_constraints
+        self._ctx = _ctx
+        self._inline_comps = []
+        self._inline_in_all_children = None
+        self._threads = -1
+        
+    @property
+    def threads(self):
+        return self._threads
     @property
     def tile_sizes(self):
         return self._tile_sizes
@@ -616,6 +698,128 @@ class Group:
     @property
     def liveness_map(self):
         return self._liveness_map
+    
+    @property
+    def inlined_comps(self):
+        return self._inline_comps
+    
+    def inline_in_all_children (self):
+        
+        if (self._inline_in_all_children != None):
+            return self._inline_in_all_children
+        
+        self._inline_in_all_children = False
+        
+        if (self.is_pointwise ()):
+            if (len(self.comps[0].func.getObjects(Reference)) == 1):
+                self._inline_in_all_children = True
+                return True
+        
+        #Find all top-level case statements
+        case_stmts = []
+        for b in self.comps[0].func.defn:
+            if isinstance (b, constructs.Case):
+                case_stmts += [b]
+        
+        if (case_stmts == []):
+            return False
+        
+        #Determine all condition variables of case, their constant values, and
+        #their position in the arguments of the function declaration
+        info = [] #Tuple of [Variable, Index in Function's Declaration, Value]
+        for case_stmt in case_stmts:
+            cond = case_stmt.condition
+            var = None
+            val = None
+            
+            if (isinstance (cond.rhs, Value) and isinstance (cond.lhs, Variable)):
+                var = cond.lhs
+                val = cond.rhs
+            elif isinstance (cond.lhs, Value) and isinstance (cond.rhs, Variable):
+                var = cond.rhs
+                val = cond.lhs
+            
+            try:
+                lhs_index = self.comps[0].func.variables.index (var)
+                if (len(info) > 0):
+                    idx = len(info)-1
+                    if (info[idx][0] == var and info[idx][1] == lhs_index):
+                        pass
+                    else:
+                        return False
+                info += [(var, lhs_index, val)]
+            except ValueError:
+                pass
+        
+        #Collect all references of group's func from its children
+        child_to_ref = {}
+        for child in self.children:
+            refObjects = child.comps[0].func.getObjects(Reference)
+            child_to_ref [child] = []
+            for ref in refObjects:
+                if (ref.objectRef == self.comps[0].func):
+                    child_to_ref [child] += [ref]
+                
+        constant_args= []
+        const_arg_pos_list = []
+        for child in child_to_ref:
+            refs = child_to_ref[child]
+            #Make sure for all refs in a child the constant arg and
+            #its position are same
+            constant_arg = None
+            const_arg_pos = None
+                
+            for ref in refs:
+                args = ref.arguments
+                for i in range(len(args)):
+                    arg = args[i]
+                    if (isinstance (arg, Value)):
+                        
+                        if (constant_arg is None):
+                            constant_arg = arg
+                            const_arg_pos = i
+                        else:
+                            if (constant_arg != arg or const_arg_pos != i):
+                                return False
+                
+                if (constant_arg is None):
+                    return False
+            
+            constant_args += [constant_arg]
+            const_arg_pos_list += [const_arg_pos]
+
+            #Determine whether the constant arg is used in
+            #one of the case statement 
+            found = False
+            for case_info in info:
+                if (case_info[2] == constant_arg and
+                    case_info[1] == const_arg_pos):
+                    found = True
+            if not found:
+                return False
+        
+        self._inline_in_all_children = True
+        return True            
+    
+    def set_inline_comps (self, comps):
+        self._inline_comps = list(comps)
+    
+    def is_pointwise (self):
+        assert (len(self.comps) == 1)
+        return self.comps[0].is_pointwise ()
+    def recompute_computation_objs(self):
+        '''After removing computations, recompute the internal representations
+        '''
+        self._set_type()
+        self.set_comp_group()
+
+        self._level_order_comps = self.order_compute_objs()
+        self._comps = self.get_sorted_comps()
+        self._inputs = self.find_root_comps()
+        self._image_refs = self.collect_image_refs()
+
+        if self.isPolyhedral():
+            self._polyrep = PolyRep(self._ctx, self, [], self._param_constraints)
 
     def set_tile_size_for_dim(self, size, dim):
         self._tile_sizes [dim] = size
@@ -924,7 +1128,7 @@ class Group:
 
         return dim_sizes
         
-    def get_dimensional_reuse (self, param_estimates):
+    def get_dimensional_reuse (self, param_estimates, func_map):
         '''Returns the dimensional reuse in each dimension. 
         Reurns a list of dimensional reuse for each dimension.
         Dimensional Reuse is in terms of number of 4 Bytes.
@@ -945,6 +1149,26 @@ class Group:
             
             if isinstance(comp.func, Reduction):
                 continue
+            
+            refs = comp.func.getObjects (Reference)
+            funcs = []
+            for ref in refs:
+                funcs += [ref.objectRef]
+            
+            funcs = set (funcs)
+            to_exclude = []
+            for f in funcs:
+                s = func_map[f].compute_size ()
+                m = 1
+                d = 0
+                for a in s:
+                    if (isinstance (a[1], Value)):
+                        m = m*a[1].value
+                        d += 1
+                    else:
+                        break
+                if (d == f.ndims and m > 1 and m < 1000):
+                    to_exclude += [func_map[f]]
                 
             for dim in range (comp.func.ndims):
                
@@ -960,8 +1184,10 @@ class Group:
                 
                 first_iter = lb + int((ub - lb)/2)
                 second_iter = first_iter + 1
-                first_iter_visitor = MemRefsAtIterationVisitor (dim, first_iter)
-                second_iter_visitor = MemRefsAtIterationVisitor (dim, second_iter)
+                comps_to_exclude = []
+                
+                first_iter_visitor = MemRefsAtIterationVisitor (dim, first_iter, to_exclude)
+                second_iter_visitor = MemRefsAtIterationVisitor (dim, second_iter, to_exclude)
                 mem_ref_at_second_iter = set()
                 mem_ref_at_first_iter = set()
                 
@@ -983,7 +1209,7 @@ class Group:
                 
                 dim_reuse_iters = mem_ref_at_second_iter.intersection (mem_ref_at_first_iter)
                 dim_size = 1
-                dim_reuse[dim] += len (dim_reuse_iters)*dim_size
+                dim_reuse[dim + (max_dim-comp.func.ndims)] += len (dim_reuse_iters)*dim_size
         
         return dim_reuse
     
@@ -1064,7 +1290,7 @@ class Group:
                         if (ref_dim.op == '+' or ref_dim == '-'):
                             if ((ref_dim.left is Variable or ref_dim.left is Value) and
                                 (ref_dim.right is Variable or ref_dim.right is Value)):
-                                pass#ref_types += 
+                                pass
                                 
                     else:
                         raise Exception ("Case Not Handled for ref type")
@@ -1263,30 +1489,27 @@ class Group:
 
     def get_tile_sizes_for_cache_size (self, param_estimates, slope_min,
                                        slope_max, group_parts, dim_reuse, 
-                                       dim_sizes, CACHE_SIZE, LAST_DIM_SIZE):
+                                       dim_sizes, CACHE_SIZE, LAST_DIM_SIZE,
+                                       cores):
         '''Returns the tile sizes for each dimension found
             and tile_size 
         '''
         tile_sizes = {}
         total_used_size = self._total_used_size/IMAGE_ELEMENT_SIZE
-        tile_size = total_used_size/N_CORES
-        print("tile_size initial ", tile_size)
+        tile_size = total_used_size/cores
         if (tile_size > CACHE_SIZE):
             tile_size = CACHE_SIZE
         tile_size = tile_size/self._n_buffers
             
-        print ("tileable dims:",)
+        LOG (logging.DEBUG, "tileable dims:")
         for i in range (len(slope_min)):
             if (self.is_dim_tileable (i, slope_min, dim_sizes)):
-                print (i,)
+                LOG (logging.DEBUG, str(i))
 
-        print ("tile_size ", tile_size)
-        print ("dim_reuse ", dim_reuse)
-        if (is_power_of_2 (int(tile_size)) == False):
-            pass#tile_size = get_next_power_of_2 (int(tile_size))/2
-            
-        print ("tile_size power of two ", tile_size)
-        print ("dim_sizes ", dim_sizes)
+        LOG (logging.DEBUG, "tile_size " + str(tile_size))
+        LOG (logging.DEBUG, "dim_reuse " + str(dim_reuse))
+        LOG (logging.DEBUG, "dim_sizes " + str(dim_sizes))
+        
         last_tileable_dim = None
         n_tileable_dims = 0
         max_dim_reuse = 0
@@ -1333,8 +1556,8 @@ class Group:
             
             return tile_sizes, tile_size
         
-        print ('last_tileable_dim ', last_tileable_dim)
-        print ('outer_tileable_dim ', outer_tileable_dim)
+        LOG (logging.DEBUG, 'last_tileable_dim ' + str(last_tileable_dim))
+        LOG (logging.DEBUG, 'outer_tileable_dim ' + str(outer_tileable_dim))
         tile_sizes [last_tileable_dim] = min (dim_sizes[last_tileable_dim], LAST_DIM_SIZE)
         remaining_tile_size = tile_size/tile_sizes [last_tileable_dim]
         #for s in zero_dim_reuse_size:
@@ -1342,7 +1565,9 @@ class Group:
         
         if (outer_tileable_dim != -1 and dim_sizes[outer_tileable_dim] != 0):
             remaining_tile_size = remaining_tile_size/dim_sizes[outer_tileable_dim]
-            
+
+        LOG (logging.DEBUG, "remaining_tile_size " + str(remaining_tile_size))
+
         for i in range (len(slope_min)):
             if (self.is_dim_tileable (i, slope_min, dim_sizes) and 
                 i != last_tileable_dim and i != outer_tileable_dim):
@@ -1359,7 +1584,9 @@ class Group:
                     max_dim_tile_size = max_dim_tile_size * (max_dim_reuse/dim_reuse [i])
                 else:
                     n_zero_dims +=1
-                    
+        
+        LOG (logging.DEBUG, "max_dim_tile_size " + str(max_dim_tile_size))
+        
         if (n_non_zero_dims > 0):
             max_dim_tile_size = max_dim_tile_size ** (1.0/n_non_zero_dims)
                     
@@ -1368,7 +1595,7 @@ class Group:
                     i != last_tileable_dim and i != outer_tileable_dim):
                     if (dim_reuse[i] != 0):
                         tile_sizes [i] = int(max_dim_tile_size * dim_reuse[i]/max_dim_reuse)
-                        
+                        LOG (logging.DEBUG, "tile_sizes [i] " + str(tile_sizes [i]))
                         if (tile_sizes [i] > dim_sizes [i]):
                             tile_sizes [i] = dim_sizes [i]
         
@@ -1388,33 +1615,41 @@ class Group:
                     tile_sizes [i] = int (max_dim_tile_size)
         
         _tile_sizes = dict(tile_sizes)
+        LOG (logging.DEBUG, "tile_sizes before popping " + str(tile_sizes))
         
         for k in tile_sizes.keys():
-            if (tile_sizes[k] == 0):
+            if (int(tile_sizes[k]) == 0):
                 _tile_sizes.pop (k)
-            
+        
+        tile_sizes = _tile_sizes
+        LOG (logging.DEBUG, "tile_sizes after popping " + str(_tile_sizes))
+        
+        if (len(slope_min) == 3):
+            if (len(tile_sizes) == 1):
+                if 1 not in tile_sizes and 2 in tile_sizes:
+                    tile_sizes [1] = int(math.ceil(tile_size/tile_sizes[2]))
+            elif (len(tile_sizes) == 2 and 1 in tile_sizes and int(tile_sizes[1]) == 1):
+                tile_sizes [1] = int(math.ceil(tile_size/tile_sizes[2]))
+
         return _tile_sizes, tile_size
             
     def get_tile_sizes (self, param_estimates, slope_min, slope_max, group_parts, 
-                        h, use_only_l2 = False):
-        print ("get_tile_sizes for ", self)
-        #self._tile_sizes = {1:8, 2:256}
-        #print ("total_size ", self._total_used_size/IMAGE_ELEMENT_SIZE)
-        #self._tile_sizes = {1:32, 2:256}
-        #return
-        if (str(self) == "[1Dx_1_img2, Dy_1_img2, Ux_0_img2, Dx_2_img2]"):
-            self._tile_sizes = {1:32, 2:256}
-            return
+                        h, func_map, use_only_l2 = False, multi_level_tiling = False):
+        global L2_CACHE_SIZE
+        LOG (logging.DEBUG, "get_tile_sizes for " + str(self))
+
         if (self._total_used_size == -1):
             #print (self)
             assert (False)
             
         tileable_dims = set()
         tile_size = 0
-        dim_reuse = [i*IMAGE_ELEMENT_SIZE for i in self.get_dimensional_reuse (param_estimates)]
-        
+        dim_reuse = [i*IMAGE_ELEMENT_SIZE for i in self.get_dimensional_reuse (param_estimates, func_map)]
+        LOG (logging.DEBUG, "total used size for " + str(self) + " is " + str(self._total_used_size))
         dim_sizes = {}
-        
+        #if ("blury" in str(self)):
+            #multi_level_tiling = False
+            
         for i in range(1, len(slope_min) + 1):
             # Check if every part in the group has enough iteration
             # points in the dimension to benefit from tiling.
@@ -1422,6 +1657,7 @@ class Group:
             for part in group_parts:
                 lower_bound = part.sched.range().dim_min(i)
                 upper_bound = part.sched.range().dim_max(i)
+                LOG (logging.DEBUG, "lower_bound " +str(lower_bound) + " upper_bound " + str(upper_bound))
                 size = upper_bound.sub(lower_bound)
                 if (size.is_cst() and size.n_piece() == 1):
                     aff = (size.get_pieces())[0][1]
@@ -1432,49 +1668,186 @@ class Group:
                             dim_sizes[i-1] = max (val.to_python(), dim_sizes[i-1])
                         else:
                             dim_sizes[i-1] = val.to_python()
+                        if (i-1 == 3):
+                            #TODO: Correct this for z dimension of blurz, blurx, blury in bilateral_grid
+                            #Use compute size instead of this way
+                            dim_sizes[i-1] = 14
                     else:
                         if i-1 not in dim_sizes:
                             dim_sizes [i-1] = 0
         
         self._dim_sizes_part = dim_sizes
+        overlap_shifts_zero = False
         
-        if (not use_only_l2):
-            #try with L1 Cache
-            tile_sizes, tile_size = self.get_tile_sizes_for_cache_size (param_estimates, 
-                slope_min, slope_max, group_parts, dim_reuse, dim_sizes, L1_CACHE_SIZE, L1_INNER_MOST_DIM_SIZE)
-            
-            overlap_shift_greater = False
-            
-            for i in tile_sizes.keys ():
-                if (i < len(slope_min) and slope_min[i] != '*'):
+        if (multi_level_tiling):
+            overlap_shifts_zero = True
+            for i in range(len(slope_min)):
+                if (slope_min[i] != '*'):
                     right = int(math.floor(Fraction(slope_min[i][0],
                                                     slope_min[i][1])))
                     left = int(math.ceil(Fraction(slope_max[i][0],
                                                 slope_max[i][1])))
                     # Compute the overlap shift
                     overlap_shift = abs(left * (h)) + abs(right * (h))
+                    if (overlap_shift != 0):
+                        overlap_shifts_zero = False
+        
+        #if ((not use_only_l2 and not multi_level_tiling) 
+        #    or (multi_level_tiling and not overlap_shifts_zero)):
+        
+        if (not multi_level_tiling):
+            if (not use_only_l2):
+                tile_size_less_than_l1 = False
+                cores = N_CORES
+                total_used_size = self._total_used_size/IMAGE_ELEMENT_SIZE
+                tile_size = total_used_size/cores
+                LOG (logging.DEBUG, "tile_vol for 16 cores " +str(tile_size))
+                if (tile_size < L1_CACHE_SIZE):
+                    tile_size_less_than_l1 = True
+                    cores = int(total_used_size/L1_CACHE_SIZE)
+                    if (cores <= 1):
+                        cores = 2
+                
+                #try with L1 Cache
+                tile_sizes, tile_size = self.get_tile_sizes_for_cache_size (param_estimates, 
+                    slope_min, slope_max, group_parts, dim_reuse, dim_sizes, 
+                    L1_CACHE_SIZE, L1_INNER_MOST_DIM_SIZE, cores)
+                
+                if (tile_size_less_than_l1):
+                    self._tile_sizes = tile_sizes
+                    LOG (logging.DEBUG, "tile_size_less_than_l1=True tile_sizes from L1 " +str(tile_sizes) +" cores "+str(cores))
+                    return tile_size
+                    
+                overlap_shift_greater = False
+                
+                for i in tile_sizes.keys ():
+                    if (slope_min[i] != '*'):
+                        right = int(math.floor(Fraction(slope_min[i][0],
+                                                        slope_min[i][1])))
+                        left = int(math.ceil(Fraction(slope_max[i][0],
+                                                    slope_max[i][1])))
+                        # Compute the overlap shift
+                        overlap_shift = abs(left * (h)) + abs(right * (h))
+                            
+                        if (overlap_shift + 0 > tile_sizes[i]):
+                            overlap_shift_greater = True
+                            break
+                
+                threshold_tile_size_met = True
+                for i in tile_sizes.keys ():
+                    if tile_sizes[i] <= 2:
+                        threshold_tile_size_met = False
+                        break
                         
-                    if (overlap_shift + 0 > tile_sizes[i]):
+                LOG (logging.DEBUG, "tile_sizes from L1 cores " + str(tile_sizes) + " " + str(cores))
+                
+                if (not overlap_shift_greater and threshold_tile_size_met):
+                    self._tile_sizes = tile_sizes
+                    #if (len(self.comps) == 2 and "filtered" in str(self)):
+                    #    self._tile_sizes= {1:32, 2:256}
+                        
+                    return tile_size
+
+            tile_sizes, tile_size = self.get_tile_sizes_for_cache_size (param_estimates, 
+                slope_min, slope_max, group_parts, dim_reuse, dim_sizes, 
+                L2_CACHE_SIZE, L2_INNER_MOST_DIM_SIZE, N_CORES)
+            
+            LOG (logging.DEBUG, "tile_sizes from L2 " + str(tile_sizes))
+            self._tile_sizes = tile_sizes
+            
+            if ("denoised" in str(self)):
+                #TODO: denoised group requires even tile size in dimension 0
+                self._tile_sizes[0] -= 1
+                
+            return tile_size
+            
+        else:
+            tile_size_less_than_l1 = False
+            cores = N_CORES
+            total_used_size = self._total_used_size/IMAGE_ELEMENT_SIZE
+            _tile_size = total_used_size/cores
+            LOG (logging.DEBUG, "tile_vol for 16 cores " + str(tile_size))
+            if (_tile_size < L1_CACHE_SIZE):
+                tile_size_less_than_l1 = True
+                cores = int(total_used_size/L1_CACHE_SIZE)
+                if (cores <= 1):
+                    cores = 2
+            
+            #try with L1 Cache
+            l1tile_sizes, l1tile_size = self.get_tile_sizes_for_cache_size (param_estimates, 
+                slope_min, slope_max, group_parts, dim_reuse, dim_sizes, 
+                L1_CACHE_SIZE, L1_INNER_MOST_DIM_SIZE, cores)
+            
+            if (tile_size_less_than_l1):
+                self._tile_sizes = l1tile_sizes
+                LOG (logging.DEBUG, "tile_size_less_than_l1=True tile_sizes from L1 " + str(l1tile_sizes) + " cores " + str(cores))
+                return l1tile_size
+            
+            overlap_shift_greater = False
+            overlap_shifts = {}
+            for i in l1tile_sizes.keys ():
+                if (slope_min[i] != '*'):
+                    right = int(math.floor(Fraction(slope_min[i][0],
+                                                    slope_min[i][1])))
+                    left = int(math.ceil(Fraction(slope_max[i][0],
+                                                slope_max[i][1])))
+                    # Compute the overlap shift
+                    overlap_shift = abs(left * (h)) + abs(right * (h))
+                    overlap_shifts [i] = overlap_shift    
+                    if (overlap_shift + 0 > l1tile_sizes[i]):
                         overlap_shift_greater = True
                         break
-            
-            threshold_tile_size_met = True
-            for i in tile_sizes.keys ():
-                pass#if tile_sizes[i] < THRESHOLD_TILE_SIZE:
-                    #threshold_tile_size_met = False
-                    #break
                     
-            print ("tile_sizes from L1 ", tile_sizes)
-            use_l1 = True
-            if len(slope_min) == 0 and len(slope_max) == 0 and h is None:
+            LOG (logging.DEBUG, "tile_sizes from L1 " + str(l1tile_sizes))
+            
+            if (not overlap_shift_greater):
                 total_used_size = self._total_used_size/IMAGE_ELEMENT_SIZE
                 tile_size = total_used_size/N_CORES
-                if tile_size > L2_CACHE_SIZE:
-                    l1_tile_sizes = tile_sizes
-                    use_l1 = False
+                last_dim = len(dim_reuse) - 1
+                LOG (logging.DEBUG, "not overlap greater total_used_size " + str(total_used_size) + " tile_size " + str(tile_size))
+                
+                if (tile_size < 2*L2_CACHE_SIZE or last_dim not in l1tile_sizes or 
+                    len([d for d in dim_reuse if d > 0]) == 0):
+                    #if tile size is less than L2 cache then return the L1 tile size
+                    #no need of making code more complex, such a program will 
+                    #automatically have a good L2 locality.
+                    #Also, no need to do multi level tiling if dimensional reuse
+                    #is 0 along all the dimensions
+                    tile_sizes = l1tile_sizes
+                    tile_size = l1tile_size
+                else:
+                    #Overlap is not greater than L1, hence, increase the L2 tile sizes
+                    #in each dimension according to the dim reuse.
+                    tile_size = l1tile_size*(L2_CACHE_SIZE/L1_CACHE_SIZE)
+                    if (last_dim in l1tile_sizes and dim_reuse [last_dim] > 0):
+                        LOG (logging.DEBUG, "overlap_shifts " + str(overlap_shifts) + \
+                                          " l1tile_sizes " + str(l1tile_sizes) + \
+                                          " dim_sizes " + str(dim_sizes) + \
+                                          " last_dim " + str(last_dim))
+                        if (l1tile_sizes[last_dim]*2 + overlap_shifts[last_dim] < dim_sizes[last_dim]):
+                            last_dim_size = l1tile_sizes[last_dim]*2
+                        else:
+                            last_dim_size = l1tile_sizes[last_dim]
+                    else:
+                        last_dim_size = l1tile_sizes[last_dim]
+                        
+                    tile_sizes, tile_size = self.get_tile_sizes_for_cache_size(param_estimates, 
+                        slope_min, slope_max, group_parts, dim_reuse, dim_sizes, 
+                        L2_CACHE_SIZE, last_dim_size, N_CORES)
+            else:
+                #overlap size is greater than L1, hence, generate an L2 tile size
+                #and then generate an L1 tile size
+                tile_sizes, tile_size = self.get_tile_sizes_for_cache_size (param_estimates, 
+                    slope_min, slope_max, group_parts, dim_reuse, dim_sizes, 
+                    L2_CACHE_SIZE, L2_INNER_MOST_DIM_SIZE, N_CORES)
+                
+                l1tile_sizes, l1tile_size = self.get_tile_sizes_for_cache_size (param_estimates, 
+                    slope_min, slope_max, group_parts, dim_reuse, dim_sizes, 
+                    L1_CACHE_SIZE, L2_INNER_MOST_DIM_SIZE, N_CORES)
+                    
+            print ("tile_sizes from L1 ", tile_sizes)
             
-            if (not overlap_shift_greater and threshold_tile_size_met \
-                                                            and use_l1):
+            if (not overlap_shift_greater and threshold_tile_size_met):
                 self._tile_sizes = tile_sizes
                 return tile_size
 
@@ -1483,13 +1856,6 @@ class Group:
             L2_CACHE_SIZE, L2_INNER_MOST_DIM_SIZE)
         
         print ("tile_sizes from L2 ", tile_sizes)
-        #~ if not use_l1:
-            #~ ratios = {}
-            #~ for i in tile_sizes.keys():
-                #~ ratios[i] = tile_sizes[i] // l1_tile_sizes[i]
-            #~ tile_sizes = l1_tile_sizes
-            #~ for i in ratios.keys():
-                #~ tile_sizes[max(tile_sizes) + 1] = ratios[i]
         self._tile_sizes = tile_sizes
         return tile_size
         
@@ -1502,6 +1868,157 @@ class Group:
 
 
 class Pipeline:
+    class MachineInformation:
+        @staticmethod
+        def get_dpfusion_weights (machine, is_inlining, is_heirarichal_tiling,
+                                  is_multi_level_tiling):
+            to_ret = {}
+            if (machine == 'polymage'):
+                if is_inlining and is_heirarichal_tiling and is_multi_level_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5;
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0;
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0;
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5;
+                    
+                elif is_inlining and is_heirarichal_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5;
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0;
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0;
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5;
+                    
+                elif is_inlining and is_multi_level_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5;
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.5;
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0;
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0/1.5;
+                
+                elif is_multi_level_tiling and is_heirarichal_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5;
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0;
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0;
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5;
+                    
+                elif is_inlining:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5;
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0;
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0;
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5;
+                    
+                elif is_heirarichal_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5;
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0;
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0;
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5;
+                    
+                elif is_multi_level_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5;
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.5;
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0;
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0/1.5;
+                    
+                else:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5;
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0;
+                    to_ret["CLEANUP_THREADS_WEIGHT"] =100.0;
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5;
+            
+            elif (machine == 'mcastle2'):
+                if (is_multi_level_tiling):
+                    global L2_CACHE_SIZE
+                    #In case of multi level tiling L2_CACHE_SIZE is set to 256KB
+                    #the weights are also for that cache size
+                    L2_CACHE_SIZE = int(256*1024/IMAGE_ELEMENT_SIZE)
+                if is_inlining and is_heirarichal_tiling and is_multi_level_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5
+                    
+                elif is_inlining and is_heirarichal_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5
+                    
+                elif is_inlining and is_multi_level_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 2.0
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0/1.2
+                
+                elif is_multi_level_tiling and is_heirarichal_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5
+                    
+                elif is_inlining:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5
+                    
+                elif is_heirarichal_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 1.5
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5
+                    
+                elif is_multi_level_tiling:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 2.0
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 1.0
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0/1.2
+                    
+                else:
+                    to_ret["DIM_STD_DEV_WEIGHT"] = 2.0
+                    to_ret["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"] = 0.3
+                    to_ret["CLEANUP_THREADS_WEIGHT"] = 100.0
+                    to_ret["RELATIVE_OVERLAP_WEIGHT"] = 1000.0*50.0*1.5
+            else:
+                raise Exception ("Unknown Machine. Enter Weights for the new machine")
+                
+            return to_ret
+        @staticmethod
+        def get_dim_std_dev_weight (is_inlining, is_heirarichal_tiling,
+                                    is_multi_level_tiling):
+            return Pipeline.MachineInformation.get_dpfusion_weights (MACHINE_TYPE, 
+                                                            is_inlining, 
+                                                            is_heirarichal_tiling,
+                                                            is_multi_level_tiling) ["DIM_STD_DEV_WEIGHT"]
+        @staticmethod
+        def get_live_to_tile_size_weight (is_inlining, is_heirarichal_tiling,
+                                          is_multi_level_tiling):
+            return Pipeline.MachineInformation.get_dpfusion_weights (MACHINE_TYPE, 
+                                                            is_inlining,
+                                                            is_heirarichal_tiling,
+                                                            is_multi_level_tiling) ["LIVE_SIZE_TO_TILE_SIZE_WEIGHT"]
+        @staticmethod
+        def get_cleanup_threads_weight (is_inlining, is_heirarichal_tiling,
+                                        is_multi_level_tiling):
+            return Pipeline.MachineInformation.get_dpfusion_weights (MACHINE_TYPE, 
+                                                            is_inlining, 
+                                                            is_heirarichal_tiling,
+                                                            is_multi_level_tiling) ["CLEANUP_THREADS_WEIGHT"]
+        @staticmethod                                 
+        def get_relative_overlap_weight (is_inlining, is_heirarichal_tiling,
+                                         is_multi_level_tiling):
+            return Pipeline.MachineInformation.get_dpfusion_weights (MACHINE_TYPE, 
+                                                            is_inlining, is_heirarichal_tiling,
+                                                            is_multi_level_tiling) ["RELATIVE_OVERLAP_WEIGHT"]
+        @staticmethod
+        def get_machine_l1_cache_size ():
+            return L1_CACHE_SIZE
+        @staticmethod
+        def get_machine_l2_cache_size ():
+            return L2_CACHE_SIZE
+        @staticmethod
+        def get_machine_ncores ():
+            return N_CORES
+        @staticmethod    
+        def get_machine_image_element_size ():
+            return IMAGE_ELEMENT_SIZE
+            
     def __init__(self, _ctx, _outputs,
                  _param_estimates, _param_constraints,
                  _grouping, _group_size, _inline_directives,
@@ -1531,6 +2048,9 @@ class Pipeline:
         self.polymage_to_pluto_fname_map = {}
         self.pluto_to_polymage_fname_map = {}
         self.function_schedule_map = {}
+        self._dim_reuse = {}
+        self._do_inline = 'inline' in self._options
+
 
         if 'pluto' in self.options:
             self._pluto_sched_required = True
@@ -1538,7 +2058,7 @@ class Pipeline:
             self._pluto_sched_required = False
 
         self._dim_reuse = {}
-
+        
         ''' CONSTRUCT DAG '''
         # Maps from a compute object to its parents and children by
         # backtracing starting from given live-out functions.
@@ -1596,7 +2116,7 @@ class Pipeline:
         # self._initial_graph = self.draw_pipeline_graph()
 
         # Checking bounds
-        bounds_check_pass(self)        
+        bounds_check_pass(self)
 
         if self.pluto_sched_required:
             # Generate Schedule
@@ -1616,10 +2136,15 @@ class Pipeline:
 
         else:
             # inline pass
-            inline_pass(self)
-
-            # make sure the set of functions to be inlined and those to be grouped
-            # are disjoint
+            inline_after_grouping = True
+            if (self._do_inline):
+                self.pre_grouping_inline_phase ()
+            
+            if (not inline_after_grouping):
+                inline_pass(self)
+            
+             # make sure the set of functions to be inlined and those to be grouped
+             # are disjoint
             if self._inline_directives and self._grouping:
                 group_comps = []
                 for g in self._grouping:
@@ -1651,9 +2176,20 @@ class Pipeline:
             self._level_order_groups = self.order_group_objs()
 
         
+        if (inline_after_grouping):
+            for group in self.groups:
+                #clones = [self._clone_map[comp.func] for comp in group.inlined_comps]
+                #inline_pass_for_comp (self, [self._func_map[f] for f in clones])
+                inline_pass_for_comp (self, group.inlined_comps)
+            
+            LOG (logging.DEBUG, "\n\n")
+            LOG (logging.DEBUG, "Compute Objects after Inlining: ")
+            for group in self.groups:
+                LOG (logging.DEBUG, group.name+" ")
+            
         ''' GRAPH UPDATES '''
         # level order traversal of groups
-
+        self._level_order_groups = self.order_group_objs()
         self._groups = self.get_sorted_groups()
 
         #TESTING HERE
@@ -1662,10 +2198,7 @@ class Pipeline:
             
         for group in self.groups:
             # update liveness of compute objects in each new group
-            if self.pluto_sched_required:
-                group.compute_liveness_for_matrix()
-            else:
-                group.compute_liveness()
+            group.compute_liveness()
             # children map for comps within the group
             group.collect_comps_children()
         self._liveouts = self.collect_liveouts()
@@ -1689,12 +2222,12 @@ class Pipeline:
                 align_and_scale(self, g)
                 # base schedule
                 base_schedule(g)
-                # grouping and tiling
+                # grouping, select tile sizes, and tiling
                 fused_schedule(self, self._ctx, g, self._param_estimates)
                 # idiom matching algorithm
                 idiom_recognition(self, g)
                 # tile reductions
-                self.reduction_tiling(g)
+                #self.reduction_tiling(g)
 
             # group
             self._grp_schedule = schedule_groups(self)
@@ -1729,23 +2262,27 @@ class Pipeline:
         # use graphviz to create pipeline graph
         self._pipeline_graph = self.draw_pipeline_graph()
 
-    def get_overlapping_size_for_groups (self, groups, tile_size, _n_buffers):
-        print ("get_overlapping_size_for_groups for ", [g.comps[0].func.name for g in groups])
+    def get_overlapping_size_for_groups (self, groups, inlined_comps, 
+                                         tile_size, _n_buffers):
+        LOG (logging.DEBUG, "get_overlapping_size_for_groups for " + \
+                            str([g.comps[0].func.name for g in groups]))
         img1 = False
         img2 = False
-        denoised = False
-        #TODO: To solve
+
         for g in groups:
             if (g.comps[0].func.name.find("img1") != -1):
                 img1 = True
-            if (g.comps[0].func.name.find("img2") != -1):
+            elif (g.comps[0].func.name.find("img2") != -1):
                 img2 = True
-            if (g.comps[0].func.name.find("denoised") != -1):
-                denoised = True
-        if ((img1 and img2) or denoised):
+            
+        if (img1 and img2):
+            #TODO: Special Case for Pyramid Blend. Otherwise, it groups Dx_img1 and
+            #Dx_img2, which should not happen since both takes different input images.
+            #However, in Harris it is good to group both Ix and Iy group as they
+            #take same input images.
             return -1, 0
-
-        g = self.create_group (groups)
+                
+        g = self.create_group (groups, inlined_comps)
         g.set_total_used_size (tile_size)
         g.set_n_buffers (_n_buffers)
         #print ("create_group = ", [comp.func.name for comp in g.comps])
@@ -1784,10 +2321,14 @@ class Pipeline:
         det_tile_size = 0
         if len(comp_deps) > 0 and len(g_all_parts) > 1:
             hmax = max( [ p.level for p in g_all_parts ] )
-            #hmin = min( [ p.level for p in g_all_parts ] )
+            hmin = min( [ p.level for p in g_all_parts ] )
             slope_min, slope_max = compute_tile_slope(comp_deps, hmax)
             det_tile_size = g.get_tile_sizes (self.param_estimates, slope_min, slope_max, 
-                                              g_all_parts, hmax, False)
+                                              g_all_parts, hmax - hmin, _func_map, False, self.multi_level_tiling)
+            
+            #Restore original body of all functions
+            #for comp in g.comps:
+                #comp.func.restore_original_body ()
             tile_sizes = g._tile_sizes
             all_slope_invalid = True
             for slope in slope_min:
@@ -1797,8 +2338,8 @@ class Pipeline:
             
             if (all_slope_invalid):
                 return -1, 0
-                
-            print ("slope_min, slope_max", slope_min, slope_max)
+            
+            LOG (logging.DEBUG, "slope_min " + str(slope_min) + " slope_max " + str(slope_max))
             overlap_shifts = [0 for i in range(0, len(slope_min))]
             for i in range(1, len(slope_min)+1):
                 if (slope_min[i-1] == '*'):
@@ -1809,29 +2350,56 @@ class Pipeline:
                                               slope_max[i-1][1])))
                 for h in range(1, get_group_height (g_all_parts)+1):
                     overlap_shifts [i-1] += abs(left * (h)) + abs(right * (h))
-                #print (_overlap_shift, i)
-                #if (_overlap_shift != 0):
-                #    overlap_shift *= _overlap_shift
-            print ("overlap_shifts ", overlap_shifts)
+                for h in range(1, get_group_height (g_all_parts)+1):
+                    LOG (logging.DEBUG, "overlap for i " + str(i) + " and h " +\
+                                        str(h) + " = " + str(abs(left * (h)) + \
+                                        abs(right * (h))))
+            LOG (logging.DEBUG, "overlap_shifts " + str(overlap_shifts))
             overlap_shift = 1
             for i in tile_sizes:
+                if ("L1" in str(i)):
+                    continue
                 if (overlap_shifts[i] != 0 and tile_sizes[i] < g._dim_sizes_part[i]):
                     if ((i-1) in tile_sizes):
-                        overlap_shift *= overlap_shifts[i]*(tile_sizes[i-1] + overlap_shifts[i-1])
+                        overlap_shift *= overlap_shifts[i]*(tile_sizes[i-1])
                     else:
-                        overlap_shift *= overlap_shifts[i]*1
-            #overlap_shift *= IMAGE_ELEMENT_SIZE
-            #print ("overlap_shift ", overlap_shift)
-            print ("overlap_shift ", overlap_shift, "det_tile_size " , det_tile_size)
-            return overlap_shift, det_tile_size
-        
+                        overlap_shift *= overlap_shifts[i]
+                            
+            LOG (logging.DEBUG, "overlap_shift " + str(overlap_shift) + \
+                                str (" det_tile_size ") + str(det_tile_size))
+            return overlap_shift/1.6, det_tile_size
+            
         if len (comp_deps) <= 0:
             return 1 << 30, 1 #For Pyramid Blend UnComment
             #return 0, 0 #For Campipe
             
-        print ("Getting Overlap for non stencil? Not Good")
+        LOG (logging.DEBUG, "Getting Overlap for non stencil? Not Good")
         assert (False)
+    
+    def pre_grouping_inline_phase (self):
+        '''Inline those functions which 
+            (i) has only one reference and only one child,
+            or 
+            (ii) has n cases with n children, each child is associated with
+                one case, s.t. no other child is associated with the same case
+                and each case has only one reference.
+        '''
+        self._pre_grouping_inline_groups = []
+        for g in list(self.groups):
+            if (len(g.children) == 1 and g.comps[0].n_refs () == 1):
+                self._pre_grouping_inline_groups += [g.comps[0].func]
+            else:
+                if (g.inline_in_all_children () and not g.is_pointwise ()):
+                    self._pre_grouping_inline_groups += [g.comps[0].func]
         
+        inline_pass (self, self._pre_grouping_inline_groups)
+    
+    @property
+    def multi_level_tiling (self):
+        return "multi-level-tiling" in self._options
+    @property
+    def do_inline (self):
+        return self._do_inline
     @property
     def dim_reuse (self):
         return self._dim_reuse
@@ -1912,30 +2480,60 @@ class Pipeline:
         for group in self.groups:
             self._dim_reuse [group.comps[0]] = group.get_dimensional_reuse (self.param_estimates)
         
-    def create_group(self, args):
-        groups = args
+    def create_group(self, groups, inlined_comps):
+        LOG (logging.DEBUG, "Pipeline.create_group: inlined_comps " +str([str(k) for k in inlined_comps]))
         comps = []
         for g in groups:
             comps += g.comps
-        
+        #for c in comps:
+            #c.print_parent ()
+            #c.print_children ()
+            
+        orig_comps = list(comps)
         comp_to_clone = dict ()
+        inlined_comp_to_clone = dict ()
+        cloned_inlined_comps = []
+        will_inline = inlined_comps != []
+        func_to_clone_func = dict()
+        clone_func_to_func = dict()
         for i in range(len(comps)):
-            #print ("comps [i] ", hex(id(comps[i])),)
-            cloneComp = comps[i].clone()
+            cloneComp = comps[i].clone(will_inline)
             comp_to_clone [comps[i]] = cloneComp
+            func_to_clone_func [comps[i].func] = cloneComp.func
+            clone_func_to_func [cloneComp.func] = comps[i].func
+            if (comps[i] in inlined_comps):
+                cloned_inlined_comps.append (cloneComp)
             comps[i] = cloneComp
             #print ("clone comps [i] ", hex(id(comps[i])))
         
         for i in range(len(comps)):
+            parents = []
             for j in range(len(comps[i].parents)):
                 if (comps[i].parents[j] in comp_to_clone):
-                    comps[i].parents[j] = comp_to_clone[comps[i].parents[j]]
+                    parents.append (comp_to_clone[comps[i].parents[j]])
+            comps[i].set_parents (parents)
+            children = []
             for j in range(len(comps[i].children)):
-                if (comps[i].children[j] in comp_to_clone):
-                    comps[i].children[j] = comp_to_clone[comps[i].children[j]]
+                if comps[i].children[j] in comp_to_clone:
+                    children.append(comp_to_clone[comps[i].children[j]])
+            comps[i].set_children (children)
+        
+        g = Group (self._ctx, comps, self._param_constraints, False)
+        
+        if (will_inline == True):
+            for comp in comps:
+                comp = comp
+                refs = comp.func.getObjects (Reference)
+                for ref in refs:
+                    if (ref.objectRef in func_to_clone_func):
+                        ref._replace_ref_object (func_to_clone_func[ref.objectRef])
+                    else:
+                        pass
                 
-        print (comps)
-        return Group (self._ctx, comps, self._param_constraints, False)
+        inline_pass_for_comp (self, cloned_inlined_comps, False)
+        LOG (logging.DEBUG, "Pipeline.create_group: g after inlining " + str(g))
+        
+        return g
 
     def get_size_for_group (self, group):
         size = group.get_total_size ()
@@ -2442,7 +3040,7 @@ class Pipeline:
         for inp_func in self.inputs:
             inp_comp = self.func_map[inp_func]
             inp_groups[inp_func] = \
-                pipe.Group(self._ctx, [inp_comp], self._param_constraints, self.pluto_sched_required)
+                pipe.Group(self._ctx, [inp_comp], self._param_constraints, False)
             # do not add input groups to the list of pipeline groups
         self._inp_groups = inp_groups
 
@@ -2450,7 +3048,8 @@ class Pipeline:
         comps = self.comps
         groups = []
         for comp in comps:
-            group = Group(self._ctx, [comp], self._param_constraints, self.pluto_sched_required)
+            group = Group(self._ctx, [comp], self._param_constraints, False)
+            # add to the list of pipeline groups
             groups.append(group)
 
         for group in groups:
@@ -2628,7 +3227,33 @@ class Pipeline:
         self._groups.append(new_group)
 
         return
-
+    
+    def make_func_independent_for_comp(self, comp_a, comp_b):
+        """
+        makes func_b independent of func_b and updates parent children
+        relations in the graph structure
+        [ assumes that func_b is a child of func_a, and that func_a is inlined
+        into func_b ]
+        """
+        #Group should be same, since, these computations have been merged
+        assert (comp_a.group == comp_b.group)
+        assert (comp_b in comp_a.children)
+        parent = comp_a.group
+        if parent:
+            # remove relation between a and b
+            comp_a.remove_child(comp_b)
+            comp_b.remove_parent(comp_a)
+            for p in comp_a.parents:
+                if p in parent.comps:
+                    p.add_child(comp_b)
+                    p.remove_child (comp_a)
+            
+            parents_of_b = comp_b.parents
+            for p in comp_a.parents:
+                if (p in parent.comps):
+                    parents_of_b.append(p)
+            comp_b.set_parents (list(set(parents_of_b)))
+            
     def make_func_independent(self, func_a, func_b):
         """
         makes func_b independent of func_b and updates parent children

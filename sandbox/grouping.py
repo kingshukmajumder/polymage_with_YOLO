@@ -25,7 +25,7 @@ from __future__ import absolute_import, division, print_function
 
 from constructs import *
 import logging
-import optgrouping
+import dpfusion
 import storage_mapping
 
 # LOG CONFIG #
@@ -92,7 +92,7 @@ def group_topological_sort (pipeline):
     
     return stack;
 
-def auto_group_dp(pipeline):
+def auto_group(pipeline):    
     
     stack = group_topological_sort (pipeline)
     order = 0
@@ -111,7 +111,7 @@ def auto_group_dp(pipeline):
     
     out_group = [group for group in pipeline.groups if not group.children]
     for group in pipeline.groups:
-        dim_reuse [group] = group.get_dimensional_reuse (pipeline.param_estimates)
+        dim_reuse [group] = group.get_dimensional_reuse (pipeline.param_estimates, pipeline.func_map)
         live_size [group] = group.get_max_live_size (pipeline.param_estimates)
         dim_size [group] = group.get_size_for_each_dim (pipeline.param_estimates)
         #group.set_type_of_access (pipeline.param_estimates)
@@ -171,18 +171,27 @@ def auto_group_dp(pipeline):
 
     small_comps, comp_size_map = get_small_comps(pipeline, comps)
     
-    
-    optgrouping.group (in_group, out_group, pipeline.groups, pipeline, 
+    w_args = [pipeline.do_inline, False, pipeline.multi_level_tiling]
+    elem_size = pipeline.MachineInformation.get_machine_image_element_size ();
+    dpfusion.dpgroup (in_group, out_group, pipeline.groups, pipeline, 
                        Reduction, small_comps, comp_size_map, TStencil,
                        topological_order, dim_reuse, live_size, dim_size,
-                       storage_mapping.get_dim_size, storage_mapping.Storage)
-                       
-    for group in pipeline.groups:
-        pass#print ("group ", group, " tile sizes ", group.tile_sizes)
-        
+                       storage_mapping.get_dim_size, storage_mapping.Storage,
+                       pipeline.do_inline, pipeline.multi_level_tiling,
+                       #MachineInformation
+                       pipeline.MachineInformation.get_machine_l1_cache_size ()*elem_size,
+                       pipeline.MachineInformation.get_machine_l2_cache_size ()*elem_size,
+                       pipeline.MachineInformation.get_machine_ncores (),
+                       pipeline.MachineInformation.get_machine_image_element_size (),
+                       #Weights
+                       pipeline.MachineInformation.get_dim_std_dev_weight (*w_args),
+                       pipeline.MachineInformation.get_live_to_tile_size_weight (*w_args),
+                       pipeline.MachineInformation.get_cleanup_threads_weight (*w_args),
+                       pipeline.MachineInformation.get_relative_overlap_weight (*w_args))
+
     return
 
-def auto_group(pipeline):
+def auto_group1(pipeline):
     param_est = pipeline._param_estimates
     size_thresh = pipeline._size_threshold
     grp_size = pipeline._group_size
@@ -208,8 +217,6 @@ def auto_group(pipeline):
         # arithmetic intensity in the expressions.
         comp_size_map = {}
         for comp in comps:
-            if comp.group.polyRep is None:
-                continue
             parts = comp.group.polyRep.poly_parts[comp]
             p_sizes = []
             for p in parts:
@@ -221,8 +228,6 @@ def auto_group(pipeline):
             comp_size_map[comp] = sum(p_sizes)
 
         for comp in comps:
-            if comp.group.polyRep is None:
-                continue
             is_small_comp = False
             if comp_size_map[comp] != '*':
                 is_small_comp = (comp_size_map[comp] <= size_thresh)

@@ -530,9 +530,10 @@ def align_and_scale(pipeline, group):
         for child in solved_children:
             for child_part in part_map[child]:
                 # collect the references made only to comp
-                refs = [ref for ref in child_part.refs
-                              if ref.objectRef == comp.func]
-
+                refs = []
+                for ref in child_part.refs:
+                    if ref.objectRef == comp.func:
+                        refs.append(ref)
                 # if the poly part makes no reference to any other compute object
                 if not refs:
                     continue
@@ -563,7 +564,7 @@ def align_and_scale(pipeline, group):
         parent_order = {}
         for parent in parents:
             parent_order[parent] = poly_parts[parent][0].level
-            # index 0 picks the fist poly part
+            # index 0 picks the first poly part
 
         # parents near leaf level shall be solved at the earliest
         sorted_order = sorted(parent_order.items(), key=lambda x:x[1], \
@@ -613,10 +614,15 @@ def align_and_scale(pipeline, group):
         # solve for each part
         for p in comp_parts:
             # collect the references to solved parents
-            refs = [ref for ref in p.refs \
-                          if not (isinstance(ref.objectRef, Image) or (isinstance(ref.objectRef, Matrix) and ref.objectRef.isInput) \
-                             or (isinstance(ref.objectRef, Wave) and ref.objectRef.isInput)) and \
-                             func_map[ref.objectRef] in solved_pars]
+            refs = []
+            for ref in p.refs:
+                if not isinstance(ref.objectRef, Image) and \
+                             func_map[ref.objectRef] in solved_pars:
+                    refs.append(ref)
+                    
+            #refs = [ref for ref in p.refs \
+                          #if not isinstance(ref.objectRef, Image) and \
+                             #func_map[ref.objectRef] in solved_pars]
 
             # if the poly part makes no reference to any other compute object
             if not refs:

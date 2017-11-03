@@ -119,7 +119,7 @@ def isl_expr_to_cgen(expr, prologue_stmts = None):
                    expr.get_op_n_arg() == 2)
             return isl_expr_to_cgen(expr.get_op_arg(0), prolog) / \
                    isl_expr_to_cgen(expr.get_op_arg(1), prolog)
-        if op_typ == isl._isl.ast_op_type.pdiv_r or op_typ == 14: #TODO: find a better way, this is just a jugad
+        if op_typ == isl._isl.ast_op_type.pdiv_r or op_typ == 14: #TODO: Find a better way
             assert("Division must have exactly 2 arguments!" and \
                    expr.get_op_n_arg() == 2)
             print ("op is pdiv_r")
@@ -337,7 +337,6 @@ def generate_c_naive_from_accumlate_node(pipe, polyrep, node, body,
     part_id = node.user_get_expr().get_op_arg(0).get_id()
     poly_part = isl_get_id_user(part_id)
     dom_len = len(poly_part.comp.func.reductionVariables)
-
     # FIXME: this has to be changed similar to Expression Node
     cvar_map = cvariables_from_variables_and_sched(node,
                  poly_part.comp.func.reductionVariables, poly_part.sched)
@@ -488,10 +487,48 @@ def log_loop_end(indent, log_level=logging.DEBUG-1):
     LOG(log_level, indent_str+"}")
     return
 
+def rec_is_perfect_loopnest (node, it):
+    assert (type(node) == isl._isl.AstExpr)
+    
+    #if (node.get_op_n_arg() == 1):
+    if (node.get_type () == isl._isl.ast_expr_type.id):
+        name = node.get_id().get_name()
+        v = name.find ("_T")
+        if (name != it and v == 0):
+            return False
+    if (node.get_type () == isl._isl.ast_expr_type.int):
+        return True
+    
+    if node.get_type() == isl._isl.ast_expr_type.op:
+        for i in range (0, node.get_op_n_arg ()):
+            if (not rec_is_perfect_loopnest (node.get_op_arg (i), it)):
+                return False
+    
+    return True
+    
+def is_perfect_loopnest(node):
+    '''Returns True if the given loop in node is a perfect loop nest, i.e.,
+        checks if the bounds and increment of the loop are not dependent on
+        previous loop iterations.
+    '''
+    
+    if node.get_type () == isl._isl.ast_node_type.for_:
+        init = node.for_get_init()
+        cond = node.for_get_cond ()
+        it = node.for_get_iterator()
+        it = it.get_id().get_name()
+        
+        if (rec_is_perfect_loopnest (init, it) and 
+            rec_is_perfect_loopnest (cond, it)):
+            return True
+            
+    return False
+    
 def rec_perfect_loopnest(node, perfect_loopnest=[]):
     if node.get_type() == isl._isl.ast_node_type.for_:
         var = isl_expr_to_cgen(node.for_get_iterator())
-        if "_T" in str(var):
+
+        if "_T" in str(var) and is_perfect_loopnest (node):
             perfect_loopnest.append(node)
             rec_perfect_loopnest(node.for_get_body(), perfect_loopnest)
 
@@ -514,6 +551,18 @@ def collect_perfect_loopnest(node):
 
     return perfect_loopnest
 
+def collect_user_nodes (node, fused_comp):
+    res = []
+    if node.get_type () == isl._isl.ast_node_type.block:
+        num_nodes = (node.block_get_children().n_ast_node())
+        for i in range(0, num_nodes):
+            res += get_user_node (child, fused_comp)
+            
+    elif node.get_type() == isl._isl.ast_node_type.for_:
+        pass
+    return res
+
+
 def collect_reduction_loopnest(node):
     red_nest = []
 
@@ -524,7 +573,7 @@ def collect_reduction_loopnest(node):
     return red_nest
 
 def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
-                                  pooled, perfect_loopnest, indent=0,
+                                  pooled, perfect_loopnest, fused_comps, indent=0,
                                   red_nest=None):
     if node.get_type() == isl._isl.ast_node_type.block:
         num_nodes = (node.block_get_children().n_ast_node())
@@ -532,7 +581,7 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
             child = node.block_get_children().get_ast_node(i)
             generate_c_naive_from_isl_ast(pipe, polyrep, child, body,
                                           cparam_map, pooled,
-                                          perfect_loopnest, indent+1,
+                                          perfect_loopnest, fused_comps, indent+1,
                                           red_nest)
     else:
         if node.get_type() == isl._isl.ast_node_type.for_:
@@ -576,7 +625,7 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
 
             # Convert lb and ub expressions to C expressions
             prologue = []
-            cond = isl_cond_to_cgen(node.for_get_cond(), prologue, roundRhsToEven)
+            cond = isl_cond_to_cgen(node.for_get_cond(), prologue)
             var = isl_expr_to_cgen(node.for_get_iterator())
             # ***
             log_loop_start(var, indent)
@@ -600,80 +649,197 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
 
             dim_parallel = is_sched_dim_parallel(polyrep, user_nodes, var.name)
             dim_vector = is_sched_dim_vector(polyrep, user_nodes, var.name)
-            dim_reduce = n_rloops > 1
             arrays = get_arrays_for_user_nodes(pipe, polyrep, user_nodes)
 
             # number of loops in the perfectly nested loop
             n_ploops = len(perfect_loopnest)
+            user_nodes = get_user_nodes_in_body(node.for_get_body())
+            generated_comp = None
+            generated_comp_loop = None
+            comp_in_dict = None
+            need_to_set_fused_comps_loop = False
+            
+            if (len (user_nodes) == 1 and 
+                node.for_get_body().get_type () != isl._isl.ast_node_type.for_):
 
-            if dim_parallel:
-                omp_par_str = "omp parallel for schedule(static)"
-                if n_ploops > 1:
-                    outer_loop = perfect_loopnest[0]
-                    # outer loop
-                    if node == outer_loop:
-                        omp_par_str += " collapse("+str(n_ploops)+")"
-                omp_pragma = genc.CPragma(omp_par_str)
-                body.add(omp_pragma)
-            if dim_vector:
-                vec_pragma = genc.CPragma("ivdep")
-                body.add(vec_pragma)
-
-            if dim_reduce:
-                reductions = get_reductions(polyrep, \
-                            get_user_nodes_in_body(node.for_get_body()))
-                for red in reductions:
-                    pid = red.user_get_expr().get_op_arg(0).get_id()
-                    pp = isl_get_id_user(pid)
-                    part_size = pp.get_size(pipe._param_estimates)
-                    big_part = (part_size != '*' and \
-                                part_size > pipe._size_threshold)
-                if node == red_nest[0] and big_part:
+                name = str(user_nodes[0].user_get_expr().get_op_arg(0).get_id())
+                name = name[:name.rfind("_")]
+                
+                comp_in_fused_comps = False
+                
+                for _dict in fused_comps:
+                    if name in _dict:
+                        comp_in_fused_comps = True
+                        comp_in_dict = _dict;
+                        break
+                        
+                if (comp_in_fused_comps):
+                    for k in comp_in_dict.keys():
+                        if (comp_in_dict[k][0] == True):
+                            generated_comp = k
+                            generated_comp_loop = comp_in_dict[k][1]
+                            break
+                            
+                    need_to_set_fused_comps_loop = True
+                    comp_in_dict[name] = (True, None)
+            
+            if (generated_comp == None):
+                # Convert lb and ub expressions to C expressions
+                prologue = []
+                cond = isl_cond_to_cgen(node.for_get_cond(), prologue)
+                var = isl_expr_to_cgen(node.for_get_iterator())
+                # ***
+                log_loop_start(var, indent)
+                var_inc = isl_expr_to_cgen(node.for_get_inc())
+                incr = genc.CAssign(var, var+var_inc)
+                if prologue is not None:
+                    for s in prologue:
+                        body.add(s)
+        
+                prologue = []
+                init = isl_expr_to_cgen(node.for_get_init(), prologue)
+                if prologue is not None:
+                    for s in prologue:
+                        body.add(s)
+                var_decl =  genc.CDeclaration(var.typ, var, init)
+                loop = genc.CFor(var_decl, cond, incr)
+                    
+                # Check if the loop is a parallel or a vector dimension by
+                # examining the loop body.
+                dim_parallel = is_sched_dim_parallel(polyrep, user_nodes, var.name)
+                dim_vector = is_sched_dim_vector(polyrep, user_nodes, var.name)
+                arrays = get_arrays_for_user_nodes(pipe, polyrep, user_nodes)
+            
+                if dim_parallel:
                     omp_par_str = "omp parallel for schedule(static)"
+                    if n_ploops > 1:
+                        outer_loop = perfect_loopnest[0]
+                        # outer loop
+                        if node == outer_loop:
+                            omp_par_str += " collapse("+str(n_ploops)+")"
                     omp_pragma = genc.CPragma(omp_par_str)
                     body.add(omp_pragma)
-                if node == red_nest[n_rloops-2] and big_part:
-                    ujam_pragma = genc.CPragma("unroll_and_jam (4)")
-                    body.add(ujam_pragma)
-                if node == red_nest[n_rloops-1] and big_part:
+                if dim_vector:
                     vec_pragma = genc.CPragma("ivdep")
                     body.add(vec_pragma)
-            elif n_rloops == 1:
-                reduction_strs = []
-                for red in reductions:
-                    pid = red.user_get_expr().get_op_arg(0).get_id()
-                    pp = isl_get_id_user(pid)
-                    part_size = pp.get_size(pipe._param_estimates)
-                    big_part = (part_size != '*' and \
-                                part_size > pipe._size_threshold)
-                    if getType(pp.expr.accumulate_ref) is Complex \
-                                or hasReference(pp.expr.expression, \
-                                pp.expr.accumulate_ref) or not big_part:
-                        continue
+        
+                body.add(loop)
+        
+                # Assuming only one parallel dimension and a whole lot
+                # of other things.
+                freelist = []
+                array_writers = pipe.array_writers
+                
+                # check if this loop is at the right level to allocate
+                # thread-local scratchpads
+                flat_scratch = 'flatten_scratchpad' in pipe.options
+                scratchpad_loop = True
+                if n_ploops >= 1:
+                    # innermost perfect loop
+                    if node != perfect_loopnest[n_ploops-1]:
+                        scratchpad_loop = False
+                else:
+                    scratchpad_loop = dim_parallel
+    
+                if scratchpad_loop:
+                    with loop.body as lbody:
+                        for array in arrays:
+                            # add a comment line with a list of comps using this
+                            # array.
+                            comment = add_users_as_comment(pipe, array)
+                            lbody.add(comment)
+                            #if array.is_constant_size():
+                            if array.is_constant_size() or True:
+                                array_decl = genc.CArrayDecl(array, flat_scratch)
+                                lbody.add(array_decl)
+                            else:
+                                array_ptr = genc.CPointer(array.typ, 1)
+                                array_decl = genc.CDeclaration(array_ptr, array)
+                                lbody.add(array_decl)
+                                array.allocate_contiguous(lbody)
+                                freelist.append(array)
+                                
+                if (need_to_set_fused_comps_loop):
+                    comp_in_dict[name] = (True, loop)
+            else:
+                #TODO: Remove the extra loop being generated for the comp that has
+                #been inlined
+                # Convert lb and ub expressions to C expressions
+                prologue = []
+                cond = isl_cond_to_cgen(node.for_get_cond(), prologue)
+                var = isl_expr_to_cgen(node.for_get_iterator())
+                # ***
+                log_loop_start(var, indent)
+                var_inc = isl_expr_to_cgen(node.for_get_inc())
+                incr = genc.CAssign(var, var+var_inc)
+                #if prologue is not None:
+                #    for s in prologue:
+                #        body.add(s)
+        
+                #prologue = []
+                init = isl_expr_to_cgen(node.for_get_init(), prologue)
+                #if prologue is not None:
+                #    for s in prologue:
+                #        body.add(s)
+                var_decl =  genc.CDeclaration(var.typ, var, init)
+                loop = genc.CFor(var_decl, cond, incr)
 
-                    cm = cvariables_from_variables_and_sched(red,
-                           pp.comp.func.reductionVariables, pp.sched)
-                    prolog = []
-                    array_ref = generate_c_expr(pipe, pp.expr.accumulate_ref,
-                                                cparam_map, cm,
-                                                prologue_stmts = prolog)
-                    op_type_str = {
-                        Op.Max: "max",
-                        Op.Min: "min",
-                        Op.Mul: "*",
-                        Op.Sum: "+"
-                    }[pp.expr.op_type]
-                    reduction_strs.append("reduction(" + op_type_str
-                                          + ": " + array_ref.__str__()
-                                          + ")")
-                if len(reduction_strs) > 0:
-                    omp_par_reduce_str = \
-                        "omp parallel for schedule(static) " \
-                        + ",".join(reduction_strs)
-                    omp_pragma = genc.CPragma(omp_par_reduce_str)
-                    body.add(omp_pragma)
-
-            body.add(loop)
+                ## Check if the loop is a parallel or a vector dimension by
+                ## examining the loop body.
+                #dim_parallel = is_sched_dim_parallel(polyrep, user_nodes, var.name)
+                #dim_vector = is_sched_dim_vector(polyrep, user_nodes, var.name)
+                #arrays = get_arrays_for_user_nodes(pipe, polyrep, user_nodes)
+            
+                #if dim_parallel:
+                    #omp_par_str = "omp parallel for schedule(static)"
+                    #if n_ploops > 1:
+                        #outer_loop = perfect_loopnest[0]
+                        ## outer loop
+                        #if node == outer_loop:
+                            #omp_par_str += " collapse("+str(n_ploops)+")"
+                    #omp_pragma = genc.CPragma(omp_par_str)
+                    #body.add(omp_pragma)
+                #if dim_vector:
+                    #vec_pragma = genc.CPragma("ivdep")
+                    #body.add(vec_pragma)
+        
+                #body.add(loop)
+        
+                # Assuming only one parallel dimension and a whole lot
+                # of other things.
+                freelist = []
+                array_writers = pipe.array_writers
+                                
+                # check if this loop is at the right level to allocate
+                # thread-local scratchpads
+                flat_scratch = 'flatten_scratchpad' in pipe.options
+                scratchpad_loop = True
+                if n_ploops >= 1:
+                    # innermost perfect loop
+                    if node != perfect_loopnest[n_ploops-1]:
+                        scratchpad_loop = False
+                else:
+                    scratchpad_loop = dim_parallel
+    
+                if scratchpad_loop:
+                    with loop.body as lbody:
+                        for array in arrays:
+                            # add a comment line with a list of comps using this
+                            # array.
+                            comment = add_users_as_comment(pipe, array)
+                            lbody.add(comment)
+                            #if array.is_constant_size():
+                            if array.is_constant_size() or True:
+                                array_decl = genc.CArrayDecl(array, flat_scratch)
+                                lbody.add(array_decl)
+                            else:
+                                array_ptr = genc.CPointer(array.typ, 1)
+                                array_decl = genc.CDeclaration(array_ptr, array)
+                                lbody.add(array_decl)
+                                array.allocate_contiguous(lbody)
+                                freelist.append(array)
+                
+                loop = generated_comp_loop
 
             # Assuming only one parallel dimension and a whole lot
             # of other things.
@@ -712,7 +878,7 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                 generate_c_naive_from_isl_ast(pipe, polyrep,
                                               node.for_get_body(), lbody,
                                               cparam_map, pooled,
-                                              perfect_loopnest, indent+1,
+                                              perfect_loopnest, fused_comps, indent+1,
                                               red_nest)
                 # Deallocate storage
                 for array in freelist:
@@ -729,14 +895,14 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                     generate_c_naive_from_isl_ast(pipe, polyrep,
                                                   node.if_get_then(), ifblock,
                                                   cparam_map, pooled,
-                                                  perfect_loopnest, indent+1,
+                                                  perfect_loopnest, fused_comps, indent+1,
                                                   red_nest)
                 with cif_else.else_block as elseblock:
                     generate_c_naive_from_isl_ast(pipe, polyrep,
                                                   node.if_get_else(),
                                                   elseblock,
                                                   cparam_map, pooled,
-                                                  perfect_loopnest, indent+1,
+                                                  perfect_loopnest, fused_comps, indent+1,
                                                   red_nest)
                 body.add(cif_else)
             else:
@@ -745,7 +911,7 @@ def generate_c_naive_from_isl_ast(pipe, polyrep, node, body, cparam_map,
                     generate_c_naive_from_isl_ast(pipe, polyrep,
                                                   node.if_get_then(), ifblock,
                                                   cparam_map, pooled,
-                                                  perfect_loopnest, indent+1,
+                                                  perfect_loopnest, fused_comps, indent+1,
                                                   red_nest)
                 body.add(cif)
 
@@ -1092,6 +1258,8 @@ def generate_reduction_scan_loops(pipe, group, comp, pipe_body, cparam_map):
         elif(isinstance(case, Case)):
             c_cond = generate_c_cond(pipe, case.condition,
                                      cparam_map, cvar_map)
+            cond_expr = generate_c_expr(pipe, case.expression,
+                                        cparam_map, cvar_map)
             cif = genc.CIfThen(c_cond)
 
             if(isinstance(case.expression, Reduce)):
@@ -1125,6 +1293,8 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
         g.polyRep.generate_code()
         group_part_map = g.polyRep.poly_parts
 
+    g.polyRep.generate_code()
+    group_part_map = g.polyRep.poly_parts
     sorted_comps = g.get_sorted_comps()
 
     # ***
@@ -1134,7 +1304,60 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
 
     pooled = 'pool_alloc' in pipeline.options
     multipar = 'multipar' in pipeline.options
-
+    
+    #A list of dictionary of comps which should be fused in the innermost loop
+    #Each dictionary is the key value pair (comp name, (inlined earlier, cgen loop))
+    fused_comps = []
+    
+    if ("fuse-for-reg-reuse" in pipeline.options):
+        rev_sorted_comps = list(sorted_comps).reverse()
+        
+        comps_with_same_parent = {}
+        for comp in sorted_comps:
+            comps_with_same_parent[comp] = set()
+            
+        initial_comps = []
+        set_children_traversed = set()
+        
+        for comp in sorted_comps:
+            for child1 in comp.children:
+                if (child1 in sorted_comps):
+                    for child2 in comp.children:
+                        if (child1.func.name not in ["g_gr", "g_gb"] and #TODO: Check for register reuse
+                            child2.func.name not in ["g_gr", "g_gb"] and 
+                            child1 != child2 and child2 in sorted_comps and 
+                            child1 not in child2.parents and
+                            child2 not in child1.parents and 
+                            set(child1.parents) == set(child2.parents) and
+                            child1 not in set_children_traversed):
+                            
+                            comps_with_same_parent [child1].add (child2)
+                            set_children_traversed.add (child2)
+                            
+                    set_children_traversed.add (child1)
+                    
+            if (len(comp.parents) == 0):
+                initial_comps.append (comp)
+        
+        for comp in comps_with_same_parent:
+            if (len(comps_with_same_parent[comp]) != 0):
+                comps_to_fuse = {}
+                comps_to_fuse[comp.func.name] = (False, None)
+                for comp_to_fuse in comps_with_same_parent[comp]:
+                    if True: #TODO Check for register reuse and also if their dimensions
+                        #are same
+                        comps_to_fuse[comp_to_fuse.func.name] = (False, None)
+                        
+                fused_comps.append (comps_to_fuse)
+        
+        initial_comps_to_fuse = {}
+        for comp in initial_comps:
+            #TODO check for register reuse and if their references point to same
+            #parent function and if their dimensions are also same
+            initial_comps_to_fuse[comp.func.name] = (False, None)
+            
+        fused_comps.append (initial_comps_to_fuse)
+    
     for comp in sorted_comps:
         func = comp.func
 
@@ -1192,7 +1415,8 @@ def generate_code_for_group(pipeline, g, body, alloc_arrays,
             else:
                 perfect_loopnest = []
             generate_c_naive_from_isl_ast(pipeline, polyrep, ast, body,
-                                          cparam_map, pooled, perfect_loopnest)
+                                          cparam_map, pooled, perfect_loopnest, 
+                                          fused_comps)
             pass
 
     return

@@ -690,7 +690,7 @@ def move_independent_dim(dim, group_parts, stageDim):
         part.sched = part.sched.remove_dims(
                             isl._isl.dim_type.out, dim+1, 1)
         part.sched = part.sched.set_dim_name(
-                                isl._isl.dim_type.out, 
+                                isl._isl.dim_type.out,
                                 stageDim, noDepName)
 
 def get_group_height(group_parts):
@@ -864,18 +864,27 @@ def overlap_tile(pipeline, group, group_parts, slope_min, slope_max):
     comp_dim = 0
     tile_dims = 0
     no_tile_dims = 0
+    l1tile_in_l2_dims = 0
     h = get_group_height(group_parts)
     num_tile_dims = 0
-    #pipeline.use_different_tile_sizes = False
-    print ("SLOPES ", slope_min, slope_max)
-    if (pipeline.use_different_tile_sizes):
-        group.get_tile_sizes (pipeline.param_estimates, slope_min, slope_max, group_parts, h)
-    #group.tile_sizes = None
-    _group_id += 1
     
-    print ("overlap_tile tile sizes: ", group.tile_sizes)# " for group: ", _group_id)
-    #input("232232323")
-    #input ("group new tile sizes")    
+    pipeline.use_different_tile_sizes = True
+    if (pipeline.use_different_tile_sizes):
+        _multi_level_tiling = pipeline.multi_level_tiling
+        group.get_tile_sizes (pipeline.param_estimates, slope_min, slope_max, 
+                              group_parts, h, pipeline.func_map, #len(group.comps) == 2,
+                              multi_level_tiling = _multi_level_tiling)
+        #TODO: Correct this
+        if (_multi_level_tiling and ("b_gb" in str(group) or "r_r" in str(group))):
+            group.tile_sizes[0] = 20
+            group.tile_sizes[1] = 512
+            group.tile_sizes["L10"] = 6
+            group.tile_sizes["L11"] = 256
+        #group.tile_sizes["L20"] = group.tile_sizes[0]
+        #group.tile_sizes["L21"] = group.tile_sizes[1]
+        #group.tile_sizes[1] = group.tile_sizes[1]*4
+        #group.tile_sizes[0] = group.tile_sizes[0]*2
+        
     no_tile_dims_set = set()
     tile_dims_set = set ()
     
@@ -894,7 +903,7 @@ def overlap_tile(pipeline, group, group_parts, slope_min, slope_max):
                 val = aff.get_constant_val()
                 print ("i-1 = ", i - 1, "val = ", val, " num_tile_dims ", num_tile_dims, pipeline.use_different_tile_sizes and group.tile_sizes and (i-1) in group.tile_sizes)
                 if (pipeline.use_different_tile_sizes and group.tile_sizes and (i-1) in group.tile_sizes):
-                    if val > group.tile_sizes[i-1]:
+                    if val >= group.tile_sizes[i-1]:
                         tile = True
                     #else:
                         #dims_with_no_tiles.add (i-1)
@@ -929,7 +938,8 @@ def overlap_tile(pipeline, group, group_parts, slope_min, slope_max):
                 # tiled dimension
                 name = part.sched.get_dim_name(
                             isl._isl.dim_type.out,
-                            comp_dim + no_tile_dims + 2*tile_dims + 2)
+                            comp_dim + no_tile_dims + 2*tile_dims + 2 +
+                            l1tile_in_l2_dims)
                 part.sched = part.sched.set_dim_name(
                                 isl._isl.dim_type.out,
                                 comp_dim + tile_dims,
@@ -959,10 +969,10 @@ def overlap_tile(pipeline, group, group_parts, slope_min, slope_max):
                 ineqs = []
                 eqs = []
                 coeff = {}
-                it_dim = comp_dim + no_tile_dims + 2*tile_dims + 2
+                it_dim = comp_dim + no_tile_dims + 2*tile_dims + 2 + l1tile_in_l2_dims
                 tile_dim = comp_dim + tile_dims
-                time_dim = comp_dim + tile_dims + 1
-
+                time_dim = comp_dim + tile_dims + 1 + l1tile_in_l2_dims
+                
                 coeff[('out', time_dim)] = -left
                 coeff[('out', it_dim)] = 1
                 coeff[('out', tile_dim)] = -tile_size
@@ -995,7 +1005,73 @@ def overlap_tile(pipeline, group, group_parts, slope_min, slope_max):
                 assert(part.sched.is_empty() == False)
                 # Tiling should not change the domain that is iterated over
                 assert(prior_dom.is_equal(post_dom))
-                
+            
+            if pipeline.multi_level_tiling:
+                _it_dim = it_dim+1
+                for cache_level in range (2,0,-1):
+                    if ("L"+str(cache_level)+str(i-1) in group.tile_sizes):
+                        for part in group_parts:
+                            part.sched = part.sched.insert_dims(
+                                                isl._isl.dim_type.out,
+                                                tile_dim+l1tile_in_l2_dims+1, 1)
+                            # get the name of the untiled dim to name its corresponding
+                            # tiled dimension
+                            
+                            _name = part.sched.get_dim_name(
+                                        isl._isl.dim_type.out,
+                                        comp_dim + no_tile_dims + 2*tile_dims + 3 + l1tile_in_l2_dims)
+                            l1_tile_dim = tile_dim + 1 + l1tile_in_l2_dims
+                            part.sched = part.sched.set_dim_name(
+                                                isl._isl.dim_type.out,
+                                                comp_dim + tile_dims +l1tile_in_l2_dims+ 1,
+                                                '_TL%d%s'%(cache_level, _name))
+                            l1tile_l2_size = group.tile_sizes["L%d%d"%(cache_level, i-1)]
+                            part.dim_tile_info['L%dTileDim'%(cache_level)] = \
+                                ('L%dtile'%(cache_level), _name,
+                                 '_TL%d'%(cache_level) + _name, l1tile_l2_size,
+                                 left, right, l1tile_in_l2_dims)                            
+                            
+                            time_dim = comp_dim + tile_dims + 1 + l1tile_in_l2_dims+1
+                            ineqs = []
+                            eqs = []
+                            coeff = {}
+                                                        
+                            coeff = {}
+                            coeff[('out', time_dim)] = right
+                            coeff[('out', _it_dim)] = 1
+                            coeff[('out', l1_tile_dim)] = -l1tile_l2_size 
+                            ineqs.append(coeff)
+                            
+                            coeff = {}
+                            coeff[('out', time_dim)] = -right
+                            coeff[('out', _it_dim)] = -1
+                            coeff[('out', l1_tile_dim)] = l1tile_l2_size
+                            coeff[('constant', 0)] = l1tile_l2_size - 1
+                            ineqs.append(coeff)
+                            
+                            coeff = {}
+                            coeff[('out', time_dim)] = right
+                            coeff[('out', _it_dim)] = 1
+                            coeff[('out', l1_tile_dim)] = -l1tile_l2_size
+                            ineqs.append(coeff)
+                            
+                            coeff = {}
+                            coeff[('out', time_dim)] = -right
+                            coeff[('out', _it_dim)] = -1
+                            coeff[('out', l1_tile_dim)] = l1tile_l2_size
+                            coeff[('constant', 0)] = l1tile_l2_size - 1
+                            ineqs.append(coeff)
+                            
+                            prior_dom = part.sched.domain()
+                            part.sched = add_constraints(part.sched, ineqs, eqs)
+                            post_dom = part.sched.domain()
+                            assert(part.sched.is_empty() == False)
+                            # Tiling should not change the domain that is iterated over
+                            assert(prior_dom.is_equal(post_dom))
+                        
+                        _it_dim += 1
+                        l1tile_in_l2_dims += 1
+                    
             tile_dims += 1
             num_tile_dims += 1
             tile_dims_set.add (i-1)

@@ -48,7 +48,7 @@ def generate_graph(pipe, file_name, app_data):
 
 def build_unsharp(app_data, g_size = None, t_size = None):
     pipe_data = app_data['pipe_data']
-    out_unsharp = unsharp_mask(pipe_data)
+    out_unsharp, inline_func = unsharp_mask(pipe_data)
     R = pipe_data['R']
     C = pipe_data['C']
     threshold = pipe_data['threshold']
@@ -64,7 +64,7 @@ def build_unsharp(app_data, g_size = None, t_size = None):
     p_constraints = [ Condition(R, "==", rows), \
                       Condition(C, "==", cols) ]
     if (t_size == None):
-        t_size = [1, 8, 512]
+        t_size = [1, 8, 256]
     if (g_size == None):
         g_size = 4
     opts = []
@@ -74,14 +74,19 @@ def build_unsharp(app_data, g_size = None, t_size = None):
         opts += ['optimize_storage']
     if app_data['pool_alloc']:
         opts += ['pool_alloc']
-
+    if app_data['inline']:
+        opts += ['inline']
+    if app_data['multi-level-tiling']:
+        opts += ['multi-level-tiling']
+        
     pipe = buildPipeline(live_outs,
                          param_estimates=p_estimates,
                          param_constraints=p_constraints,
                          tile_sizes = t_size,
                          group_size = g_size,
                          options = opts,
-                         pipe_name = pipe_name)
+                         pipe_name = pipe_name,
+                         inline_directives = inline_func)
 
     return pipe
 
@@ -93,6 +98,7 @@ def create_lib(build_func, pipe_name, app_data, g_size = None, t_size = None):
     pipe_src  = pipe_name+".cpp"
     pipe_so   = pipe_name+".so"
     app_args = app_data['app_args']
+    
     graph_gen = bool(app_args.graph_gen)
 
     if build_func != None:

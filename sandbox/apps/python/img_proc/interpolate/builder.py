@@ -64,10 +64,10 @@ def build_interpolate(app_data, g_size = None, t_size = None):
     p_constraints = [ Condition(R, "==", rows), \
                       Condition(C, "==", cols) ]
     if (t_size == None):
-	    t_size = [1, 32, 128]
+	    t_size = [4, 64, 128]
     if (g_size == None):
         g_size = 4
-
+ 
     opts = []
     if app_data['early_free']:
         opts += ['early_free']
@@ -75,7 +75,9 @@ def build_interpolate(app_data, g_size = None, t_size = None):
         opts += ['optimize_storage']
     if app_data['pool_alloc']:
         opts += ['pool_alloc']
-
+    if app_data['multi-level-tiling']:
+        opts += ['multi-level-tiling']
+        
     pipe = buildPipeline(live_outs,
                          param_estimates=p_estimates,
                          param_constraints=p_constraints,

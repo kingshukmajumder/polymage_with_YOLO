@@ -74,3 +74,20 @@ parser.add_option('--fft',
                         performing fast Fourier transforms of signals), \
                         False: Do not include the FFTW library (there \
                         are no FFTs in the code)')
+
+#To enable automatic inlining
+parser.add_option('--inline',
+                  action='store_true',
+                  dest='inline',
+                  default=False,
+                  help='True : Enable Inlining, \
+                        False: Disable Inlining')
+
+#To enable automatic inlining
+parser.add_option('--multi-level-tiling',
+                  action='store_true',
+                  dest='multi_level_tiling',
+                  default=False,
+                  help='True : Enable Multi Level L2 and L1 Tiling, \
+                        False: Disable Multi Level L2 and L1 Tiling')
+

@@ -79,7 +79,7 @@ class Min(InbuiltFunction):
 class Pow(InbuiltFunction):
     def __init__(self, _leftExpr, _rightExpr):
         InbuiltFunction.__init__(self, _leftExpr, _rightExpr)
-   
+
     def getType(self):
         return Double
 
@@ -95,7 +95,7 @@ class Pow(InbuiltFunction):
 class Powf(InbuiltFunction):
     def __init__(self, _leftExpr, _rightExpr):
         InbuiltFunction.__init__(self, _leftExpr, _rightExpr)
-    
+
     def getType(self):
         return Float
 
@@ -784,6 +784,7 @@ class Stencil(AbstractExpression):
 
         return index_expr
 
+
 class TStencil(object):
     def __init__(self, _var_domain, _typ, _name, _timesteps=1):
 
@@ -1036,7 +1037,7 @@ class TStencil(object):
             assert(isinstance(arg, AbstractExpression))
         return Reference(self, args)
 
-class Condition(object):
+class Condition(AbstractExpression):
     def __init__(self, _left, _cond, _right):
         _left  = Value.numericToValue(_left)
         _right = Value.numericToValue(_right)
@@ -1270,7 +1271,7 @@ class Function(object):
         # * The Case constructs are expected to be non-overlapping. Therefore,
         #   value at each point in the function domain is uniquely defined.
         self._body      = []
-
+        self._orig_body = None
         self.no_return_value = False
         self._dimensions = []
         self._description = _name
@@ -1329,7 +1330,7 @@ class Function(object):
     @property
     def variableDomain(self):
         return (self._variables, self._varDomain)
-           
+
     @property
     def domain(self):
         return self._varDomain
@@ -1417,7 +1418,7 @@ class Function(object):
 
     def clone(self):
         newBody = [ c.clone() for c in self._body ]
-        varDom = ( [ v.clone() for v in self._variables],
+        varDom = ( [ v.clone() for v in self._variables], 
                    [ d.clone() for d in self._varDomain] )
         _const = ""
         if self.is_const_func:
@@ -1428,7 +1429,20 @@ class Function(object):
         newFunc.dimensions = self.dimensions
         newFunc.description = self.description
         return newFunc
-
+    
+    def clone_and_replace_body (self):
+        """Clone only body and replace the current body with cloned body.
+        Returns self
+        """
+        self._orig_body = self._body
+        newBody = [ c.clone() for c in self._body ]
+        self._body = newBody
+        return self
+    
+    def restore_original_body (self):
+        assert (self._orig_body != None)
+        self._body = self._orig_body
+        
     def __str__(self):
         if (self._body):
             var_str = ", ".join([var.__str__() for var in self._variables])
@@ -1439,6 +1453,7 @@ class Function(object):
                                             for case in self._body]) + " }"
             return "Domain: " + dom_str + '\n' + self._name + \
                    "(" + var_str + ") = " + case_str + '\n'
+            #return self._name
         else:
             return self._name
 
@@ -3337,14 +3352,21 @@ class GetSizeVisitor(AbstractExpressionVisitor):
         return self.visit_variable (parameter)
 
 class MemRefsAtIterationVisitor(AbstractExpressionVisitor):
-    def __init__ (self, _dim, _iter):
+    def __init__ (self, _dim, _iter, comps_to_exclude = []):
         self._dim = _dim
         self._iter = _iter
         self._dim_refs = []
-
+        self._funcs_to_exclude = []
+        for c in comps_to_exclude:
+            self._funcs_to_exclude.append (c.func)
+            
     @property
     def dim_refs (self):
         return self._dim_refs
+    
+    @property
+    def funcs_to_exclude (self):
+        return self._funcs_to_exclude
         
     def visit_value (self, value):
         return value.value
@@ -3353,9 +3375,9 @@ class MemRefsAtIterationVisitor(AbstractExpressionVisitor):
         left_visit = binop.left.visit (self)
         right_visit = binop.right.visit (self)
         
-        #~ print (binop.op)
-        #~ print (binop.left, type(binop.left), left_visit, type(left_visit))
-        #~ print (binop.right, type(binop.right), right_visit, type(right_visit))
+        ##print (binop.op)
+        ##print (binop.left, type(binop.left), left_visit, type(left_visit))
+        ##print (binop.right, type(binop.right), right_visit, type(right_visit))
             
             
         if (isinstance (binop.left, Reference) or

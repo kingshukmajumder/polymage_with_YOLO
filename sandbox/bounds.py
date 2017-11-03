@@ -42,19 +42,11 @@ def bounds_check_pass(pipeline):
     i.e. they are not data dependent. We restrict ourselves to affine
     references.
     """
-    inp_groups = {}
-
-    for inp_func in pipeline.inputs:
-        inp_comp = pipeline.func_map[inp_func]
-        inp_groups[inp_func] = \
-            pipe.Group(pipeline._ctx, [inp_comp], \
-                       pipeline._param_constraints, pipeline.pluto_sched_required)
-
     for group in pipeline.groups:
         for child in group.children:
             check_refs(child, group)
         for inp in group.image_refs:
-            check_refs(group, inp_groups[inp])
+            check_refs(group, pipeline.input_groups[inp])
     return
 
 def check_refs(child_group, parent_group):
@@ -68,9 +60,6 @@ def check_refs(child_group, parent_group):
     parent_func = parent_comp.func
     child_comp = child_group.comps[0]
     child_func = child_comp.func
-
-    if child_group.polyRep is None:
-        return
 
     # Only verifying if both child and  parent group have a polyhedral
     # representation
