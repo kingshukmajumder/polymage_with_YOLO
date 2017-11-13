@@ -2260,7 +2260,10 @@ class Pipeline:
             else:
                 # Run the grouping algorithm
                 self.initialize_storage()
-                auto_group(self)
+                if 'dpfusion' in self.options:
+                    auto_group_dp(self)
+                else:
+                    auto_group_greedy(self)
                 pass
             self._level_order_groups = self.order_group_objs()
 
