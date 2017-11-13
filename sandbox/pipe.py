@@ -1134,10 +1134,14 @@ class Group:
         Dimensional Reuse is in terms of number of 4 Bytes.
         optgrouping multiplies the dimensional reuse with 4 Bytes.
         '''
-       
         max_dim = 0
         for comp in self.comps:
-            max_dim = max (max_dim, comp.func.ndims)
+            num_dims = 0
+            if isinstance(comp.func, Reduction):
+                num_dims = comp.func.nRednDims
+            else:
+                num_dims = comp.func.ndims
+            max_dim = max (max_dim, num_dims)
         
         dim_reuse = [0 for i in range (0, max_dim)]
         
@@ -1147,8 +1151,8 @@ class Group:
             intervals = comp.func.domain
            
             
-            if isinstance(comp.func, Reduction):
-                continue
+            #if isinstance(comp.func, Reduction):
+            #    continue
             
             refs = comp.func.getObjects (Reference)
             funcs = []
@@ -1169,7 +1173,91 @@ class Group:
                         break
                 if (d == f.ndims and m > 1 and m < 1000):
                     to_exclude += [func_map[f]]
-                
+
+            if isinstance(comp.func, Reduction):
+                for dim in range(comp.func.nRednDims):
+
+                    lb = comp.func.reductionDomain[dim].lowerBound
+
+                    lb = lb.visit(get_size_visitor)
+
+                    ub = comp.func.reductionDomain[dim].upperBound
+
+                    ub = ub.visit(get_size_visitor)
+
+                    size = ub - lb + 1
+
+                    first_iter = lb + int((ub - lb) / 2)
+                    second_iter = first_iter + 1
+                    comps_to_exclude = []
+
+                    first_iter_visitor = MemRefsAtIterationVisitor(dim, first_iter, to_exclude)
+                    second_iter_visitor = MemRefsAtIterationVisitor(dim, second_iter, to_exclude)
+                    mem_ref_at_second_iter = set()
+                    mem_ref_at_first_iter = set()
+
+                    for ast_node in comp.func.defn:
+                        expr = None
+                        if (isinstance(ast_node, Case)):
+                            expr = ast_node.expression
+                        elif (isinstance(ast_node, AbstractExpression)):
+                            expr = ast_node
+                        elif (isinstance(ast_node, Reduce)):
+                            expr = ast_node.expression
+                            if (isinstance(expr, Reduce)):
+                                expr = expr.expression
+                        expr.visit(first_iter_visitor)
+
+                        mem_ref_at_first_iter = mem_ref_at_first_iter.union(set(first_iter_visitor.dim_refs))
+                        expr.visit(second_iter_visitor)
+                        mem_ref_at_second_iter = mem_ref_at_second_iter.union(set(second_iter_visitor.dim_refs))
+
+                    dim_reuse_iters = mem_ref_at_second_iter.intersection(mem_ref_at_first_iter)
+                    dim_size = 1
+                    dim_reuse[dim + (max_dim - comp.func.nRednDims)] += len(dim_reuse_iters) * dim_size
+            else:
+                for dim in range(comp.func.ndims):
+
+                    lb = intervals[dim].lowerBound
+
+                    lb = lb.visit(get_size_visitor)
+
+                    ub = intervals[dim].upperBound
+
+                    ub = ub.visit(get_size_visitor)
+
+                    size = ub - lb + 1
+
+                    first_iter = lb + int((ub - lb) / 2)
+                    second_iter = first_iter + 1
+                    comps_to_exclude = []
+
+                    first_iter_visitor = MemRefsAtIterationVisitor(dim, first_iter, to_exclude)
+                    second_iter_visitor = MemRefsAtIterationVisitor(dim, second_iter, to_exclude)
+                    mem_ref_at_second_iter = set()
+                    mem_ref_at_first_iter = set()
+
+                    for ast_node in comp.func.defn:
+                        expr = None
+                        if (isinstance(ast_node, Case)):
+                            expr = ast_node.expression
+                        elif (isinstance(ast_node, AbstractExpression)):
+                            expr = ast_node
+                        elif (isinstance(ast_node, Reduce)):
+                            expr = ast_node.expression
+                            if (isinstance(expr, Reduce)):
+                                expr = expr.expression
+                        expr.visit(first_iter_visitor)
+
+                        mem_ref_at_first_iter = mem_ref_at_first_iter.union(set(first_iter_visitor.dim_refs))
+                        expr.visit(second_iter_visitor)
+                        mem_ref_at_second_iter = mem_ref_at_second_iter.union(set(second_iter_visitor.dim_refs))
+
+                    dim_reuse_iters = mem_ref_at_second_iter.intersection(mem_ref_at_first_iter)
+                    dim_size = 1
+                    dim_reuse[dim + (max_dim - comp.func.ndims)] += len(dim_reuse_iters) * dim_size
+
+            '''
             for dim in range (comp.func.ndims):
                
                 lb = intervals[dim].lowerBound
@@ -1210,6 +1298,7 @@ class Group:
                 dim_reuse_iters = mem_ref_at_second_iter.intersection (mem_ref_at_first_iter)
                 dim_size = 1
                 dim_reuse[dim + (max_dim-comp.func.ndims)] += len (dim_reuse_iters)*dim_size
+            '''
         
         return dim_reuse
     
@@ -3412,7 +3501,6 @@ def replace_sched_expr_with_matched_idiom(g_all_parts, isPlutoSchedule, idiom, c
         tuple_in = poly_part.sched.get_tuple_id(isl._isl.dim_type.in_)
         eqs = []
         ineqs = []
-        import pudb; pudb.set_trace();
         if isPlutoSchedule and poly_part.tiled:
             #TODO: Assuming the code is tiled. Need to add a condition to check that
             n_dims = poly_part.sched.dim(isl._isl.dim_type.out)

@@ -1539,6 +1539,8 @@ class Reduction(Function):
         self._reductionDimensions = []
         self._reductionDimensions = []
 
+        self._nRednDims = len(self._redVariables)
+
         # Intial value of each accumulator cell. Default is set to zero of the
         # given type
         self._default   = Value(0, _typ)
@@ -1567,6 +1569,10 @@ class Reduction(Function):
     @reductionDimensions.setter
     def reductionDimensions(self, rednDims):
         self._reductionDimensions = rednDims
+
+    @property
+    def nRednDims(self):
+        return self._nRednDims
 
     @property
     def defn(self):
