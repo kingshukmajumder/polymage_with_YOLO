@@ -1098,33 +1098,16 @@ def rect_tile(pipeline, group, group_parts):
     no_tile_dims = 0
     l1tile_in_l2_dims = 0
     h = get_group_height(group_parts)
+    #TODO: Needs to be passed from dpfusion function
     num_tile_dims = 0
+    for comp in group.comps:
+        num_tile_dims = max(num_tile_dims, comp.func.ndims)
 
 
-    for i in range(1, 3):
-        # Check if every part in the group has enough iteration
+    for i in range(0, num_tile_dims):
+        # TODO: Check if every part in the group has enough iteration
         # points in the dimension to benefit from tiling.
-        tile = False
-        # dims_with_no_tiles = set()
-        for part in group_parts:
-            curr_dim = comp_dim + no_tile_dims + 2 * tile_dims + 1
-            lower_bound = part.sched.range().dim_min(curr_dim)
-            upper_bound = part.sched.range().dim_max(curr_dim)
-            size = upper_bound.sub(lower_bound)
-            if (size.is_cst() and size.n_piece() == 1):
-                aff = (size.get_pieces())[0][1]
-                val = aff.get_constant_val()
-                print("i-1 = ", i - 1, "val = ", val, " num_tile_dims ", num_tile_dims,
-                      pipeline.use_different_tile_sizes and group.tile_sizes and (i - 1) in group.tile_sizes)
-                if (pipeline.use_different_tile_sizes and group.tile_sizes and (i - 1) in group.tile_sizes):
-                    if val >= group.tile_sizes[i - 1]:
-                        tile = True
-                else:
-                    if val > pipeline._tile_sizes[num_tile_dims]:
-                        tile = True
-
-            else:
-                tile = True
+        tile = True
 
         if tile:
             # Altering the schedule
@@ -1147,7 +1130,7 @@ def rect_tile(pipeline, group, group_parts):
                 left = 0
                 # L and R are normals to the left and the right (hence 1 in this case)
                 # bounding hyperplanes of the uniform dependencies
-                tile_size = pipeline._tile_sizes[num_tile_dims]
+                tile_size = pipeline._tile_sizes[tile_dims]
 
                 #shift = abs(left * (h)) + abs(right * (h))
                 for j in range(0, len(part.align)):
@@ -1155,7 +1138,7 @@ def rect_tile(pipeline, group, group_parts):
                         assert j not in part.dim_tile_info
                         if tile_size % part.scale[j] != 0:
                             tile_size = int(math.ceil(part.scale[j]))
-                        part.dim_tile_info[j] = ('overlap', name, '_T' + name,
+                        part.dim_tile_info[j] = ('rect', name, '_T' + name,
                                                  tile_size, left, right, h)
                 ineqs = []
                 eqs = []
@@ -1198,6 +1181,7 @@ def rect_tile(pipeline, group, group_parts):
                 assert (part.sched.is_empty() == False)
                 # Tiling should not change the domain that is iterated over
                 assert (prior_dom.is_equal(post_dom))
+            tile_dims += 1
 
     return
 

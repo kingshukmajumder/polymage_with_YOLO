@@ -84,8 +84,10 @@ def build_matmul(app_data):
                     ]
 
     # Pluto schedule requires tile.sizes file
+    tile_size = []
     if(app_data['pluto']):
         t_size = app_data['tiles'].split(',')
+        tile_size.append(t_size)
         create_tile_sizes_file(t_size)
 
     g_size = 1
@@ -107,6 +109,7 @@ def build_matmul(app_data):
                          param_estimates=p_estimates,
                          param_constraints=p_constraints,
                          #group_size = g_size,
+                         tile_sizes = tile_size,
                          options = opts,
                          pipe_name = pipe_name)
 
