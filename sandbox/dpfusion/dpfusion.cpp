@@ -665,7 +665,8 @@ void naive_sched_objs (const map <Group*, int, Group::GroupComparer>& order,
         max_level = max (max_level, l);
     }
     
-    PRINT_DEBUG_BLOCK_L1
+    //TODO: Add a check before printing the vaules.
+    /*PRINT_DEBUG_BLOCK_L1
     {
         std::cout << "reverse_map: " << std::endl;
         for (auto it = reverse_map.begin (); it != reverse_map.end (); it++)
@@ -676,7 +677,7 @@ void naive_sched_objs (const map <Group*, int, Group::GroupComparer>& order,
                 std::cout << "    " <<getPyGroupName (it2->getPyGroup ()) << std::endl;
             }
         }
-    }
+    }*/
     
     int time = 0;
     
@@ -744,6 +745,7 @@ void classify_storage (const vector <PyObject*>& vec_comps,
     //find_storage_equivalence
     unordered_map <string, vector <PyObject*>> storage_class_map;
     
+    //For each compute objects
     for (auto it = vec_comps.begin(); it != vec_comps.end(); it++)
     {
         string _strkey = stg_class_to_key [comp_to_orig_storage [*it]];
@@ -758,14 +760,15 @@ void classify_storage (const vector <PyObject*>& vec_comps,
         }
     }
 
-    PRINT_DEBUG_BLOCK_L1
+    //TODO: Add a check before printing the vaules.
+    /*PRINT_DEBUG_BLOCK_L1
     {
         std::cout<< "storage_class_map "<< std::endl;
         for (auto it = storage_class_map.begin(); it != storage_class_map.end (); it++)
         {
             std::cout<< "    "<<it->first << " " << it->second.size () << std::endl;
         }
-    }
+    }*/
     
     //maximal_storage
     
@@ -819,10 +822,11 @@ void classify_storage (const vector <PyObject*>& vec_comps,
                                             args);
             Py_DECREF (args);
             Py_DECREF (max_offset_dim);
+
+            PyObject* orig_storage = PyObject_GetAttr (dim_storage, str_orig_param);
+            PyObject* new_args = PyTuple_Pack (2, orig_storage, new_size);
             
-            vec_dim_sizes.push_back (PyTuple_Pack (2,
-                                     PyObject_GetAttr (dim_storage, str_orig_param),
-                                     new_size));
+            vec_dim_sizes.push_back (new_args);
         }
         
         PyObject* dim_sizes;
@@ -1742,7 +1746,7 @@ inline uint64_t cost (uint128_t hash_id, std::vector <uint64_t>& tile_sizes)
     //Iterate till you reach the first function
     while (_hash_id != 0)
     {
-		//Check if it is the first group
+		//Check if it is the first group or a fused group
         if ((_hash_id & 1L) == 1)
         {
             uint128_t l = 1;
@@ -1764,7 +1768,7 @@ inline uint64_t cost (uint128_t hash_id, std::vector <uint64_t>& tile_sizes)
                     if (PyObject_IsInstance (func,
                                              reduction_cls))
                     {
-                         //is_reduction = true;
+                         is_reduction = true;
                         
                     }
                     
@@ -1894,10 +1898,12 @@ inline uint64_t cost (uint128_t hash_id, std::vector <uint64_t>& tile_sizes)
     
     _hash_id = hash_id;
     
-    if ((is_reduction || is_const_grp || is_small_grp || is_tstencil_grp || is_dummy_source_group) && nOnes == 1)
+    //if ((is_reduction || is_const_grp || is_small_grp || is_tstencil_grp || is_dummy_source_group) && nOnes == 1)
+    if ((is_const_grp || is_small_grp || is_tstencil_grp || is_dummy_source_group) && nOnes == 1)
         return 1L;
     
-    if (is_reduction || is_const_grp || is_small_grp || is_tstencil_grp || is_dummy_source_group)
+    //if (is_reduction || is_const_grp || is_small_grp || is_tstencil_grp || is_dummy_source_group)
+    if (is_const_grp || is_small_grp || is_tstencil_grp || is_dummy_source_group)
         return -1;
     
     if (total_comps > grp_size)
@@ -1922,6 +1928,12 @@ inline uint64_t cost (uint128_t hash_id, std::vector <uint64_t>& tile_sizes)
     }
     
     PyObject* args = PyTuple_Pack (4, list_groups_for_overlap, list_inline_comps, pytotalsizeused, pyn_buffers);
+    // If reduction is one of the computation,
+    // we call the rectangular tile function instead of overlap tile.
+    if (is_reduction)
+    {
+		PyObject* tuple_return = PyObject_CallObject (get_rect_tile_size_func, args);
+	}
     PyObject* tuple_return = PyObject_CallObject (get_overlapping_size_func, args);
     check_and_print_exception ();
     PyObject* overlap_obj = PyTuple_GetItem (tuple_return, 0);

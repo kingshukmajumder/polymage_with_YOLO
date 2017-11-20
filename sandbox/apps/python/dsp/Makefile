@@ -11,3 +11,7 @@ clean:
 	@-for d in $(APPS); do \
 		make -C $$d clean; \
 		done
+cleaner:
+	@-for d in $(APPS); do \
+		make -C $$d cleaner; \
+		done

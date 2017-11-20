@@ -49,13 +49,20 @@ class TypeSizeMap(object):
         assert typ_name in cls._type_size_map
         return cls._type_size_map[typ_name]
 
+#TODO: Verify this logic from dpfusion file as well.
 def get_dim_size(dim_storage, const=None):
+    param_part = 0
     if const == None:
         const = dim_storage.const
     if isinstance(dim_storage.coeff, Fraction):
         numr = dim_storage.coeff.numerator
         denr = dim_storage.coeff.denominator
         param_part = numr * dim_storage.orig_param // denr
+    elif isinstance(dim_storage.coeff, list):
+        for coeff in dim_storage.coeff:
+            numr = coeff.numerator
+            denr = coeff.denominator
+            param_part += numr * dim_storage.orig_param[0] // denr
     else:
         param_part = sum([c * o for c, o in zip(dim_storage.coeff, dim_storage.orig_param)])
     size = param_part + const
