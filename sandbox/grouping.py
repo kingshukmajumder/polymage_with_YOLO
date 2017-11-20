@@ -25,7 +25,6 @@ from __future__ import absolute_import, division, print_function
 
 from constructs import *
 import logging
-import dpfusion
 import storage_mapping
 
 # LOG CONFIG #
@@ -173,6 +172,8 @@ def auto_group_dp(pipeline):
     
     w_args = [pipeline.do_inline, False, pipeline.multi_level_tiling]
     elem_size = pipeline.MachineInformation.get_machine_image_element_size ();
+
+    import dpfusion
     dpfusion.dpgroup (in_group, out_group, pipeline.groups, pipeline, 
                        Reduction, small_comps, comp_size_map, TStencil,
                        topological_order, dim_reuse, live_size, dim_size,

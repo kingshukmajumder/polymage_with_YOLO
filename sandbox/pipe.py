@@ -110,7 +110,6 @@ elif (MACHINE_TYPE == 'mcastle2'): #AMD Opteron machine
     OUTER_DIM_TILING_THRESH = 4
     THRESHOLD_TILE_SIZE = 4
 
-    
 def get_next_power_of_2 (num):
     num -= 1
     num |= num >> 1
@@ -512,6 +511,7 @@ class ComputeObject:
         else:
             assert isinstance(_array, genc.CArray)
         self._array = _array
+        
     def set_scratch_info(self, _scratch_info):
         self._scratch_info = _scratch_info
 
@@ -1120,9 +1120,7 @@ class Group:
               
                 ub = ub.visit (get_size_visitor)
                 
-                size = ub - lb + 1
-                
-             
+                size = ub - lb + 1             
                 
                 dim_sizes [dim] = size
 
@@ -1134,6 +1132,7 @@ class Group:
         Dimensional Reuse is in terms of number of 4 Bytes.
         optgrouping multiplies the dimensional reuse with 4 Bytes.
         '''
+        
         max_dim = 0
         for comp in self.comps:
             num_dims = 0
@@ -1142,7 +1141,7 @@ class Group:
             else:
                 num_dims = comp.func.ndims
             max_dim = max (max_dim, num_dims)
-        
+            
         dim_reuse = [0 for i in range (0, max_dim)]
         
         get_size_visitor = GetSizeVisitor (param_estimates)
@@ -1289,8 +1288,8 @@ class Group:
                         expr = ast_node.expression
                         if (isinstance (expr, Reduce)):
                             expr = expr.expression
+
                     expr.visit(first_iter_visitor)
-                    
                     mem_ref_at_first_iter = mem_ref_at_first_iter.union (set(first_iter_visitor.dim_refs))
                     expr.visit(second_iter_visitor)
                     mem_ref_at_second_iter = mem_ref_at_second_iter.union (set(second_iter_visitor.dim_refs))
@@ -1728,9 +1727,8 @@ class Group:
         LOG (logging.DEBUG, "get_tile_sizes for " + str(self))
 
         if (self._total_used_size == -1):
-            #print (self)
             assert (False)
-            
+                        
         tileable_dims = set()
         tile_size = 0
         dim_reuse = [i*IMAGE_ELEMENT_SIZE for i in self.get_dimensional_reuse (param_estimates, func_map)]
@@ -1934,20 +1932,59 @@ class Group:
                     slope_min, slope_max, group_parts, dim_reuse, dim_sizes, 
                     L1_CACHE_SIZE, L2_INNER_MOST_DIM_SIZE, N_CORES)
                     
-            print ("tile_sizes from L1 ", tile_sizes)
-            
-            if (not overlap_shift_greater and threshold_tile_size_met):
-                self._tile_sizes = tile_sizes
-                return tile_size
-
-        tile_sizes, tile_size = self.get_tile_sizes_for_cache_size (param_estimates, 
-            slope_min, slope_max, group_parts, dim_reuse, dim_sizes, 
-            L2_CACHE_SIZE, L2_INNER_MOST_DIM_SIZE)
-        
-        print ("tile_sizes from L2 ", tile_sizes)
-        self._tile_sizes = tile_sizes
-        return tile_size
-        
+            if (tile_sizes != l1tile_sizes):
+                tile_sizes_keys = list(tile_sizes.keys ())
+                LOG (logging.DEBUG, "tile_sizes " + str(tile_sizes) + " " +\
+                                    str(l1tile_sizes))
+                for k in tile_sizes_keys:
+                    if (0 in tile_sizes):
+                        tile_sizes [0] = min (50, tile_sizes[0])
+                    elif (1 in tile_sizes):
+                        tile_sizes [1] = min (64, tile_sizes[1])
+                    if (k in l1tile_sizes and tile_sizes[k] >= l1tile_sizes[k]):
+                        if ((l1tile_sizes[k] == 16 or l1tile_sizes[k] == 256) and 
+                            "filtered" in str(self)): 
+                            #Bug in Bilateral Grid group [interpolate, filtered].
+                            #Seg Fault due to 16, and 8.
+                            #Runs fine if l1 tile size is not multiple of l2 tile size.
+                            #In Multi Level Tiling, if tile_sizes[1] is 64, then Bilateral Grid
+                            #runs very fast. Also, l1 tile size [1] should be set to 
+                            #10, not 16. Correct the tile size determination algorithm
+                            l1tile_sizes[k] -= 1
+                        if ("denoised" in str(self)):
+                            if (l1tile_sizes[k] %2 == 1):
+                                l1tile_sizes[k] -= 1
+                            if (tile_sizes[k] %2 == 1):
+                                tile_sizes[k] -= 1
+                        
+                        tile_sizes["L1"+str(k)] = l1tile_sizes[k]
+                
+                if ("interpolated" in str(self) and "filtered" in str(self)):
+                    #TODO: Correct this
+                    tile_sizes[1] = 42*4
+                if ("blury" in str(self) and "blurx" in str(self) and "blurz" in str(self)):
+                    tile_sizes[1] = 19*2
+                    tile_sizes[2] = 25*2
+            #if (len (self.comps) == 4):
+                #if (1 in l1tile_sizes):
+                #    For Bilateral Grid
+                #    tile_sizes = dict()
+                #    tile_sizes [1] = 64 #l1tile_sizes[1]
+                #    tile_sizes ['L11'] = 15
+                #    tile_sizes ["L12"] = 257
+                #    tile_sizes [2] = 512
+                
+                #For Unsharp Mask
+                #tile_sizes = dict ()
+                #tile_sizes[1] = 42
+                #tile_sizes[2] = 512
+                #tile_sizes["L11"] = l1tile_sizes[1]
+                #tile_sizes["L12"] = l1tile_sizes[2]
+                
+            LOG (logging.DEBUG, "tile_sizes from L2 " + str(tile_sizes))
+            self._tile_sizes = tile_sizes
+            return tile_size
+    
     def __str__(self):
         comp_str  = '[' + \
                     ', '.join([comp.func.name \
@@ -2377,15 +2414,6 @@ class Pipeline:
         g = self.create_group (groups, inlined_comps)
         g.set_total_used_size (tile_size)
         g.set_n_buffers (_n_buffers)
-        #print ("create_group = ", [comp.func.name for comp in g.comps])
-        #print ("LEVEL ORDER COMPS", g._level_order_comps)
-        #g.get_total_size (self._param_estimates)
-        #g.get_dimensional_reuse (self._param_estimates)
-        #sys.exit (0)
-        # update liveness of compute objects in each new group
-        #g.compute_liveness()
-        # children map for comps within the group
-        #g.collect_comps_children()
         orig_func_map = self.func_map
         _func_map = dict(orig_func_map)
         for comp in g.comps:
@@ -2398,16 +2426,12 @@ class Pipeline:
         #    return -1
         base_schedule(g)
         # grouping and tiling
-        #print ("fused_schedule232323 ", g)
         g_all_parts = []
         for comp in g.polyRep.poly_parts:
-            #print ("poly_parts comp ", hex(id(comp)))
             g_all_parts.extend(g.polyRep.poly_parts[comp])
-        #print (g_all_parts)
         # get dependence vectors between each part of the group and each of its
         # parents' part
         comp_deps = get_group_dep_vecs(self, g, g_all_parts, func_map = _func_map)
-        #print (comp_deps)
         # No point in tiling a group that has no dependencies
         self._func_map = orig_func_map
         det_tile_size = 0
@@ -2564,7 +2588,7 @@ class Pipeline:
     @property
     def free_arrays(self):
         return self._free_arrays
-
+        
     def get_tile_sizes_for_group (self, group):
         dim_reuse = {}
         
@@ -2596,7 +2620,6 @@ class Pipeline:
             if (comps[i] in inlined_comps):
                 cloned_inlined_comps.append (cloneComp)
             comps[i] = cloneComp
-            #print ("clone comps [i] ", hex(id(comps[i])))
         
         for i in range(len(comps)):
             parents = []
@@ -3387,7 +3410,7 @@ class Pipeline:
                 p_comp.add_child(comp_b)
             for p_group in parents_of_grp_b:
                 p_group.add_child(group_b)
-
+        
         return
 
     def __str__(self):
