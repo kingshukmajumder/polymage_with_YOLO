@@ -53,6 +53,7 @@ def get_input(app_data):
     app_data['matrix'] = bool(app_args.matrix)
 
     app_data['fft'] = bool(app_args.fft)
+    app_data['dpfusion'] = bool(app_args.dpfusion)
 
     return
 

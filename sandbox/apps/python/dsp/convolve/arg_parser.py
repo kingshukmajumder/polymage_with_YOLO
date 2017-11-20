@@ -83,6 +83,13 @@ def parse_args():
                       help='True : If it is Matrix execution, \
                             False: Normal image processing application')
 
+    parser.add_option('--dpfusion', '--dpfusion',
+                      action='store_true',
+                      dest='dpfusion',
+                      default=False,
+                      help='True : Enables DP based Fusion, \
+                            False: Does Greedy based fusion')
+
     (options, args) = parser.parse_args()
 
     return options

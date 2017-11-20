@@ -9,7 +9,7 @@ ROOT="../../../../"
 IMG=$(ROOT)"/../images/venice_wikimedia.jpg"
 RUNS=1
 
-APP_ARGS=
+APP_ARGS=--dpfusion
 #APP_ARGS=--matrix --blas
 OPT_ARGS=--pool_alloc --optimize_storage --early_free
 TOOL_ARGS=--graph-gen --runs=${RUNS} --display --timer

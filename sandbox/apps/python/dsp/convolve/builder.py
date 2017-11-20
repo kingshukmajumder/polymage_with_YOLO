@@ -64,7 +64,7 @@ def build_convolve(app_data):
     p_constraints = []
     #~ t_size = [16, 16]
     #~ g_size = 1
-    #~ opts = []
+    opts = []
     #~ if app_data['early_free']:
         #~ opts += ['early_free']
     #~ if app_data['optimize_storage']:
@@ -75,13 +75,15 @@ def build_convolve(app_data):
         #~ opts += ['blas']
     #~ if app_data['matrix']:
         #~ opts += ['matrix']
+    if app_data['dpfusion']:
+       opts += ['dpfusion']
 
     pipe = buildPipeline(live_outs,
                          param_estimates=p_estimates,
                          param_constraints=p_constraints,
                          #~ tile_sizes = t_size,
                          #~ group_size = g_size,
-                         #~ options = opts,
+                         options = opts,
                          pipe_name = pipe_name)
 
     return pipe

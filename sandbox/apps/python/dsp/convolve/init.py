@@ -59,6 +59,7 @@ def get_input(app_data):
     app_data['blas'] = bool(app_args.blas)
 
     app_data['matrix'] = bool(app_args.matrix)
+    app_data['dpfusion'] = bool(app_args.dpfusion)
 
     return
 
