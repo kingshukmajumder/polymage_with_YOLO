@@ -570,7 +570,8 @@ void get_level_order (uint128_t hash_id, vector <PyObject*>& objs,
         order [*it] = 0;
     }
     
-    PRINT_DEBUG_BLOCK_L1
+    //TODO: Add a check before printing the vaules.
+    /*PRINT_DEBUG_BLOCK_L1
     {
         std::cout << "Final New Next Groups in get_level_order" << std::endl;
         for (auto const &it : new_nextGroups)
@@ -597,7 +598,7 @@ void get_level_order (uint128_t hash_id, vector <PyObject*>& objs,
             
             std::cout << std::endl;
         }
-    }
+    }*/
     
     while (change)
     {
@@ -1027,7 +1028,8 @@ uint64_t getTotalSizeUsed (uint128_t hash_id, int& number_of_buffers,
         bit++;
     }
     
-    PRINT_DEBUG_BLOCK_L1
+    //TODO: Add a check before printing the vaules.
+    /*PRINT_DEBUG_BLOCK_L1
     {
         std::cout << "Final New Next Groups in getTotalSizeUsed" << std::endl;
         for (auto const &it : new_nextGroups)
@@ -1054,7 +1056,7 @@ uint64_t getTotalSizeUsed (uint128_t hash_id, int& number_of_buffers,
             
             std::cout << std::endl;
         }
-    }
+    }*/
     
     get_level_order (nonLiveOutsHashID, vec_comps, vec_groups, level_order, 
                      inlined_groups, new_nextGroups, new_prevGroups);
@@ -1737,8 +1739,10 @@ inline uint64_t cost (uint128_t hash_id, std::vector <uint64_t>& tile_sizes)
     PRINT_DEBUG_BLOCK_L1
         std::cout << "Cost for hash_id " << std::bitset <41> ((uint64_t)hash_id) << std::endl;
     
+    //Iterate till you reach the first function
     while (_hash_id != 0)
     {
+		//Check if it is the first group
         if ((_hash_id & 1L) == 1)
         {
             uint128_t l = 1;
@@ -1760,7 +1764,7 @@ inline uint64_t cost (uint128_t hash_id, std::vector <uint64_t>& tile_sizes)
                     if (PyObject_IsInstance (func,
                                              reduction_cls))
                     {
-                        is_reduction = true;
+                         //is_reduction = true;
                         
                     }
                     
@@ -1822,7 +1826,8 @@ inline uint64_t cost (uint128_t hash_id, std::vector <uint64_t>& tile_sizes)
         bit++;
     }
     
-    PRINT_DEBUG_BLOCK_L1
+    //TODO: Add a check before printing the vaules.
+    /*PRINT_DEBUG_BLOCK_L1
     {
         std::cout << "Final New Next Groups in COST" << std::endl;
         for (auto const &it : new_nextGroups)
@@ -1849,7 +1854,7 @@ inline uint64_t cost (uint128_t hash_id, std::vector <uint64_t>& tile_sizes)
             
             std::cout << std::endl;
         }
-    }
+    }*/
     
     if (INLINING_ENABLED)
         update_graph_with_inlining (inlined_groups, new_nextGroups, 
@@ -2034,7 +2039,7 @@ inline uint64_t cost2 (uint128_t hash_id, std::vector <uint64_t>& tile_sizes)
                        if (PyObject_IsInstance (func,
                                                 reduction_cls))
                        {
-                            is_reduction = true;
+                            //is_reduction = true;
                        }
                        if (PyObject_IsInstance (func,
                                                 tstencil_cls))
@@ -2931,6 +2936,8 @@ PyObject* dpgroup(PyObject* self, PyObject* args)
     
     std::cerr<<"Running DP Fusion " << std::endl;
     
+    //Parsing the data from Python and Initializing the required fields
+
     PyArg_ParseTuple (args, "OOOOOOOOOOOOOOOOllllffff", &in_group, &out_group, &groups, &pipeline, 
                       &reduction_cls, &small_comps, &comp_size_map, &tstencil_cls,
                       &pygroup_topological_order, &pygroup_dim_reuse, &pylive_size,
@@ -3007,17 +3014,20 @@ PyObject* dpgroup(PyObject* self, PyObject* args)
     
     for (int i = 0; i < PyList_Size (groups); i++)
     {
+		cout << "no of groups" << endl;
         pygroups_vector.push_back (PyList_GetItem (groups, i));
     }
     
     sort (pygroups_vector.begin (), pygroups_vector.end(), pyGroupSortFunc);
     
+    // For each group create a cpp Group adn OptGroup object and set relevant parameters
     for (uint64_t i = 0; i < pygroups_vector.size(); i++)
     {
         PyObject* group = pygroups_vector [i];
         PyObject* comps = PyObject_GetAttr (group,
                                             Py_BuildValue ("s", 
                                                            "comps"));
+        // For each compute object inside the group  set all relevant attributes
         for (int j = 0; j < PyList_Size (comps); j++)
         {
             static PyObject* str_lookup_key = Py_BuildValue ("s", "lookup_key");
@@ -3053,6 +3063,7 @@ PyObject* dpgroup(PyObject* self, PyObject* args)
             //check_and_print_exception ();
             vector <long> max_offset;
             
+            //For each dimension find the max offset
             for (long i = 0; i < PyLong_AsLong (dims); i++)
             {
                 PyObject* _max_offset = PyTuple_GetItem (PyList_GetItem (offsets, i), 1);
@@ -3112,9 +3123,11 @@ PyObject* dpgroup(PyObject* self, PyObject* args)
         PyObject* group = PyList_GetItem (groups, i);
         Group* cppGroup = pyToGroup[group];
         OptGroup* optGroup = OptGroup::optHashIDToGroup [cppGroup->hashID ()];
+        //Get the children for this group
         PyObject* children = PyObject_GetAttr (group,
                                                Py_BuildValue ("s", 
-                                                              "children"));        
+                                                              "children"));
+        //Add the children to the Group objects, nextGroups set
         for (int j = 0; j < PyList_Size (children); j++)
         {
             PyObject* child = PyList_GetItem (children, j);
@@ -3127,7 +3140,7 @@ PyObject* dpgroup(PyObject* self, PyObject* args)
         PyObject* parents = PyObject_GetAttr (group,
                                                Py_BuildValue ("s", 
                                                               "parents"));
-        
+        //Add the parents to the Group objects, prevGroups set
         for (int j = 0; j < PyList_Size (parents); j++)
         {
             PyObject* parent = PyList_GetItem (parents, j);
@@ -3173,7 +3186,8 @@ PyObject* dpgroup(PyObject* self, PyObject* args)
     
     uint64_t max_group_size = 1UL << logMaxChildren;
     uint128_t start_hash_id = opt_start->hashID();
-       
+
+    // Initialization complete
     int iteration = 0;
     uint64_t _maxID = maxID;
     if (_maxID && (!(_maxID & (_maxID-1))))
