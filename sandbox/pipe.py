@@ -1134,6 +1134,7 @@ class Group:
         '''
         
         max_dim = 0
+        
         for comp in self.comps:
             num_dims = 0
             if isinstance(comp.func, Reduction):
@@ -1387,193 +1388,6 @@ class Group:
         self._access_types = access_types
         
         return access_types
-        
-    def get_tile_sizes2 (self, param_estimates, slope_min, group_parts):
-        #self._tile_sizes = {1:8, 2:256}
-        #print ("total_size ", self._total_used_size/IMAGE_ELEMENT_SIZE)
-        #self._tile_sizes = {1:1, 2:256}
-        #return
-        if (self._total_used_size == -1):
-            #print (self)
-            assert (False)
-            
-        tileable_dims = set()
-        
-        dim_reuse = [i*IMAGE_ELEMENT_SIZE for i in self.get_dimensional_reuse (param_estimates)]
-        
-        dim_sizes = {}
-        
-        for i in range(1, len(slope_min) + 1):
-            # Check if every part in the group has enough iteration
-            # points in the dimension to benefit from tiling.
-            tile = False
-            for part in group_parts:
-                lower_bound = part.sched.range().dim_min(i)
-                upper_bound = part.sched.range().dim_max(i)
-                size = upper_bound.sub(lower_bound)
-                if (size.is_cst() and size.n_piece() == 1):
-                    aff = (size.get_pieces())[0][1]
-                    val = aff.get_constant_val()
-                    #print (val, i)
-                    if (val > TILING_THRESHOLD):
-                        if i-1 in dim_sizes:
-                            dim_sizes[i-1] = min (val.to_python(), dim_sizes[i-1])
-                        else:
-                            dim_sizes[i-1] = val.to_python()
-                    else:
-                        if i-1 not in dim_sizes:
-                            dim_sizes [i-1] = 0
-        
-
-        total_used_size = self._total_used_size/IMAGE_ELEMENT_SIZE
-        tile_size = total_used_size/N_CORES
-        if (tile_size > L2_CACHE_SIZE):
-            tile_size = L2_CACHE_SIZE
-        tile_size = tile_size/self._n_buffers
-        print ("tile_size is ", tile_size)
-        input ("324342343423")
-        input ("1111")
-        if (is_power_of_2 (int(tile_size)) == False):
-            tile_size = get_next_power_of_2 (int(tile_size))
-        
-        max_dim_reuse = 0
-        max_dim = -1
-        n_tileable_dims = 0
-        
-        for i in range (len(slope_min)):
-            if self.is_dim_tileable (i, slope_min, dim_sizes):
-                n_tileable_dims+=1
-        
-        if (n_tileable_dims == 0):
-            self._tile_sizes = {}
-            for dim in range (len(slope_min)):
-                self._tile_sizes [dim] = int(get_next_power_of_2 (int(tile_size ** (1.0/len(slope_min))))/2)
-            
-            return 
-            
-        for i in range (len(slope_min)):
-            if self.is_dim_tileable (i, slope_min, dim_sizes):
-                if (max_dim_reuse < dim_reuse [i]):
-                    max_dim_reuse = dim_reuse[i]
-                    max_dim = i
-        
-        max_dim_tile_size = tile_size
-        n_non_zero_dims = 0
-        
-        for i in range (len(slope_min)):
-            if self.is_dim_tileable (i, slope_min, dim_sizes):
-                if (dim_reuse [i] != 0):
-                    n_non_zero_dims += 1
-                    max_dim_tile_size = max_dim_tile_size * (max_dim_reuse/dim_reuse [i])
-        
-        tile_sizes_product = 1
-        tile_sizes = {}
-        
-        if (n_non_zero_dims > 0):
-            max_dim_tile_size = max_dim_tile_size ** (1.0/n_non_zero_dims)
-                    
-            for i in range (len(slope_min)):
-                if self.is_dim_tileable (i, slope_min, dim_sizes):
-                    if (dim_reuse[i] != 0):
-                        tile_sizes [i] = int(max_dim_tile_size * dim_reuse[i]/max_dim_reuse)
-                        
-                        if (tile_sizes [i] > dim_sizes [i]):
-                            tile_sizes [i] = dim_sizes [i]
-                        
-                        print (str(i)+": "+str(tile_sizes[i]))
-                        tile_sizes_product *= tile_sizes [i]
-        
-        n_zero_dim_reuse = n_tileable_dims - n_non_zero_dims
-            
-        if (n_zero_dim_reuse > 0 and tile_sizes_product < tile_size):
-            tile_size_for_zero_dim = (tile_size/tile_sizes_product)**(1.0/n_zero_dim_reuse)
-            tile_size_for_zero_dim = int(tile_size_for_zero_dim)
-            for i in range (len(slope_min)):
-                if i not in tile_sizes and self.is_dim_tileable (i, slope_min, dim_sizes):
-                    tile_sizes[i] = tile_size_for_zero_dim
-        
-        tile_sizes_product = 1
-        for k in tile_sizes.keys():
-            if tile_sizes [k] != 0 and (tile_sizes [k] & (tile_sizes [k] - 1)) != 0:
-                new_tile_size = get_next_power_of_2 (tile_sizes [k])
-                tile_sizes [k] = new_tile_size
-                
-            tile_sizes_product *= tile_sizes [k]
-                
-        if (tile_sizes_product > tile_size):
-            times = tile_sizes_product/tile_size
-            
-            max_dim = 0
-            max_tile_size = 0
-            for k in tile_sizes.keys():
-                if (max_tile_size < tile_sizes[k]):
-                    max_tile_size = tile_sizes[k]
-                    max_dim = k
-                    
-            tile_sizes[max_dim] = int(tile_sizes[max_dim]/times)
-            
-        if (tile_sizes_product < tile_size):
-            remaining_tile_size = int((tile_size/tile_sizes_product)**(1.0/n_tileable_dims))
-            if (remaining_tile_size & (remaining_tile_size - 1) != 0):
-                remaining_tile_size = get_next_power_of_2 (remaining_tile_size)/2
-                remaining_tile_size = int(remaining_tile_size)
-            
-            for k in tile_sizes.keys():
-                tile_sizes[k] *= remaining_tile_size
-        
-        vec_dim = max(tile_sizes)
-        if (tile_sizes [vec_dim] < VECTOR_WIDTH_THRESHOLD):
-            tile_sizes[vec_dim] = int(get_next_power_of_2 (int(dim_sizes[vec_dim])))
-        
-        print ("tile_sizes ", tile_sizes)
-        par_dim = min(tile_sizes)
-        _tile_sizes = dict (tile_sizes)
-        while (dim_sizes[par_dim]/N_CORES < N_CORES):
-            _tile_sizes.pop (par_dim)
-            if (_tile_sizes != {}):
-                par_dim = min (_tile_sizes)
-            else:
-                par_dim = -1
-                break
-            
-        print ("tile_sizes ", tile_sizes, "par_dim ", par_dim)
-        #par_dim = -1
-        if (par_dim != -1):
-            n_threads = dim_sizes[par_dim]/tile_sizes[par_dim]
-            if (n_threads < N_CORES):
-                #If number of threads to be created are less than number of cores then, 
-                #set the tile size such that number of threads are greater than cores
-                tile_sizes[par_dim] = int(get_next_power_of_2 (int(dim_sizes[par_dim]/N_CORES))/2)
-            elif (n_threads >= N_CORES):
-                #Since, n_threads > N_CORES, all can still be executed in parallel.
-                #Hence, it is fine
-                #tile_sizes [par_dim] = 1
-                pass       
-        print ("tile_sizes3333", tile_sizes, " dim_sizes[par_dim] = ") 
-        if (par_dim != -1 and tile_sizes [par_dim] == 0):
-            tile_sizes [par_dim] = 1
-            
-        for k in tile_sizes.keys ():
-            if (k != par_dim and k != vec_dim and tile_sizes [k] > dim_sizes[k]):
-                tile_sizes[k] = int(get_next_power_of_2 (int(dim_sizes[k]))/2)
-       
-        print ("tile_sizes222", tile_sizes) 
-        to_remove = []
-        for k in tile_sizes.keys():
-            if (tile_sizes [k] == 0):
-                to_remove.append (k)
-        
-        for k in to_remove:
-            tile_sizes.pop (k)
-            
-        self._tile_sizes = tile_sizes
-        
-        for k in tile_sizes.keys():
-            pass #assert (is_power_of_2 (tile_sizes [k]))
-        
-        tile_sizes_product = 1
-        for k in tile_sizes.keys():
-            tile_sizes_product *= tile_sizes[k]
 
     def get_tile_sizes_for_cache_size (self, param_estimates, slope_min,
                                        slope_max, group_parts, dim_reuse, 
@@ -1749,16 +1563,15 @@ class Group:
                 if (size.is_cst() and size.n_piece() == 1):
                     aff = (size.get_pieces())[0][1]
                     val = aff.get_constant_val()
-                    print (val, i-1)
                     if (val > TILING_THRESHOLD):
                         if i-1 in dim_sizes:
                             dim_sizes[i-1] = max (val.to_python(), dim_sizes[i-1])
                         else:
                             dim_sizes[i-1] = val.to_python()
-                        if (i-1 == 3):
+                        #if (i-1 == 3):
                             #TODO: Correct this for z dimension of blurz, blurx, blury in bilateral_grid
                             #Use compute size instead of this way
-                            dim_sizes[i-1] = 14
+                            #dim_sizes[i-1] = 14
                     else:
                         if i-1 not in dim_sizes:
                             dim_sizes [i-1] = 0
@@ -1800,31 +1613,34 @@ class Group:
                     slope_min, slope_max, group_parts, dim_reuse, dim_sizes, 
                     L1_CACHE_SIZE, L1_INNER_MOST_DIM_SIZE, cores)
                 
-                if (tile_size_less_than_l1):
-                    self._tile_sizes = tile_sizes
-                    LOG (logging.DEBUG, "tile_size_less_than_l1=True tile_sizes from L1 " +str(tile_sizes) +" cores "+str(cores))
-                    return tile_size
-                    
                 overlap_shift_greater = False
-                
-                for i in tile_sizes.keys ():
-                    if (slope_min[i] != '*'):
-                        right = int(math.floor(Fraction(slope_min[i][0],
-                                                        slope_min[i][1])))
-                        left = int(math.ceil(Fraction(slope_max[i][0],
-                                                    slope_max[i][1])))
-                        # Compute the overlap shift
-                        overlap_shift = abs(left * (h)) + abs(right * (h))
-                            
-                        if (overlap_shift + 0 > tile_sizes[i]):
-                            overlap_shift_greater = True
+                if (tile_sizes != -1 and tile_size != -1):
+                    if (tile_size_less_than_l1):
+                        self._tile_sizes = tile_sizes
+                        LOG (logging.DEBUG, "tile_size_less_than_l1=True tile_sizes from L1 " +str(tile_sizes) +" cores "+str(cores))
+                        return tile_size
+                    
+                    for i in tile_sizes.keys ():
+                        if (slope_min[i] != '*'):
+                            right = int(math.floor(Fraction(slope_min[i][0],
+                                                            slope_min[i][1])))
+                            left = int(math.ceil(Fraction(slope_max[i][0],
+                                                        slope_max[i][1])))
+                            # Compute the overlap shift
+                            overlap_shift = abs(left * (h)) + abs(right * (h))
+                                
+                            if (overlap_shift + 0 > tile_sizes[i]):
+                                overlap_shift_greater = True
+                                break
+                    
+                    threshold_tile_size_met = True
+                    for i in tile_sizes.keys ():
+                        if tile_sizes[i] <= 2:
+                            threshold_tile_size_met = False
                             break
-                
-                threshold_tile_size_met = True
-                for i in tile_sizes.keys ():
-                    if tile_sizes[i] <= 2:
-                        threshold_tile_size_met = False
-                        break
+                else:
+                    overlap_shift_greater = True
+                    threshold_tile_size_met = False
                         
                 LOG (logging.DEBUG, "tile_sizes from L1 cores " + str(tile_sizes) + " " + str(cores))
                 
@@ -1870,20 +1686,23 @@ class Group:
                 LOG (logging.DEBUG, "tile_size_less_than_l1=True tile_sizes from L1 " + str(l1tile_sizes) + " cores " + str(cores))
                 return l1tile_size
             
-            overlap_shift_greater = False
-            overlap_shifts = {}
-            for i in l1tile_sizes.keys ():
-                if (slope_min[i] != '*'):
-                    right = int(math.floor(Fraction(slope_min[i][0],
-                                                    slope_min[i][1])))
-                    left = int(math.ceil(Fraction(slope_max[i][0],
-                                                slope_max[i][1])))
-                    # Compute the overlap shift
-                    overlap_shift = abs(left * (h)) + abs(right * (h))
-                    overlap_shifts [i] = overlap_shift    
-                    if (overlap_shift + 0 > l1tile_sizes[i]):
-                        overlap_shift_greater = True
-                        break
+            if (l1tile_sizes == -1):
+                overlap_shift_greater = False
+                overlap_shifts = {}
+                for i in l1tile_sizes.keys ():
+                    if (slope_min[i] != '*'):
+                        right = int(math.floor(Fraction(slope_min[i][0],
+                                                        slope_min[i][1])))
+                        left = int(math.ceil(Fraction(slope_max[i][0],
+                                                    slope_max[i][1])))
+                        # Compute the overlap shift
+                        overlap_shift = abs(left * (h)) + abs(right * (h))
+                        overlap_shifts [i] = overlap_shift    
+                        if (overlap_shift + 0 > l1tile_sizes[i]):
+                            overlap_shift_greater = True
+                            break
+            else:
+                overlap_shift_greater = True
                     
             LOG (logging.DEBUG, "tile_sizes from L1 " + str(l1tile_sizes))
             
@@ -2304,6 +2123,9 @@ class Pipeline:
                 pass
             self._level_order_groups = self.order_group_objs()
 
+            #auto_group(self)
+            #self.merge_groups (self.groups[1], self.groups[2])
+            pass
         
         if (inline_after_grouping):
             for group in self.groups:
@@ -2357,6 +2179,18 @@ class Pipeline:
                 idiom_recognition(self, g)
                 # tile reductions
                 #self.reduction_tiling(g)
+
+            # ***
+            log_level = logging.INFO
+            LOG(log_level, "\n\n")
+            LOG(log_level, "Grouped compute objects:")
+            for g in self.groups:
+                if 'dpfusion' in self.options:
+                    s = " Tile Sizes: " + str(g.tile_sizes)
+                else:
+                    s = "  "
+                LOG(log_level, g.name+s)
+            # ***
 
             # group
             self._grp_schedule = schedule_groups(self)
@@ -2486,8 +2320,7 @@ class Pipeline:
             return overlap_shift/1.6, det_tile_size
             
         if len (comp_deps) <= 0:
-            return 1 << 30, 1 #For Pyramid Blend UnComment
-            #return 0, 0 #For Campipe
+            return 1 << 30, 1
             
         LOG (logging.DEBUG, "Getting Overlap for non stencil? Not Good")
         assert (False)
