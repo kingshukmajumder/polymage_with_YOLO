@@ -11,6 +11,7 @@ class AppType():
     HARRIS = 1
     BILATERAL = 2
     LAPLACIAN = 3
+    DARKNET = 4
 
     apps_list = set([])
     apps_list.add(NONE)
@@ -18,6 +19,7 @@ class AppType():
     apps_list.add(HARRIS)
     apps_list.add(BILATERAL)
     apps_list.add(LAPLACIAN)
+    apps_list.add(DARKNET)
 
     name = {}
     name[NONE] = ''
@@ -25,6 +27,7 @@ class AppType():
     name[HARRIS] = 'Harris Corner'
     name[BILATERAL] = 'Bilateral Grid'
     name[LAPLACIAN] = 'Local Laplacian'
+    name[DARKNET] = 'darknet'
 
     file_name = {}
     file_name[NONE] = ''
@@ -32,6 +35,7 @@ class AppType():
     file_name[HARRIS] = 'harris'
     file_name[BILATERAL] = 'bilateral'
     file_name[LAPLACIAN] = 'laplacian'
+    file_name[DARKNET] = 'darknet'
 
 class ModeType():
     QUIT = -3
@@ -43,7 +47,6 @@ class ModeType():
     P_OPT = 3
     NUMBA = 4
     PIL = 5
-
     modes_list = set([])
     modes_list.add(CV2)
     modes_list.add(P_NAIVE)
@@ -66,7 +69,10 @@ class ModeType():
     name[P_OPT] = 'PolyMage Opt'
     name[NUMBA] = 'Numpy + Numba'
     name[PIL] = 'Pillow (PIL)'
-
+    darknet_name = {}
+    darknet_name[CV2]= 'darknet orig omp'
+    darknet_name[P_NAIVE]= 'darknet orig omp'
+    darknet_name[P_OPT]= 'darknet mkl'
     @staticmethod
     def get_file_suffix(mode_id):
         if mode_id == ModeType.P_NAIVE:
@@ -386,6 +392,7 @@ class VideoProcessor:
 
     def _process_frame(self, frame):
         app = self.apps_map[self.current_app]
+        #if self.current_app==0: import pdb;pdb.set_trace()
         result_frame = app.process_frame(frame)
         result_frame = self._gen_output_frame(result_frame)
         return result_frame
@@ -454,7 +461,10 @@ class VideoProcessor:
 
         # execution mode
         text2_start = (40, 80)
-        text2 = "%-15s : %s" % ("Pipeline", ModeType.name[app.current_mode])
+        if app.id_ == 4:
+            text2 = "%-15s : %s" % ("Pipeline", ModeType.darknet_name[app.current_mode])
+        else:
+            text2 = "%-15s : %s" % ("Pipeline", ModeType.name[app.current_mode])
         draw_str(frame, text2_start, text2)
 
         # app
